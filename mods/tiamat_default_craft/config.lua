@@ -166,6 +166,28 @@ C.classify = {
     },
 }
 
+-- How fast a tool digs a class of block, as a share of its own speed
+-- (engine ask 2). A class a type does not list digs at the tool's speed;
+-- a class it may not break at all is refused before speed matters. A pick
+-- or an axe is a poor spade.
+C.speed_shares = {
+    pick = { loose = 0.5 },
+    axe = { loose = 0.5 },
+    maul = { loose = 0.6 },
+    chisel = { loose = 0.5 },
+}
+
+-- A block this mod has not classed, and that says what it is in its tags
+-- (engine ask 6), is classed by them: a class's own name, or these.
+C.tag_classes = {
+    loose = "loose", soil = "loose", sand = "loose", plant = "loose",
+    cracked = "cracked",
+    wood = "wood", log = "wood", plank = "wood",
+    hardwood = "hardwood",
+    rock = "rock", stone = "rock", ore = "rock",
+    hard_rock = "hard_rock",
+}
+
 -- What a refused dig says, by class and by what was wrong: `hand` for a bare
 -- hand, `type` for the wrong kind of tool, `tier` for the right kind too
 -- soft. One sentence each, in the world's voice; they are the tutorial.

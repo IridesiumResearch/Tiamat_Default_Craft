@@ -207,9 +207,8 @@ block("campfire_lit", {
 -- break and which yields the rock whole. Only for the world's rocks that
 -- exist in this world.
 --
--- It drops NOTHING of its own: the engine lets a block's `drops` name only
--- the registering mod's materials (engine ask 7), so the rock it yields is
--- given to the digger by fire.lua as the dig lands.
+-- It drops the world's rock, whole: a `drops` key may name another mod's
+-- block (engine ask 7, engine c83fbc9), paid in units as it comes apart.
 M.cracked = {}   -- world short name -> this mod's cracked twin's qualified id
 for _, name in ipairs(tdc.config.cracks) do
     local parent = tdc.util.world(name)
@@ -218,7 +217,8 @@ for _, name in ipairs(tdc.config.cracks) do
             name = "Cracked " .. string.gsub(name, "_", " "),
             description = "Fire-cracked. It comes away by hand.",
             hardness = tdc.config.cracked_hardness,
-            drops = {},
+            drops = { [parent] = 27 },
+            tags = { "cracked" },
         })
         M.cracked[name] = game.mod_id .. ":cracked_" .. name
     end

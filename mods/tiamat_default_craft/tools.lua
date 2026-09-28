@@ -104,6 +104,26 @@ C.tools.mould_pot = { name = "Pot mould", type = "mould", tier = 1, uses = C.mou
 C.tools.mould_tuyere = { name = "Tuyere mould", type = "mould", tier = 1, uses = C.mould_uses }
 C.tools.mould_gear = { name = "Gear mould", type = "mould", tier = 1, uses = C.mould_uses }
 
+--- A digging tool's speed on each block it is slower on than its own
+--- speed (engine ask 2): the world's blocks by class, at the share
+--- `C.speed_shares` gives its type. Only blocks registered by now — the
+--- world loads first — so no name is dropped at load.
+local function speeds_of(spec)
+    local shares = C.speed_shares[spec.type]
+    if not shares then return nil end
+    local out, any = {}, false
+    for _, class in ipairs(U.sorted_keys(shares)) do
+        for _, short in ipairs(C.classify[class] or {}) do
+            local id = U.world(short)
+            if U.material(id) then
+                out[id] = spec.speed * shares[class]
+                any = true
+            end
+        end
+    end
+    return any and out or nil
+end
+
 -- This mod's own tools: an item each, and an engine tool for the ones that dig.
 for _, short in ipairs(U.sorted_keys(C.tools)) do
     local spec = C.tools[short]
@@ -122,6 +142,7 @@ for _, short in ipairs(U.sorted_keys(C.tools)) do
             name = spec.name,
             brush = spec.brush or "block",
             speed_multiplier = spec.speed,
+            speeds = speeds_of(spec),
         }
     end
     add_tool(game.mod_id .. ":" .. short, {
@@ -159,12 +180,25 @@ for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit",
     class_names[game.mod_id .. ":" .. short] = "loose"
 end
 
---- The class of a numeric material, or nil.
+--- A class from a block's own tags (engine ask 6), or nil.
+local function class_from_tags(material)
+    local tags = game.tags(material)
+    if type(tags) ~= "table" then return nil end
+    for _, tag in ipairs(tags) do
+        local class = C.tag_classes[tag] or (classes[tag] and tag)
+        if class and classes[class] then return class end
+    end
+    return nil
+end
+
+--- The class of a numeric material, or nil: this mod's table first, then
+--- what the block's tags say.
 function T.class(material)
     local known = class_of[material]
     if known ~= nil then return known or nil end
     local id = game.block_of(material)
-    local record = id and class_names[id] and classes[class_names[id]] or false
+    local name = id and (class_names[id] or class_from_tags(material))
+    local record = name and classes[name] or false
     if not tdc.loading() then class_of[material] = record end
     return record or nil
 end

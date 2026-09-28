@@ -10,6 +10,7 @@ game.register_tool{ id = "drill", name = "Drill", brush = "block", speed_multipl
 game.register_item{ id = "rod" }
 game.register_block{ id = "alloy_wall" }
 game.register_block{ id = "plain" }
+game.register_block{ id = "tagged_ore", tags = { "ore" } }
 local craft = game.exports("tiamat_default_craft")
 assert(craft.register_tool{ id = "schism_tech:drill", type = "drill", tier = 3, uses = 3, digs = true } == true)
 assert(craft.register_tool{ id = "schism_tech:rod", type = "pick", tier = 2, uses = 5, digs = true } == true)

@@ -84,38 +84,7 @@ function F.register_cracked(material, twin)
     return true
 end
 
--- A cracked block yields the rock it was: a unit for each of its cells the
--- dig takes, which is the whole block for a hand and one cell for a chisel.
-local parent_of = nil   -- numeric twin -> parent qualified id
 
-tdc.on_dug(function(e)
-    if not parent_of then
-        parent_of = {}
-        for parent, twin in pairs(cracked_names) do
-            local material = U.material(twin)
-            if material and U.material(parent) then parent_of[material] = parent end
-        end
-    end
-    local parent = parent_of[e.material]
-    if not parent then return end
-    local units = 1
-    if e.brush == "block" then
-        units = 0
-        local at = game.get_block{ x = e.x // 3, y = e.y // 3, z = e.z // 3 }
-        if at and at.cells then
-            for _, cell in ipairs(at.cells) do
-                if cell == e.material then units = units + 1 end
-            end
-        elseif at and at.material == e.material then
-            for i = 0, 26 do
-                if at.occupancy & (1 << i) ~= 0 then units = units + 1 end
-            end
-        end
-    end
-    if units > 0 then
-        U.give(e.player, { material = parent, units = units })
-    end
-end)
 
 -- The fires ---------------------------------------------------------------------
 

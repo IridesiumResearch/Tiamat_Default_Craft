@@ -411,6 +411,16 @@ fn tools() {
     r.hold_nothing(PLAYER);
     assert_eq!(r.dig_complete(PLAYER, "tiamat_default_world:stone"), Err(rock_by_hand.to_owned()), "and as it completes");
 
+    // A block nobody classed that tags itself an ore is rock (engine ask 6).
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.dig_start(PLAYER, "schism_tech:tagged_ore"), Err(rock_by_hand.to_owned()));
+
+    // A pick is slower on earth than on rock (engine ask 2).
+    let pick = r.vm.registered_tools().into_iter().find(|t| t.id == "tiamat_default_craft:bronze_pick").unwrap();
+    assert_eq!(pick.speed_multiplier, 1.8);
+    assert!(pick.speeds.contains(&("tiamat_default_world:dirt".to_owned(), 0.9)), "{:?}", pick.speeds);
+    assert!(!pick.speeds.iter().any(|(b, _)| b == "tiamat_default_world:stone"), "rock at its own speed");
+
     // The hand on a log is allowed, with a hint the first time only.
     r.heard(PLAYER);
     assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:oak_log"), Ok(()));
@@ -546,12 +556,11 @@ fn fire() {
     r.hold_nothing(PLAYER);
     assert_eq!(r.dig_start(PLAYER, "cracked_copper_ore"), Ok(()));
     assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:copper_ore"), Err("Bare hands will not move stone. Fire will crack it, or a bronze pick will break it.".into()));
-    // A cracked block dug by hand is the ore it was, whole. (The rig's digs
-    // aim at the block at 100, 64, 100.)
-    r.put(100, 64, 100, "cracked_copper_ore");
-    let before = r.units(PLAYER, "tiamat_default_world:copper_ore");
-    assert_eq!(r.dig(PLAYER, "cracked_copper_ore"), Ok(()));
-    assert_eq!(r.units(PLAYER, "tiamat_default_world:copper_ore"), before + 27);
+    // A cracked block drops the ore it was, whole: the engine pays a drop
+    // that names the world's block (engine ask 7).
+    let rules = r.vm.registered_block_rules();
+    let cracked = rules.iter().find(|b| b.block == "tiamat_default_craft:cracked_copper_ore").expect("cracked ore");
+    assert_eq!(cracked.drops, Some(vec![("tiamat_default_world:copper_ore".to_owned(), 27)]));
     let dump = r.storage.dump();
     for first in ["fire:lit", "fireset:copper_ore", "fireset:stone"] {
         assert!(dump.contains(&format!("first:{}:{first}=", hex(PLAYER))), "{first}");
