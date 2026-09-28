@@ -53,7 +53,10 @@ and cobbles, fired by its first fire, turns logs to charcoal at red heat,
 and at orange heat (coal or charcoal) smelts ore in a crucible, alloys nine
 of copper to one of tin, and casts bronze heads into clay moulds that crack
 after four pours; a head and a haft at the workbench are a bronze tool.
-**Wood → fire → bronze is a complete loop.** A fire opens with an empty
+**Wood → fire → bronze is a complete loop.** For Life: cured meat, leather
+tanned with bark, cloth, a bone needle, and Life's own coat, cloak and
+bandages sewn from them. An iron anvil, forged on a stone one, takes half
+the blows. A fire opens with an empty
 hand: meat put on it roasts (and chars if left), meat and fruit in a copper
 pot become Life's hot stew, and the kiln bakes Life's bread from wheat. A sluice of planks stood in a
 river washes gravel into sand and tin grains, and now and then a flake of

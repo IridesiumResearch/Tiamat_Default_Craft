@@ -65,6 +65,7 @@ assert(R.register_group("#plank", { M.id("plank") }))
 assert(R.register_group("#wedge", { M.id("wooden_wedge"), M.id("ironwood_wedge") }))
 assert(R.register_group("#hammer", { M.id("bronze_hammer"), M.id("iron_hammer") }))
 assert(R.register_group("#chisel", { M.id("bronze_chisel"), M.id("iron_chisel") }))
+assert(R.register_group("#knife", { M.id("bronze_knife"), M.id("iron_knife") }))
 assert(R.register_group("#ash", { M.id("ash"), U.world("volcanic_ash") }))
 assert(R.register_group("#fruit", { "tiamat_default_life:apple", "tiamat_default_life:berries" }))
 
@@ -450,6 +451,73 @@ R.own{
     tools = { M.id("mould_pot") },
     outputs = { { M.id("copper_pot"), count = 1 } },
     first = "cast:copper_pot",
+}
+
+-- Life's asks: the kitchen's cured meat (C1), and leather, cord and cloth
+-- (C2), made into Life's own coat, cloak and bandages, which Life's wardrobe
+-- and eating already know what to do with.
+
+R.own{
+    id = "cured_meat", station = "workbench", name = "Cured meat",
+    inputs = { { LIFE .. "raw_meat", count = 1 }, { U.world("salt"), units = 9 } },
+    outputs = { { M.id("cured_meat"), count = 1 } },
+    first = "cook:cured",
+}
+R.own{
+    id = "cord_from_sinew", station = "hand", name = "Cord",
+    inputs = { { LIFE .. "sinew", count = 1 } },
+    outputs = { { M.id("cord"), count = 3 } },
+}
+R.own{
+    id = "leather", station = "workbench", name = "Leather",
+    inputs = { { LIFE .. "hide", count = 1 }, { M.id("bark_strip"), count = 2 } },
+    outputs = { { M.id("leather"), count = 1 } },
+    first = "craft:leather",
+}
+R.own{
+    id = "cloth", station = "workbench", name = "Cloth",
+    inputs = { { LIFE .. "wool", count = 3 } },
+    outputs = { { M.id("cloth"), count = 1 } },
+    first = "craft:cloth",
+}
+R.own{
+    id = "bone_needle", station = "workbench", name = "Bone needle",
+    inputs = { { LIFE .. "bone", count = 1 } },
+    tools = { "#knife" },
+    outputs = { { M.id("bone_needle"), count = 1 } },
+}
+R.own{
+    id = "warm_coat", station = "workbench", name = "Warm coat",
+    inputs = { { M.id("leather"), count = 3 }, { M.id("cloth"), count = 2 } },
+    tools = { M.id("bone_needle") },
+    outputs = { { LIFE .. "warm_coat", count = 1 } },
+    first = "sew:warm_coat",
+}
+R.own{
+    id = "cool_cloak", station = "workbench", name = "Cool cloak",
+    inputs = { { M.id("cloth"), count = 4 } },
+    tools = { M.id("bone_needle") },
+    outputs = { { LIFE .. "cool_cloak", count = 1 } },
+    first = "sew:cool_cloak",
+}
+R.own{
+    id = "bandage", station = "hand", name = "Bandages",
+    inputs = { { M.id("cloth"), count = 1 } },
+    outputs = { { LIFE .. "bandage", count = 2 } },
+}
+R.own{
+    id = "leather_bellows", station = "workbench", name = "Bellows (leather)",
+    inputs = { { "#plank", count = 4 }, { M.id("leather"), count = 2 }, { M.id("copper_nozzle"), count = 1 } },
+    outputs = { { M.id("bellows"), count = 1 } },
+}
+
+-- The iron anvil, forged on a stone one: five bars and ten blows.
+R.own{
+    id = "iron_anvil", station = "anvil", name = "Iron anvil", strikes = 10,
+    inputs = { { M.id("iron_bar"), count = 5 } },
+    tools = { M.id("iron_hammer") },
+    outputs = { { M.id("iron_anvil"), count = 1 } },
+    first = "forge:iron_anvil",
 }
 
 -- After the loop (step 10) ---------------------------------------------------

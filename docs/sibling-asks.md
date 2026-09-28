@@ -17,6 +17,26 @@ its animals drop hide, bone and sinew. Its own asks of this mod (its
 `docs/sibling-asks.md`, C1 the kitchen and C2 leather, cord and cloth) are
 this mod's to build.
 
+### L9. `steady` on bread and `hearty` on hot stew, in Life's own items (2026-09-28): OPEN
+
+**Wanted.** Life's C1 asked Craft to register bread with `steady` and a
+stew with `hearty`. But the bread and hot stew Craft makes are Life's own
+items (`tiamat_default_life:bread`, `:hot_stew`), and `add_food` on them
+from here would replace Life's whole definition — its food, saturation,
+warmth — with numbers this mod has no business choosing. The effects belong
+in Life's own `items.lua` definitions of the two.
+
+### Life's C1 and C2, its asks of this mod: BUILT 2026-09-28
+
+- **C1, the kitchen:** bread (the kiln, three wheat), hot stew (a fire and
+  a copper pot) and cured meat (raw meat and salt at the workbench, this
+  mod's own item, food through `add_food`). The buffs are L9, above.
+- **C2, leather, cord and cloth:** leather (a hide tanned with two bark
+  strips), cord from sinew, cloth from wool, a bone needle, and Life's own
+  warm coat, cool cloak and bandages sewn from them; bellows of leather, as
+  the brief first had them. Not built: bowstrings (no mod has a bow) and "a
+  bed that is not a block" (Life's bed is Life's). Feathers have no use yet.
+
 ### L3. Who cooks (2026-09-26): SETTLED, built 2026-09-28
 
 Life's roadmap once said "X while looking at a campfire cooks what you
@@ -104,15 +124,14 @@ silver, where it really occurs. It is the one ore of the Schism design with
 no block in the world. Nothing in this mod needs it; the tech tree's fission
 does. (Zinc is not asked for: bronze gears stand in for brass ones.)
 
-### W2. Tags on the world's blocks (2026-09-26): ANSWERED, awaiting World's commit
+### W2. Tags on the world's blocks (2026-09-26): ANSWERED (World 0e5db57)
 
 World tags every block (`blocks.lua`, `TAGS`), most particular word first,
 and this mod now classes the world's blocks by them: its table naming them
 one by one is gone but for four exceptions, where it reads a block
 otherwise than its tags (flint is cracked, bone rock, dead logs and marrow
-loose). The tags are in World's working tree and not yet committed; a World
-without them leaves every block of it unclassed, which this mod says in
-the log at load. A world of rock, ore and logs must ship with its tags.
+loose). Committed in World 0e5db57; a World from before it leaves every
+block of it unclassed, which this mod says in the log at load.
 
 The ask as it was:
 

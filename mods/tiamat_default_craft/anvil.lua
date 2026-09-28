@@ -79,9 +79,19 @@ local function work_of(name, station)
     return table.concat(parts, "+")
 end
 
---- Blows a recipe takes this player.
-function A.strikes(uuid, recipe)
-    return math.max(1, recipe.strikes + R.effect(uuid, "craft.anvil_strikes"))
+local IRON_ANVIL = game.mod_id .. ":iron_anvil"
+
+--- Whether the anvil at a use is iron.
+local function iron_at(e)
+    local at = game.get_block{ x = e.x // 3, y = e.y // 3, z = e.z // 3, domain = e.domain ~= "overworld" and e.domain or nil }
+    return at ~= nil and at.material ~= nil and game.block_of(at.material) == IRON_ANVIL
+end
+
+--- Blows a recipe takes this player, on a stone anvil or an iron one.
+function A.strikes(uuid, recipe, iron)
+    local n = math.max(1, recipe.strikes + R.effect(uuid, "craft.anvil_strikes"))
+    if iron then n = (n + C.iron_anvil_divisor - 1) // C.iron_anvil_divisor end
+    return n
 end
 
 --- What in the off-hand a recipe can work: the plain stack in the slot, if
@@ -115,7 +125,7 @@ local function strike_offhand(e, station, name, s, stack)
     if work ~= s.work then s.work, s.strikes, s.choice = work, 0, recipe.id end
     s.strikes = s.strikes + 1
     tdc.sounds.at("anvil_ring", { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
-    if s.strikes < A.strikes(e.player, recipe) then
+    if s.strikes < A.strikes(e.player, recipe, iron_at(e)) then
         save(name)
         return ""
     end
@@ -178,7 +188,8 @@ function A.strike(e, station, name)
     if work ~= s.work then s.work, s.strikes = work, 0 end
     s.strikes = s.strikes + 1
     tdc.sounds.at("anvil_ring", { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
-    local done = s.strikes >= A.strikes(e.player, recipe)
+    s.iron = iron_at(e) and 1 or 0
+    local done = s.strikes >= A.strikes(e.player, recipe, s.iron == 1)
     if done then
         s.strikes, s.work = 0, nil
         local made, reason = R.perform(e.player, s.choice, name)
@@ -199,8 +210,9 @@ function A.status(name)
     if s.choice then
         local recipe = R.recipe(s.choice)
         status.job_text = recipe.name
-        status.progress = (s.strikes * 1000) // recipe.strikes
-        status.note = string.format("Forging %s: %d of %d blows.", recipe.name, s.strikes, recipe.strikes)
+        local blows = A.strikes(nil, recipe, s.iron == 1)
+        status.progress = (s.strikes * 1000) // blows
+        status.note = string.format("Forging %s: %d of %d blows.", recipe.name, s.strikes, blows)
     else
         status.note = "Choose what to forge, then strike the anvil with a hammer."
     end

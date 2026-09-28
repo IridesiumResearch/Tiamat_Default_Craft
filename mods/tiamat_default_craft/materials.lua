@@ -33,8 +33,15 @@ item("bark_strip", "Bark strip", "Peeled from a log. It binds a torch's head.")
 item("tin_grain", "Tin grain", "Black grains of tin, washed out of river gravel.")
 item("gold_flake", "Gold flake", "A fleck of gold the water left behind.")
 
--- Cooking's: what a fire makes of meat left on it too long.
+-- Cooking's: what a fire makes of meat left on it too long, and meat salted
+-- to keep (Life's kitchen ask, its C1).
 item("charred_meat", "Charred meat", "Left on the fire. It is food, just.")
+item("cured_meat", "Cured meat", "Salted and dried. Travelling food.")
+
+-- The animals' leavings, worked (Life's ask C2): leather tanned with bark,
+-- cloth of wool.
+item("leather", "Leather", "Hide tanned with bark.")
+item("cloth", "Cloth", "Wool, spun and woven.")
 
 -- The kiln's: fuel, ceramics, metal.
 item("charcoal", "Charcoal", "Wood burned without air. It burns hotter than the log it was.")
@@ -160,6 +167,11 @@ block("bloomery_lit", {
     description = "Burning.",
     hardness = 1.5,
     light_emit = { r = 14, g = 8, b = 2 },
+})
+block("iron_anvil", {
+    name = "Iron anvil",
+    description = "Iron on iron: half the blows of a stone anvil.",
+    hardness = 3.0,
 })
 block("stone_anvil", {
     name = "Stone anvil",

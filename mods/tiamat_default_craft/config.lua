@@ -98,6 +98,8 @@ C.tools = {
     bronze_knife           = { name = "Bronze knife", type = "knife", tier = 1, uses = 80, weapon = 4 },
     iron_knife             = { name = "Iron knife", type = "knife", tier = 2, uses = 300, weapon = 6 },
     copper_pot             = { name = "Copper pot", type = "pot", tier = 1, uses = 0 },
+    -- For sewing: a coat, a cloak, a bandage.
+    bone_needle            = { name = "Bone needle", type = "needle", tier = 0, uses = 30 },
     fire_striker           = { name = "Fire striker", type = "striker", tier = 0, uses = 20 },
     -- Kiln tools, found in its tool slot: a crucible holds a melt and comes
     -- back; a mould is cast into four times and cracks.
@@ -249,6 +251,9 @@ C.kiln_idle = "Nothing to be made of that here."
 C.bloomery_slots = { fuel = 1, input = { 2, 3 }, tool = 4, output = 5 }
 C.bloom_ticks = 120 * 20
 C.coal_spoils = "Coal's sulphur spoils the bloom. It wants charcoal."
+
+-- An iron anvil takes half the blows a stone one does, rounded up.
+C.iron_anvil_divisor = 2
 
 -- The anvil: blows to beat a bloom into a bar, and a bar into a head. With
 -- nothing on it, a blow works what is in the off-hand, this slot of the

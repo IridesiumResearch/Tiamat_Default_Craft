@@ -602,6 +602,28 @@ ITEMS["iron_frame"] = frame
 ITEMS["ash"] = lambda: lump((150, 148, 144), (110, 108, 104))
 ITEMS["unfired_mould_gear"] = lambda: mould(lambda: gear(BRONZE, BRONZE_DARK), CLAY_WET, (98, 86, 74))
 ITEMS["mould_gear"] = lambda: mould(lambda: gear(BRONZE, BRONZE_DARK), CLAY_FIRED, CLAY_FIRED_DARK)
+def needle():
+    c = Canvas()
+    c.line(3, 13, 12, 4, (228, 222, 204))
+    c.dot(12, 3, (200, 194, 176))
+    c.dot(4, 12, (160, 150, 130))
+    return c.p
+
+
+def fabric(colour, dark):
+    c = Canvas()
+    c.rect(2, 4, 13, 12, colour)
+    for y in (6, 9):
+        c.line(2, y, 13, y, dark)
+    c.line(13, 4, 13, 12, dark)
+    return c.p
+
+
+ITEMS["cured_meat"] = lambda: lump((150, 70, 60), (100, 44, 36))
+ITEMS["leather"] = lambda: fabric((140, 96, 58), (98, 66, 40))
+ITEMS["cloth"] = lambda: fabric((222, 214, 196), (180, 170, 150))
+ITEMS["bone_needle"] = needle
+ITEMS["iron_anvil"] = lambda: [[(px[0] * 70 // 150, px[1] * 80 // 138, px[2] * 100 // 132, px[3]) if px[3] else px for px in row] for row in anvil()]
 ITEMS["torch"] = lambda: torch(True)
 ITEMS["spent_torch"] = lambda: torch(False)
 ITEMS["bark_strip"] = bark

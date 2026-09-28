@@ -718,7 +718,8 @@ local function note(kind) return function(material, value)
     return true
 end end
 game.register_block{ id = "campfire", light_emit = { r = 15, g = 9, b = 2 } }
-for _, id in ipairs({ "raw_meat", "cooked_meat", "hot_stew", "apple", "berries", "wheat", "bread" }) do
+for _, id in ipairs({ "raw_meat", "cooked_meat", "hot_stew", "apple", "berries", "wheat", "bread",
+        "hide", "sinew", "wool", "bone", "warm_coat", "cool_cloak", "bandage" }) do
     game.register_item{ id = id }
 end
 game.export{ version = 1, add_weapon = note("weapon"), add_harvest_tool = note("harvest"),
@@ -783,7 +784,7 @@ pub const WORLD_BLOCKS: &[&str] = &[
     "cherry_log", "mangrove_log", "acacia_log", "redwood_log", "ironwood_log", "stone", "granite", "dirt",
     "grass", "sand", "gravel", "wet_clay", "dry_clay", "cobbles", "bramble", "flint", "copper_ore",
     "iron_ore", "tin_ore", "coal", "obsidian", "water", "gold_ore", "silver_ore", "lead_ore", "slate", "calcite", "dark_basalt", "tall_grass",
-    "moss", "white_sand", "volcanic_ash",
+    "moss", "white_sand", "volcanic_ash", "salt",
 ];
 
 impl Rig {

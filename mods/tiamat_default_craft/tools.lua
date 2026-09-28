@@ -180,7 +180,7 @@ class_names[game.mod_id .. ":plank"] = "wood"
 class_names[game.mod_id .. ":brick"] = "rock"
 for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit", "unfired_kiln", "kiln", "kiln_lit",
         "sluice", "bloomery", "bloomery_lit", "stone_anvil", "torch", "spent_torch", "mudbrick", "glass",
-        "iron_lantern" }) do
+        "iron_lantern", "iron_anvil" }) do
     class_names[game.mod_id .. ":" .. short] = "loose"
 end
 
@@ -587,8 +587,12 @@ end
 
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 then
-    -- Charred meat is food, barely: Life eats it as it eats its own.
-    if life.add_food then life.add_food(game.mod_id .. ":charred_meat", { food = 1 }) end
+    -- Charred meat is food, barely: Life eats it as it eats its own. Cured
+    -- meat keeps a traveller going.
+    if life.add_food then
+        life.add_food(game.mod_id .. ":charred_meat", { food = 1 })
+        life.add_food(game.mod_id .. ":cured_meat", { food = 6, saturation = 6 })
+    end
     for _, short in ipairs(U.sorted_keys(C.tools)) do
         local spec = C.tools[short]
         local id = game.mod_id .. ":" .. short

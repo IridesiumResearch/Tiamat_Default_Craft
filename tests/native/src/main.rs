@@ -147,6 +147,7 @@ fn main() {
     progress_asks();
     wear_on_the_tool();
     anvil_offhand();
+    life_goods_and_iron_anvil();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -162,7 +163,7 @@ fn load_alone() {
     r.say("craft stick");
     assert_eq!(r.said(), "cannot make Sticks: nothing registered is #log");
     r.say("recipes");
-    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: bark_strip, cord, fire_striker, stick, tinder, torch, unlit_campfire, workbench"]);
+    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: bandage, bark_strip, cord, cord_from_sinew, fire_striker, stick, tinder, torch, unlit_campfire, workbench"]);
     // Every thing this mod registers has its picture: the world's rocks are
     // absent here, so do the check where they are too (registry()).
     textures_present(&r);
@@ -1437,4 +1438,85 @@ fn anvil_offhand() {
     offhand(&r, Some(r.stack("tiamat_default_world:dirt", 27)));
     assert_eq!(r.use_at(PLAYER, 90, 64, 90).as_deref(), Some("Nothing in your off-hand that hammer can work."));
     println!("anvil off-hand: ok");
+}
+
+/// What Life asked for: cured meat, and the animals' leavings worked into
+/// leather, cord and cloth, sewn into Life's own coat, cloak and bandages.
+/// And the iron anvil, forged on a stone one, which halves the blows.
+fn life_goods_and_iron_anvil() {
+    let mut r = Rig::new(Setup { world: true, life: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let d = |r: &Rig, id: &str| r.details(PLAYER, id)[0].clone();
+
+    // By hand: cord from sinew, bandages from cloth.
+    r.give(PLAYER, "tiamat_default_life:sinew", 27);
+    r.say("craft cord_from_sinew");
+    assert_eq!(r.said(), "made Cord x1");
+    assert_eq!(r.units(PLAYER, "cord"), 81);
+
+    // At the workbench, one recipe after another.
+    r.give(PLAYER, "workbench", 27);
+    r.place(PLAYER, 110, 64, 110, "workbench").unwrap();
+    let b = "tiamat_default_craft:workbench:110,64,110";
+    let make = |r: &mut Rig, puts: &[(&str, u32)], label: &str| {
+        for slot in 1..=10 {
+            r.boxes.set(b, slot, None);
+        }
+        for (i, (id, units)) in puts.iter().enumerate() {
+            r.boxes.set(b, i + 1, Some(r.stack(id, *units)));
+        }
+        r.hold_nothing(PLAYER);
+        assert_eq!(r.use_at(PLAYER, 110, 64, 110).as_deref(), Some(""));
+        r.press_labelled(PLAYER, "station", label);
+        let made = r.boxes.get(b, 10);
+        r.close(PLAYER, "station");
+        made.unwrap_or_else(|| panic!("{label} made nothing"))
+    };
+    let leather = make(&mut r, &[("tiamat_default_life:hide", 27), ("bark_strip", 54)], "Leather");
+    assert_eq!(leather.material, r.material("leather"));
+    let cloth = make(&mut r, &[("tiamat_default_life:wool", 81)], "Cloth");
+    assert_eq!(cloth.material, r.material("cloth"));
+    let needle = make(&mut r, &[("tiamat_default_life:bone", 27)], "Bone needle");
+    assert_eq!(needle.material, r.material("bone_needle"), "a knife at hand from the toolkit");
+    r.inventory.put(PLAYER, needle);
+    let coat = make(&mut r, &[("leather", 81), ("cloth", 54)], "Warm coat");
+    assert_eq!(coat.material, r.material("tiamat_default_life:warm_coat"));
+    let cloak = make(&mut r, &[("cloth", 108)], "Cool cloak");
+    assert_eq!(cloak.material, r.material("tiamat_default_life:cool_cloak"));
+    let cured = make(&mut r, &[("tiamat_default_life:raw_meat", 27), ("tiamat_default_world:salt", 9)], "Cured meat");
+    assert_eq!(cured.material, r.material("cured_meat"));
+    r.say("life heard food tiamat_default_craft:cured_meat");
+    assert_eq!(r.said(), "yes");
+    r.give(PLAYER, "cloth", 27);
+    r.say("craft bandage");
+    assert_eq!(r.units(PLAYER, "tiamat_default_life:bandage"), 54);
+
+    // The iron anvil: five bars and ten blows on a stone one...
+    r.give(PLAYER, "stone_anvil", 27);
+    r.place(PLAYER, 112, 64, 110, "stone_anvil").unwrap();
+    let a = "tiamat_default_craft:anvil:112,64,110";
+    r.boxes.set(a, 1, Some(r.stack("iron_bar", 27 * 5)));
+    r.hold_nothing(PLAYER);
+    r.use_at(PLAYER, 112, 64, 110);
+    r.press_labelled(PLAYER, "station", "Iron anvil");
+    r.close(PLAYER, "station");
+    r.hold(PLAYER, "iron_hammer", Some(&d(&r, "iron_hammer")));
+    for _ in 0..10 {
+        assert_eq!(r.use_at(PLAYER, 112, 64, 110).as_deref(), Some(""));
+    }
+    assert_eq!(r.boxes.get(a, 2).map(|s| s.material), Some(r.material("iron_anvil")));
+
+    // ...and on it a bloom is two blows, not three.
+    r.give(PLAYER, "iron_anvil", 27);
+    r.place(PLAYER, 114, 64, 110, "iron_anvil").unwrap();
+    let ia = "tiamat_default_craft:anvil:114,64,110";
+    r.boxes.set(ia, 1, Some(r.stack("iron_bloom", 27)));
+    for _ in 0..2 {
+        assert_eq!(r.use_at(PLAYER, 114, 64, 110).as_deref(), Some(""));
+    }
+    assert_eq!(r.boxes.get(ia, 2).map(|s| s.material), Some(r.material("iron_bar")), "two blows on iron");
+    println!("life's goods and the iron anvil: ok");
 }

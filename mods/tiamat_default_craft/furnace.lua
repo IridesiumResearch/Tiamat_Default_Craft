@@ -37,8 +37,10 @@ local FU = {}
 
 local STRIKER = game.mod_id .. ":fire_striker"
 
--- The unfired kiln opens as the kiln; its first fire makes it one.
+-- The unfired kiln opens as the kiln; its first fire makes it one. An iron
+-- anvil is an anvil (anvil.lua counts its blows).
 ST.alias(game.mod_id .. ":unfired_kiln", "kiln")
+ST.alias(game.mod_id .. ":iron_anvil", "anvil")
 
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 and life.add_heat_source then

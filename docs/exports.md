@@ -171,7 +171,7 @@ time it wears.
 | `set_effects(fn)` | `fn(uuid, prefix) -> { ["craft.<name>"] = delta }` | The numbers progression nodes change, read where each is used (below). One owner: the first to set it keeps it. A function answering nothing reads as no effects. |
 | `set_gate(fn)` | `fn(uuid, node) -> boolean` | The gate every `requires` is asked through. One owner: the first to set it keeps it. With none, everything is open; a gate that answers nothing (its mod faulted) is read as open, so a broken progress mod never stops the world making anything. |
 | `on_crafted(fn)` | `fn(uuid, recipe_id, outputs)` | Hears every recipe made. |
-| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`, `"bloom:iron"`, `"wash:gold"` — the list below, frozen. |
+| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"forge:iron_anvil"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`, `"cook:cured"`, `"craft:leather"`, `"craft:cloth"`, `"sew:warm_coat"`, `"sew:cool_cloak"`, `"bloom:iron"`, `"wash:gold"` — the list below, frozen. |
 | `on_tool_broken(fn)` | `fn(uuid, tool_id)` | Hears a tool wear out in somebody's hands (step 2). |
 
 ### The numbers `set_effects` moves
@@ -208,7 +208,10 @@ none is renamed or removed without bumping `version`.
 - `forge:iron_bar`, `forge:iron_<tool>`, `forge:iron_hammer` (the first,
   with bronze), `forge:iron_plate`, `forge:iron_nails`, `forge:iron_chain`,
   `forge:iron_hinge`.
-- `wash:tin`, `wash:gold`; `cook:meat`, `cook:stew`, `cook:bread`.
+- `wash:tin`, `wash:gold`; `cook:meat`, `cook:stew`, `cook:bread`,
+  `cook:cured`.
+- `craft:leather`, `craft:cloth`, `sew:warm_coat`, `sew:cool_cloak`,
+  `forge:iron_anvil`.
 - `craft:<recipe id>` for every other recipe, among them
   `craft:tiamat_default_craft:workbench`, `...:chest`, `...:bloomery`,
   `...:stone_anvil`, `...:sluice`, `...:torch`, `...:iron_frame`.
@@ -217,7 +220,8 @@ none is renamed or removed without bumping `version`.
 
 All are namespaced `tiamat_default_craft:` by the engine.
 
-- **Items:** `stick`, `tinder`, `cord`, `haft`, `bark_strip`, `ash`, the
+- **Items:** `stick`, `tinder`, `cord`, `haft`, `bark_strip`, `ash`,
+  `cured_meat`, `leather`, `cloth`, the tool `bone_needle`, the
   parts `iron_plate`, `iron_nails`, `iron_chain`, `iron_hinge`,
   `iron_frame`, `bronze_gear`, `unfired_mould_gear`, `tin_grain`, `gold_flake`,
   `iron_bloom`, `iron_bar`, `iron_<tool>_head` (as the bronze heads),
@@ -236,7 +240,7 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Engine tools:** `hand` (the default), and every tool above that digs:
   the digging sticks, spades, mauls, axes, picks and chisels (the chisels
   with the sub-node brush).
-- **Blocks:** `mudbrick`, `brick` (class `rock`: a pick's), `glass`
+- **Blocks:** `iron_anvil` (an anvil; half the blows), `mudbrick`, `brick` (class `rock`: a pick's), `glass`
   (transparent), `iron_lantern` (never burns out), `torch`, `spent_torch` (a torch burned out by a random tick;
   it drops its stick), `plank`, `workbench`, `chest`, `sluice`, `bloomery`,
   `bloomery_lit`, `stone_anvil`, `unfired_kiln`, `kiln`,
@@ -283,6 +287,14 @@ All are namespaced `tiamat_default_craft:` by the engine.
   (white sand and nine units of `#ash`), `mould_gear` (heat 1) and
   `bronze_gear` (a bronze ingot in the gear mould). A campfire that burns
   out leaves an ash in its box.
+- **For Life** (its asks C1 and C2, when Life is here): `cured_meat` (raw
+  meat and a third of a block of salt, at the workbench; food through
+  `add_food`), `cord_from_sinew` (by hand, three), `leather` (a hide and two
+  bark strips), `cloth` (three wool), `bone_needle` (a bone, a `#knife` at
+  hand), and Life's own `warm_coat` (three leather, two cloth) and
+  `cool_cloak` (four cloth), sewn with the needle, `bandage` (a cloth by
+  hand, two), and `leather_bellows`. On a stone anvil, `iron_anvil` (five
+  bars, the iron hammer, ten blows).
 - **Cooking** (Life's food, when Life is here): on a campfire,
   `spit_roast` (raw meat → cooked, 15 s), `stew` (raw meat and a `#fruit`,
   with a copper pot → hot stew, 30 s), `dry_clay` (wet clay → the world's
@@ -310,7 +322,7 @@ All are namespaced `tiamat_default_craft:` by the engine.
   screen, or a dialog of its own without it.
 - **Tabs:** `tiamat_default_craft:hand`, "Craft", on Tiamat Default UI's screen.
 - **Groups:** `#ash`, this mod's ash and the world's volcanic ash;
-  `#hammer` and `#chisel`, the bronze and iron ones; `#fruit`, Life's apples and berries; `#plank`, this mod's plank and the world's three; `#wedge`,
+  `#hammer`, `#chisel` and `#knife`, the bronze and iron ones; `#fruit`, Life's apples and berries; `#plank`, this mod's plank and the world's three; `#wedge`,
   the two wedges; `#log`, the world's thirteen logs; `#tinder`, its dry grass,
   needles, moss, lichen and heather.
 
