@@ -195,6 +195,8 @@ and the change is recorded here.
   the iron frame is assembled from them and is not.
 - **No bucket.** Life already has one, and the brief waits on `set_fluid`'s
   runtime behaviour being settled.
+- **The progress mod hands its effects in** (`set_effects`), as it does its
+  gate: it loads after this mod, which therefore cannot read its exports.
 - **Every head has a mould**, the sickle and hoe included, and the pot's
   mould casts the copper pot.
 - **Fire-setting reaches one block further through open air**, so a face

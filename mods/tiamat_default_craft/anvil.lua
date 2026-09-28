@@ -75,6 +75,11 @@ local function work_of(name, station)
     return table.concat(parts, "+")
 end
 
+--- Blows a recipe takes this player.
+function A.strikes(uuid, recipe)
+    return math.max(1, recipe.strikes + R.effect(uuid, "craft.anvil_strikes"))
+end
+
 --- One blow. Answers what the player is told ("" for nothing).
 function A.strike(e, station, name)
     local s = state(name)
@@ -99,7 +104,7 @@ function A.strike(e, station, name)
     if work ~= s.work then s.work, s.strikes = work, 0 end
     s.strikes = s.strikes + 1
     tdc.sounds.at("anvil_ring", { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
-    local done = s.strikes >= recipe.strikes
+    local done = s.strikes >= A.strikes(e.player, recipe)
     if done then
         s.strikes, s.work = 0, nil
         local made, reason = R.perform(e.player, s.choice, name)

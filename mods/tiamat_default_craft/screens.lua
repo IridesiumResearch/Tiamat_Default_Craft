@@ -75,6 +75,7 @@ end
 --- A recipe as one line: "Sticks x4".
 function S.recipe_text(recipe)
     local out = recipe.outputs[1]
+    if not out then return recipe.name end
     local n = out.units // U.UNITS
     local text = recipe.name
     if n > 1 then text = text .. " x" .. n end

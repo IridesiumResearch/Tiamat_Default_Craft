@@ -41,6 +41,7 @@ local groups = {}          -- "#name" -> { list = { names }, set = { name = true
 local stations = {}        -- id -> record
 local fuels = {}           -- qualified name -> { heat, ticks }
 local gate = nil           -- fn(uuid, node) -> boolean, or nil for "everything is open"
+local effects = nil        -- fn(uuid, prefix) -> { key = delta }, or nil for "no effects"
 local subscribers = { crafted = {}, first = {}, tool_broken = {} }
 
 -- Numeric ids, resolved lazily. Cleared never: the registries are frozen by
@@ -267,8 +268,8 @@ local function entry(value, groups_ok)
     return { name = name, units = units }
 end
 
-local function entries(list, limit, groups_ok, what)
-    if type(list) ~= "table" or #list == 0 then return nil, what .. " is a list" end
+local function entries(list, limit, groups_ok, what, empty_ok)
+    if type(list) ~= "table" or (#list == 0 and not empty_ok) then return nil, what .. " is a list" end
     if #list > limit then return nil, "at most " .. limit .. " " .. what end
     local out = {}
     for i, value in ipairs(list) do
@@ -294,7 +295,9 @@ function R.register(spec)
     local inputs, why = entries(spec.inputs, C.max_inputs, true, "inputs")
     if not inputs then return nil, why end
     local outputs
-    outputs, why = entries(spec.outputs, C.max_outputs, false, "outputs")
+    -- A recipe may make nothing: a study, whose product is what its
+    -- `on_crafted` subscribers make of it (insight, to the progress mod).
+    outputs, why = entries(spec.outputs, C.max_outputs, false, "outputs", true)
     if not outputs then return nil, why end
 
     local tools = {}
@@ -344,7 +347,8 @@ function R.register(spec)
 
     recipes[id] = {
         id = id,
-        name = type(spec.name) == "string" and string.sub(spec.name, 1, 64) or U.title(outputs[1].name),
+        name = type(spec.name) == "string" and string.sub(spec.name, 1, 64)
+            or U.title(outputs[1] and outputs[1].name or id),
         station = station.id,
         inputs = inputs,
         tools = tools,
@@ -412,6 +416,55 @@ end
 
 --- The progression gate: `fn(uuid, node) -> boolean`, asked for every recipe
 --- that `requires` a node. One owner; the first to set it keeps it.
+--- Puts a progression requirement on a recipe that has none: how a world
+--- option in another mod gates this mod's recipes. While mods load.
+function R.set_requires(id, node)
+    if not tdc.loading() then return nil, "requirements are set while mods load" end
+    local recipe = recipes[id]
+    if not recipe then return nil, "no such recipe" end
+    if type(node) ~= "string" or node == "" or #node > 64 then return nil, "a node is a progression node id" end
+    if recipe.requires then return nil, "it already requires " .. recipe.requires end
+    recipe.requires = node
+    return true
+end
+
+--- The effects: `fn(uuid, prefix) -> { ["craft.key"] = delta }`, the numbers
+--- a progression mod's nodes change. One owner; the first to set it keeps
+--- it. The progress mod loads after this one and so cannot be read by it;
+--- it hands its `effects_of` in, as it hands in the gate.
+function R.set_effects(fn)
+    if type(fn) ~= "function" then return nil, "effects are a function" end
+    if effects then return nil, "effects are already set" end
+    effects = fn
+    return true
+end
+
+--- A player's delta for one of this mod's numbers, `"craft.<name>"`: 0 with
+--- no effects set, for nobody, or when the owner answers nothing.
+function R.effect(uuid, key)
+    if not (effects and uuid) then return 0 end
+    local all = effects(uuid, "craft.")
+    local value = type(all) == "table" and all[key] or nil
+    return type(value) == "number" and math.tointeger(value) or 0
+end
+
+--- How a recipe's numbers move with the effects: `{ input = key, output =
+--- key, per = n, ticks = key }` — `input` adds its delta for every 27 units
+--- of the first input, `output` adds `per` units a point to the first
+--- output, `ticks` adds to the time. This mod's own recipes only.
+function R.tune(id, tuning)
+    recipes[id].tuning = tuning
+end
+
+--- A recipe's ticks for a player, with the effects.
+function R.ticks(uuid, recipe)
+    local t = recipe.ticks
+    if recipe.tuning and recipe.tuning.ticks then
+        t = t + R.effect(uuid, recipe.tuning.ticks)
+    end
+    return math.max(1, t)
+end
+
 function R.set_gate(fn)
     if type(fn) ~= "function" then return nil, "a gate is a function" end
     if gate then return nil, "a gate is already set" end
@@ -758,6 +811,24 @@ function R.check(uuid, id, opts)
     local resolved
     resolved, why = resolve(recipe)
     if not resolved then return nil, why end
+    -- The effects move a recipe's first input and first output.
+    local tuning = recipe.tuning
+    if tuning and uuid and (tuning.input or tuning.output) then
+        local copy = { inputs = {}, tools = resolved.tools, outputs = {} }
+        for i, e in ipairs(resolved.inputs) do copy.inputs[i] = e end
+        for i, e in ipairs(resolved.outputs) do copy.outputs[i] = e end
+        if tuning.input and copy.inputs[1] then
+            local e = copy.inputs[1]
+            local delta = R.effect(uuid, tuning.input) * (e.units // U.UNITS)
+            copy.inputs[1] = { candidates = e.candidates, name = e.name, units = math.max(1, e.units + delta) }
+        end
+        if tuning.output and copy.outputs[1] then
+            local e = copy.outputs[1]
+            local delta = R.effect(uuid, tuning.output) * (tuning.per or 1)
+            copy.outputs[1] = { material = e.material, name = e.name, units = math.max(1, e.units + delta) }
+        end
+        resolved = copy
+    end
     local takes
     takes, why = plan(resolved, source)
     if not takes then return nil, why end

@@ -64,7 +64,7 @@ end
 
 local WASH = game.mod_id .. ":wash"
 
-local function tend(station, name, pos, step)
+local function tend(station, name, pos, step, by)
     if game.get_block(pos) == nil then return end          -- not loaded: paused
     local s = state(name)
     local opts = { container = name, unattended = true }
@@ -75,11 +75,16 @@ local function tend(station, name, pos, step)
     s.progress = s.progress + step
     if s.progress >= R.recipe(WASH).ticks then
         s.progress = 0
-        if R.perform(nil, WASH, opts) then
+        if R.perform(by, WASH, opts) then
             s.washes = s.washes + 1
-            if s.washes % C.gold_every == 0 then
+            -- The placer's eye for gold (a progression effect) shortens the count.
+            local every = math.max(1, C.gold_every + R.effect(by, "craft.sluice_gold_period"))
+            if s.washes % every == 0 then
                 for _, slot in ipairs(station.slots.output) do
-                    if game.container_give(name, { material = FLAKE, count = 1, slot = slot }) > 0 then break end
+                    if game.container_give(name, { material = FLAKE, count = 1, slot = slot }) > 0 then
+                        R.first(by, "wash:gold")
+                        break
+                    end
                 end
             end
         end
@@ -96,7 +101,7 @@ tdc.on_tick(function(dt)
     elapsed = 0
     local station = R.station("sluice")
     for _, placed in ipairs(ST.indexed("sluice")) do
-        tend(station, placed.name, placed.pos, step)
+        tend(station, placed.name, placed.pos, step, placed.by)
     end
 end)
 

@@ -169,6 +169,17 @@ return {
     --- a node. One owner: the first to set it keeps it.
     set_gate = safe("set_gate", function(fn) return R.set_gate(fn) end),
 
+    --- Puts a node requirement on one of the registry's recipes that has
+    --- none. While mods load.
+    set_requires = safe("set_requires", function(id, node)
+        if type(id) ~= "string" then return nil, "a recipe is named by its id" end
+        return R.set_requires(id, node)
+    end),
+
+    --- `fn(uuid, prefix) -> { ["craft.<name>"] = delta }`: the numbers the
+    --- progression nodes change, read where each is used. One owner.
+    set_effects = safe("set_effects", function(fn) return R.set_effects(fn) end),
+
     --- `fn(uuid, recipe_id, outputs)` after every recipe made.
     on_crafted = safe("on_crafted", function(fn) return R.on_crafted(fn) end),
 

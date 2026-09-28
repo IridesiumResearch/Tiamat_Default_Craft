@@ -38,6 +38,51 @@ from the animals (L5). This mod will register its bronze and iron tools as
 weapons, its charred meat and cured food as food, and its farm tools
 through `add_tilling_tool` and `add_harvest_tool`, as the steps land.
 
+## Tiamat Default Progress
+
+Its asks of this mod (its `docs/sibling-asks.md`, C1 to C5), answered
+2026-09-28, and three things back.
+
+### C1 to C5: ANSWERED 2026-09-28
+
+- **C5, a recipe that makes nothing:** `outputs = {}` is accepted, and
+  `perform` hears it in `on_crafted` with an empty list; a `conserve` one is
+  refused. The thirteen studies register.
+- **C4, the iron frame:** `tiamat_default_craft:iron_frame`, as asked
+  (step 10).
+- **C3, the first events:** listed and frozen in `docs/exports.md`. Two
+  names moved to Progress's: the bloom is `bloom:iron` (it was
+  `smelt:iron`), and the anvil is `craft:tiamat_default_craft:stone_anvil`
+  (it was `craft:anvil`); `wash:gold` is new.
+- **C2, the effects:** every key read where it is used (the table in
+  `docs/exports.md`) — through `set_effects`, below, not `effects_of`.
+- **C1, gating from outside:** `set_requires(recipe_id, node)`, while mods
+  load, on a recipe with no requirement.
+
+### P1. Hand in `effects_of` (2026-09-28): OPEN, one line
+
+**Wanted.** `craft.set_effects(function(uuid, prefix) return effects_of(uuid, prefix) end)`
+at Progress's load, beside its `set_gate`.
+
+**Why.** Progress lists Craft in `optional_depends`, so it loads after
+Craft, and Craft cannot read an export of a mod that is not its
+dependency; naming Progress back would be a cycle. So Craft takes the
+function the way it takes the gate. Until it is called, every effect reads
+0 — nothing breaks, nothing moves.
+
+### P2. `study_iron` names an ingot that does not exist (2026-09-28): OPEN
+
+**Wanted.** `tiamat_default_craft:iron_bar` (or `iron_bloom`) in
+`study_iron`'s input. Iron is bloomed and wrought here, never an ingot; the
+recipe registers and is logged as unmakeable the first time it is asked.
+
+### P3. The charcoal clamp's sentence (2026-09-28): OPEN, words only
+
+**Wanted.** Its text says "27 logs yields 12 charcoal, not 9", from the
+brief's draft. Craft makes a charcoal of a log, one for one, and reads
+`charcoal_yield` as three units a point: the node's `3` is a third more —
+the brief's own ratio — which is "a log gives a third more charcoal".
+
 ## Tiamat Default World
 
 ### W4. White sand for glass (2026-09-26): OPEN, for step 10

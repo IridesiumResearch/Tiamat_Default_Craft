@@ -136,7 +136,12 @@ local function stoke(station, name, s)
     if game.container_take(name, { material = fuel.material, units = U.UNITS, slot = fuel.slot }) < U.UNITS then
         return false
     end
-    s.burn, s.full, s.fuel_heat = fuel.ticks, fuel.ticks, fuel.heat
+    local ticks = fuel.ticks
+    if station.id == "kiln" then
+        ticks = ticks * (100 + R.effect(s.by, "craft.fuel_percent")) // 100
+    end
+    ticks = math.max(1, ticks)
+    s.burn, s.full, s.fuel_heat = ticks, ticks, fuel.heat
     s.heat = heat_of(station, name, fuel.heat)
     return true
 end
@@ -181,7 +186,7 @@ local function tend(station, name, pos, step)
     if job then
         s.progress = s.progress + step
         local recipe = R.recipe(job)
-        if s.progress >= recipe.ticks then
+        if s.progress >= R.ticks(s.by, recipe) then
             s.progress = 0
             R.perform(s.by, job, { container = name, heat = s.heat, unattended = true })
         end
@@ -228,6 +233,11 @@ function FU.light(e, station, name, pos)
     local was = game.block_of(e.material)
     if not stoke(station, name, s) then return "It wants fuel first." end
     s.lit, s.by, s.job, s.progress = 1, e.player, nil, 0
+    -- Stoked before `by` was known: the first fuel's ticks again, for them.
+    if station.id == "kiln" then
+        s.burn = math.max(1, s.burn * (100 + R.effect(s.by, "craft.fuel_percent")) // 100)
+        s.full = s.burn
+    end
     swap(station, pos, true)
     save(name)
     tdc.tools.wear_held(e.player, 1)
@@ -248,7 +258,7 @@ function FU.status(name)
     if s.job then
         local recipe = R.recipe(s.job)
         status.job_text = recipe.name
-        status.progress = recipe.ticks > 0 and (s.progress * 1000) // recipe.ticks or 0
+        status.progress = (s.progress * 1000) // R.ticks(s.by, recipe)
     elseif s.lit == 1 then
         -- Burning, and something in the inputs that nothing here makes: say so.
         local station = R.station(ST.kind_id(name) or "")

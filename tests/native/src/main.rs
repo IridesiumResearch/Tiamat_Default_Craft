@@ -124,6 +124,9 @@ game.register_on_chat(function(e)
 end)
 "##;
 
+/// A stand-in for the progress mod as it uses Craft (fixtures/progress.lua).
+const PROGRESS_STANDIN: &str = include_str!("../fixtures/progress.lua");
+
 /// A stand-in for the tech mod (fixtures/tech.lua).
 const TECH: &str = include_str!("../fixtures/tech.lua");
 
@@ -141,6 +144,7 @@ fn main() {
     iron();
     torch_and_hud();
     after_the_loop();
+    progress_asks();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -630,7 +634,7 @@ fn stations() {
     r.place(PLAYER, 5, 64, 5, "workbench").unwrap();
     let bench = "tiamat_default_craft:workbench:5,64,5";
     assert!(r.boxes.exists(bench));
-    assert!(r.storage.dump().contains(&format!("station:{bench}=Text(\"domain=overworld;kind=workbench;x=5;y=64;z=5\")")), "{}", r.storage.dump());
+    assert!(r.storage.dump().contains(&format!("station:{bench}=Text(\"by={};domain=overworld;kind=workbench;x=5;y=64;z=5\")", hex(PLAYER))), "{}", r.storage.dump());
 
     // Used: the screen, and the container lent to this player alone.
     assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
@@ -1000,7 +1004,7 @@ fn iron() {
     r.close(PLAYER, "station");
     r.tick(2460);
     assert_eq!(r.boxes.get(b, 5).map(|s| s.material), Some(r.material("iron_bloom")));
-    assert!(r.storage.dump().contains(&format!("first:{}:smelt:iron=", hex(PLAYER))));
+    assert!(r.storage.dump().contains(&format!("first:{}:bloom:iron=", hex(PLAYER))));
     r.say("life heard heat tiamat_default_craft:bloomery_lit 0.8");
     assert_eq!(r.said(), "yes");
 
@@ -1244,4 +1248,91 @@ fn after_the_loop() {
     r.hold_nothing(PLAYER);
     assert!(r.dig_start(PLAYER, "brick").is_err());
     println!("after the loop: ok");
+}
+
+/// The progress mod's asks: requirements set from outside, a study that
+/// makes nothing, and each node effect moving the number it names.
+fn progress_asks() {
+    let prelude = "tdc_overrides = { fire_fuel = 4000 }";
+    let mut r = Rig::new(Setup {
+        world: true,
+        life: true,
+        prelude: prelude.into(),
+        fixtures: vec![("tiamat_default_progress".into(), PROGRESS_STANDIN.into())],
+        ..Setup::default()
+    });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let d = |r: &Rig, id: &str| r.details(PLAYER, id)[0].clone();
+    let tool = |r: &Rig, id: &str| tiamat_core::inventory::Stack { detail: Some(d(r, id)), ..r.stack(id, 27) };
+
+    // Only while mods load.
+    r.say("q late");
+    assert_eq!(r.said(), "nil");
+
+    // A study: a copper ingot on the table, nothing made, the insight heard.
+    r.say("q set craft.none 0");
+    r.said();
+    r.give(PLAYER, "copper_ingot", 27);
+    r.say("q study");
+    assert_eq!(r.said(), "nil 20 0", "refused: \"missing copper ingot\"");
+    r.boxes.set("progress:table", 1, Some(r.stack("copper_ingot", 27)));
+    r.say("q study");
+    assert_eq!(r.said(), "true 0 10", "made, nothing out, and heard");
+    assert_eq!(r.boxes.get("progress:table", 1), None);
+
+    // Fire-setting 200 ticks sooner.
+    r.say("q set craft.fireset_ticks -200");
+    r.put(80, 64, 80, "unlit_campfire");
+    r.put(81, 64, 80, "tiamat_default_world:stone");
+    r.hold(PLAYER, "fire_striker", Some(&d(&r, "fire_striker")));
+    assert_eq!(r.use_at(PLAYER, 80, 64, 80).as_deref(), Some(""));
+    r.tick(420);
+    assert_eq!(r.block_name(81, 64, 80), "tiamat_default_craft:cracked_stone", "cracked at 400");
+
+    // A kiln: charcoal a third more, copper from 18 units of ore.
+    r.say("q set craft.charcoal_yield 3");
+    r.say("q set craft.smelt_ore_units -9");
+    r.give(PLAYER, "kiln", 27);
+    r.place(PLAYER, 82, 64, 80, "kiln").unwrap();
+    let k = "tiamat_default_craft:kiln:82,64,80";
+    r.boxes.set(k, 1, Some(r.stack("tiamat_default_world:coal", 27 * 9)));
+    assert_eq!(r.use_at(PLAYER, 82, 64, 80).as_deref(), Some(""));
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    r.tick(1240);
+    assert_eq!(r.boxes.get(k, 5).map(|s| s.units), Some(36), "a log is a charcoal and a third");
+    r.boxes.set(k, 5, None);
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:copper_ore", 18)));
+    r.boxes.set(k, 4, Some(tool(&r, "crucible")));
+    r.tick(940);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("copper_ingot"), 27)), "from 18 units");
+
+    // The anvil: a blow fewer.
+    r.say("q set craft.anvil_strikes -1");
+    r.give(PLAYER, "stone_anvil", 27);
+    r.place(PLAYER, 84, 64, 80, "stone_anvil").unwrap();
+    let a = "tiamat_default_craft:anvil:84,64,80";
+    r.boxes.set(a, 1, Some(r.stack("iron_bloom", 27)));
+    r.hold(PLAYER, "bronze_hammer", Some(&d(&r, "bronze_hammer")));
+    for _ in 0..2 {
+        assert_eq!(r.use_at(PLAYER, 84, 64, 80).as_deref(), Some(""));
+    }
+    assert_eq!(r.boxes.get(a, 2).map(|s| s.material), Some(r.material("iron_bar")), "two blows, not three");
+
+    // Tools last longer: a bronze pick's hundred uses are a hundred and twenty-five.
+    r.say("q set craft.uses_percent.bronze 25");
+    r.hold(PLAYER, "bronze_pick", Some(&d(&r, "bronze_pick")));
+    r.say("q tool");
+    assert_eq!(r.said(), "0/125");
+
+    // A chisel wears half as fast: two uses, one of wear.
+    r.say("q set craft.chisel_wear_percent -50");
+    r.hold(PLAYER, "bronze_chisel", Some(&d(&r, "bronze_chisel")));
+    r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    r.say("q tool");
+    assert_eq!(r.said(), "1/250", "one wear for two uses (and bronze lasts a quarter longer)");
+    println!("progress asks: ok");
 }

@@ -112,12 +112,13 @@ function ST.ensure(id, pos)
     return ensure({ id = id, size = station.size, station = station }, pos)
 end
 
-function ensure(kind, pos)
+function ensure(kind, pos, by)
     local name = ST.name(kind.id, pos)
     game.make_container(name, kind.size)
     local idx = load_index()
     if not idx[name] then
-        local record = { kind = kind.id, x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld" }
+        local record = { kind = kind.id, x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld",
+            by = by }
         idx[name] = record
         game.storage.set("station:" .. name, U.encode(record))
     end
@@ -143,8 +144,8 @@ function ST.indexed(kind_id)
     for _, name in ipairs(U.sorted_keys(idx)) do
         local r = idx[name]
         if r.kind == kind_id then
-            out[#out + 1] = { name = name, pos = { x = r.x, y = r.y, z = r.z,
-                domain = r.domain ~= "overworld" and r.domain or nil } }
+            out[#out + 1] = { name = name, by = type(r.by) == "string" and r.by or nil,
+                pos = { x = r.x, y = r.y, z = r.z, domain = r.domain ~= "overworld" and r.domain or nil } }
         end
     end
     return out
@@ -172,7 +173,7 @@ tdc.on_place(function(e)
     local refusal = check and check(pos)
     if refusal then return refusal end
     if e.occupancy == game.OCCUPANCY_FULL then
-        ensure(kind, pos)
+        ensure(kind, pos, e.player)
     end
 end)
 

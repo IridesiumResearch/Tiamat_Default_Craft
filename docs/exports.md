@@ -50,7 +50,9 @@ keep.
   `"kiln"`, `"bloomery"`, `"anvil"` and `"sluice"`. Name yours with your
   mod's id in front, `"my_mod:alembic"`.
 - `inputs` and `outputs` are lists of `{ "mod:thing", count = n }` or
-  `{ "mod:thing", units = n }`. `count` is items, 27 units each (charter
+  `{ "mod:thing", units = n }`. `outputs` may be empty: a recipe that makes
+  nothing, whose product is what its `on_crafted` subscribers make of it (a
+  study, which the progress mod pays in insight). `count` is items, 27 units each (charter
   rule 5); inside, everything is units. An input may name a `"#group"`,
   which any member satisfies, in any mix. At most 16 inputs and 8 outputs.
 - `tools` are present and not consumed: `"mod:thing"`, a `"#group"`, or
@@ -157,10 +159,51 @@ works, and wears per player and kind.
 
 | Field | Shape | What it does |
 |---|---|---|
+| `set_requires(recipe_id, node)` | a recipe id; a node id | Puts a requirement on a recipe that has none, while mods load: how a world option elsewhere gates this mod's recipes. Answers `true`, or `nil` and why (no such recipe; it already requires one). |
+| `set_effects(fn)` | `fn(uuid, prefix) -> { ["craft.<name>"] = delta }` | The numbers progression nodes change, read where each is used (below). One owner: the first to set it keeps it. A function answering nothing reads as no effects. |
 | `set_gate(fn)` | `fn(uuid, node) -> boolean` | The gate every `requires` is asked through. One owner: the first to set it keeps it. With none, everything is open; a gate that answers nothing (its mod faulted) is read as open, so a broken progress mod never stops the world making anything. |
 | `on_crafted(fn)` | `fn(uuid, recipe_id, outputs)` | Hears every recipe made. |
-| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`. Forging adds its own when it lands. |
+| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`, `"bloom:iron"`, `"wash:gold"` — the list below, frozen. |
 | `on_tool_broken(fn)` | `fn(uuid, tool_id)` | Hears a tool wear out in somebody's hands (step 2). |
+
+### The numbers `set_effects` moves
+
+Each is an integer delta, summed by the owner, read at the moment it is
+used and never stored.
+
+| Key | What it moves |
+|---|---|
+| `craft.fireset_ticks` | Ticks of burning before a fire the player lit cracks the rock round it (600). |
+| `craft.charcoal_yield` | Charcoal from a log in the kiln: three units a point, so 3 is a third more. |
+| `craft.fuel_percent` | How long each fuel lasts in a kiln the player lit, per cent. |
+| `craft.sluice_gold_period` | Washes to a gold flake in a sluice the player placed (9). |
+| `craft.mould_pours` | Pours before a mould cracks (4). |
+| `craft.uses_percent.wood`, `.bronze`, `.iron` | Uses a tool of that tier lasts, per cent. |
+| `craft.smelt_ore_units` | Ore an ingot of copper or tin, or a bloom (per 27 of it), takes. |
+| `craft.bloom_ticks` | Ticks a bloom takes in the bloomery (2,400). |
+| `craft.anvil_strikes` | Blows every anvil recipe takes. |
+| `craft.chisel_wear_percent` | Wear a chisel takes per use, per cent; the fraction is carried. |
+
+### The first events, frozen
+
+What `on_first` hears. These names are kept; a new one may be added, and
+none is renamed or removed without bumping `version`.
+
+- `fire:lit`, `fire:kiln` (a kiln's first firing), `fire:charcoal`,
+  `fireset:<rock>` (`stone`, `slate`, `calcite`, `dark_basalt`,
+  `copper_ore`, `iron_ore`, `coal`).
+- `smelt:<metal>` (`copper`, `tin`, `silver`, `gold`, `lead`, `bronze`),
+  `smelt:glass`, `bloom:iron`.
+- `cast:bronze_<tool>`, `cast:copper_pot`, `cast:bronze_tuyere`,
+  `cast:bronze_gear`.
+- `haft:bronze_<tool>`, `haft:iron_<tool>`.
+- `forge:iron_bar`, `forge:iron_<tool>`, `forge:iron_hammer` (the first,
+  with bronze), `forge:iron_plate`, `forge:iron_nails`, `forge:iron_chain`,
+  `forge:iron_hinge`.
+- `wash:tin`, `wash:gold`; `cook:meat`, `cook:stew`, `cook:bread`.
+- `craft:<recipe id>` for every other recipe, among them
+  `craft:tiamat_default_craft:workbench`, `...:chest`, `...:bloomery`,
+  `...:stone_anvil`, `...:sluice`, `...:torch`, `...:iron_frame`.
 
 ## Identifiers it registers
 

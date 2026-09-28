@@ -231,7 +231,6 @@ R.own{
     inputs = { { U.world("granite"), count = 1 } },
     tools = { { "#chisel", wear = 10 } },
     outputs = { { M.id("stone_anvil"), count = 1 } },
-    first = "craft:anvil",
 }
 
 -- Hafting, at the workbench: a cast or forged head and a haft are a tool.
@@ -308,12 +307,12 @@ R.own{
     first = "cook:bread",
 }
 
-R.own{
+R.tune(R.own{
     id = "charcoal", station = "kiln", name = "Charcoal", heat = 1, ticks = 1200,
     inputs = { { "#log", count = 1 } },
     outputs = { { M.id("charcoal"), count = 1 } },
     first = "fire:charcoal",
-}
+}, { output = "craft.charcoal_yield", per = 3 })
 
 R.own{
     id = "fired_clay", station = "kiln", name = "Fired clay", heat = 1, ticks = 200,
@@ -348,13 +347,14 @@ R.own{
 -- Smelting: 27 units of ore in a crucible is an ingot.
 local SMELT = { copper = 900, tin = 600, silver = 900, gold = 900, lead = 900 }
 for _, metal in ipairs(U.sorted_keys(SMELT)) do
-    R.own{
+    local id = R.own{
         id = metal .. "_ingot", station = "kiln", name = U.title(metal) .. " ingot", heat = 2, ticks = SMELT[metal],
         inputs = { { U.world(metal .. "_ore"), units = 27 } },
         tools = { M.id("crucible") },
         outputs = { { M.id(metal .. "_ingot"), count = 1 } },
         first = "smelt:" .. metal,
     }
+    if metal == "copper" or metal == "tin" then R.tune(id, { input = "craft.smelt_ore_units" }) end
 end
 
 -- Washed metal: nine grains of tin, or nine flakes of gold, are an ingot.
@@ -409,12 +409,12 @@ R.own{
 
 -- In the bloomery, at white heat: two parts ore to one of charcoal, and
 -- out comes a bloom.
-R.own{
+R.tune(R.own{
     id = "iron_bloom", station = "bloomery", name = "Iron bloom", heat = 3, ticks = C.bloom_ticks,
     inputs = { { U.world("iron_ore"), units = 54 }, { M.id("charcoal"), units = 27 } },
     outputs = { { M.id("iron_bloom"), count = 1 } },
-    first = "smelt:iron",
-}
+    first = "bloom:iron",
+}, { input = "craft.smelt_ore_units", ticks = "craft.bloom_ticks" })
 
 -- On the anvil: a bloom beaten into a bar with any hammer; a bar into a
 -- head with an iron one. The first iron hammer is the exception.

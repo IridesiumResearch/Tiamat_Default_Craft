@@ -242,6 +242,19 @@ function T.worn(tool, detail, uuid)
     return U.stored_int(wear_key(tool, detail, uuid))
 end
 
+local TIERS = { [0] = "wood", [1] = "bronze", [2] = "iron" }
+
+--- A tool's uses for a player, with the progression's effects: a mould's
+--- pours, and each tier's lasting longer.
+function T.uses(tool, uuid)
+    local uses = tool.uses
+    if uses == 0 then return 0 end
+    if tool.type == "mould" then uses = uses + R.effect(uuid, "craft.mould_pours") end
+    local tier = TIERS[tool.tier]
+    if tier then uses = uses * (100 + R.effect(uuid, "craft.uses_percent." .. tier)) // 100 end
+    return math.max(1, uses)
+end
+
 --- Charges `amount` uses to one tool, where it was found: `{ material,
 --- detail, container?, slot?, player? }`. At its last use it is taken away
 --- and the player told.
@@ -250,8 +263,19 @@ function T.charge(uuid, found, amount)
     local tool = T.record(found.material)
     if not tool or tool.uses == 0 or amount <= 0 then return false end
     local key = wear_key(tool, found.detail, uuid)
+    -- A chisel may wear slower than a use a use: the fraction is carried,
+    -- in hundredths, under the tool's own key.
+    if tool.type == "chisel" then
+        local pct = R.effect(uuid, "craft.chisel_wear_percent")
+        if pct ~= 0 then
+            local carry = U.stored_int(key .. ":carry") + amount * math.max(0, 100 + pct)
+            amount = carry // 100
+            game.storage.set(key .. ":carry", carry % 100)
+            if amount <= 0 then return true end
+        end
+    end
     local worn = U.stored_int(key) + amount
-    if worn < tool.uses then
+    if worn < T.uses(tool, uuid) then
         game.storage.set(key, worn)
         return true
     end
@@ -263,6 +287,7 @@ function T.charge(uuid, found, amount)
         game.take(found.player or uuid, spec)
     end
     game.storage.set(key, nil)
+    game.storage.set(key .. ":carry", nil)
     if uuid then
         game.chat_to(uuid, string.format(C.worn_out, lower(tool.name)))
         tdc.sounds.at_player("tool_break", uuid)
@@ -332,8 +357,9 @@ local function hud_values(uuid)
     local tool, held = T.held(uuid)
     local wear = -1
     if tool and tool.uses > 0 and not creative then
-        local left = tool.uses - T.worn(tool, held.detail, uuid)
-        wear = math.max(0, (left * 1000) // tool.uses)
+        local uses = T.uses(tool, uuid)
+        local left = uses - T.worn(tool, held.detail, uuid)
+        wear = math.max(0, (left * 1000) // uses)
     end
     local warn = false
     if not creative then
@@ -433,7 +459,7 @@ end
 function T.of(uuid)
     local tool, held = T.held(uuid)
     if not tool then return nil end
-    return { id = tool.id, type = tool.type, tier = tool.tier, uses = tool.uses,
+    return { id = tool.id, type = tool.type, tier = tool.tier, uses = T.uses(tool, uuid),
         wear = T.worn(tool, held.detail, uuid) }
 end
 

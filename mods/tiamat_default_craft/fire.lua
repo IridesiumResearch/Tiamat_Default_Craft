@@ -234,8 +234,9 @@ local function tend(key, fire, step)
     end
     fire.fuel = fire.fuel - step
     fire.heat = fire.heat + step
-    while fire.heat >= C.fireset_ticks do
-        fire.heat = fire.heat - C.fireset_ticks
+    local fireset = math.max(C.fire_step, C.fireset_ticks + R.effect(fire.by, "craft.fireset_ticks"))
+    while fire.heat >= fireset do
+        fire.heat = fire.heat - fireset
         crack_around(fire)
     end
     if fire.fuel <= 0 then
