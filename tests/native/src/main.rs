@@ -421,8 +421,10 @@ fn tools() {
     // A pick is slower on earth than on rock (engine ask 2).
     let pick = r.vm.registered_tools().into_iter().find(|t| t.id == "tiamat_default_craft:bronze_pick").unwrap();
     assert_eq!(pick.speed_multiplier, 1.8);
-    assert!(pick.speeds.contains(&("tiamat_default_world:dirt".to_owned(), 0.9)), "{:?}", pick.speeds);
-    assert!(!pick.speeds.iter().any(|(b, _)| b == "tiamat_default_world:stone"), "rock at its own speed");
+    assert!(pick.speeds.iter().any(|(b, v)| (b == "#soil" || b == "tiamat_default_world:dirt") && *v == 0.9),
+        "slow on soil, by its tag: {:?}", pick.speeds);
+    assert!(pick.speeds.contains(&("tiamat_default_world:dead_log".to_owned(), 0.9)), "and the loose exceptions by name");
+    assert!(!pick.speeds.iter().any(|(b, _)| b == "tiamat_default_world:stone" || b == "#stone"), "rock at its own speed");
 
     // The hand on a log is allowed, with a hint the first time only.
     r.heard(PLAYER);

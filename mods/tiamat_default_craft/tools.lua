@@ -108,24 +108,23 @@ C.tools.mould_pot = { name = "Pot mould", type = "mould", tier = 1, uses = C.mou
 C.tools.mould_tuyere = { name = "Tuyere mould", type = "mould", tier = 1, uses = C.mould_uses }
 C.tools.mould_gear = { name = "Gear mould", type = "mould", tier = 1, uses = C.mould_uses }
 
---- A digging tool's speed on each block it is slower on than its own
---- speed (engine ask 2): the world's blocks by class, at the share
---- `C.speed_shares` gives its type. Only blocks registered by now — the
---- world loads first — so no name is dropped at load.
+--- A digging tool's speed on what it is slower on than its own speed: the
+--- world's loose ground, by its tags (engine ask 11: `["#soil"]`, resolved
+--- by the engine at freeze, so a block a later mod tags `soil` takes it
+--- too), and this mod's loose exceptions by name. At the share
+--- `C.speed_shares` gives its type.
 local function speeds_of(spec)
-    local shares = C.speed_shares[spec.type]
-    if not shares then return nil end
-    local out, any = {}, false
-    for _, class in ipairs(U.sorted_keys(shares)) do
-        for _, short in ipairs(class == "loose" and C.soft_ground or {}) do
-            local id = U.world(short)
-            if U.material(id) then
-                out[id] = spec.speed * shares[class]
-                any = true
-            end
-        end
+    local share = C.speed_shares[spec.type] and C.speed_shares[spec.type].loose
+    if not share then return nil end
+    local out = {}
+    for _, tag in ipairs(C.soft_tags) do
+        -- Only a tag some block carries: the engine warns of one nobody does.
+        if #game.tagged(tag) > 0 then out["#" .. tag] = spec.speed * share end
     end
-    return any and out or nil
+    for _, short in ipairs(C.classify.loose or {}) do
+        if U.material(U.world(short)) then out[U.world(short)] = spec.speed * share end
+    end
+    return next(out) and out or nil
 end
 
 -- This mod's own tools: an item each, and an engine tool for the ones that dig.

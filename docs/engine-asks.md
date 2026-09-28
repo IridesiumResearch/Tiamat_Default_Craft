@@ -15,13 +15,15 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-09-28)
 
-**One is open: 11.** Everything else landed — 2 to 7 in engine c83fbc9, 8
-and 9 in engine cbbbc5e, 10 in engine 7cf1c73 — and is adopted.
+**Nothing is open.** Every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
+in engine cbbbc5e, 10 in engine 7cf1c73, 11 in engine f2cbc36 — and every
+one is adopted. This mod names none of the world's blocks now but the four
+it reads otherwise than their tags.
 Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
-| 11 the blocks carrying a tag | **Open.** | a tool's slower speeds on the world's loose ground are a list of its blocks by name (`C.soft_ground`). |
+| 11 the blocks carrying a tag | Landed, engine f2cbc36. | a tool's slower speeds on loose ground are keyed by tag (`["#soil"]`), resolved at freeze. |
 | 10 a listed use handler beside an unlisted one | Landed, engine 7cf1c73. | the fires have a listed handler, every other block the unlisted one. |
 | 9 reading one slot of a player's view | Landed, engine cbbbc5e. | the anvil works what is in the off-hand. |
 | 8 a use at a block reaching the block's handler first | Landed, engine cbbbc5e. | meat held out over a burning fire goes on it, before Life can eat it. |
@@ -34,7 +36,10 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 11. The blocks carrying a tag (2026-09-28): OPEN
+## 11. The blocks carrying a tag (2026-09-28): LANDED 2026-09-28 (engine f2cbc36)
+
+`game.tagged(tag)`, and `speeds` on `register_tool` keyed by tag
+(`["#soil"] = 2.0`), resolved at freeze. The history follows.
 
 **Seen.** Ask 6 gave `game.tags(material)`, and the world now tags its
 blocks, so this mod classes them by rule: `stone` is rock, `hard` hard

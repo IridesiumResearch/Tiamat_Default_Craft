@@ -515,7 +515,7 @@ function Stream:next_bool() end
 ---@field name string? Display name.
 ---@field brush string? What shape it removes: `"block"` (default) or `"subnode"`.
 ---@field speed_multiplier number? How much faster than a bare hand. Default 1.0, must be positive.
----@field speeds table<string, number>? Its speed on particular blocks, by id, where it is not `speed_multiplier`: `{ ["tiamat_default_world:stone"] = 4.5, dirt = 0.5 }` — a bare name is your own. Each must be positive. A block nobody registered is dropped, and digs at the general speed.
+---@field speeds table<string, number>? Its speed on particular blocks, by id, where it is not `speed_multiplier`: `{ ["tiamat_default_world:stone"] = 4.5, dirt = 0.5 }` — a bare name is your own. Each must be positive. A block nobody registered is dropped, and digs at the general speed. A key of the form `["#<name>"]` — `{ ["#soil"] = 2.0 }` — names every block carrying that tag (see `game.tags` and `game.tagged`) instead of one material, and is resolved once every mod has registered, so a block registered by a mod that loaded after yours still gets the speed. The leading `#` (not, say, a `"tag:"` prefix) is deliberate: mod ids can never contain it, so it can never collide with a bare or namespaced material key. Precedence, at that same resolution: a speed named for the material itself always beats one reached through a tag; where two tags both reach one block, the higher speed wins. A tag nothing carries is a load-time warning naming the tool and the tag, not an error — the tool simply gets no speed from it, like a material name nobody registered.
 ---@field default boolean? Whether this is what a player digs with holding nothing. The engine has no bare hand of its own, so a world whose mods register no default is one nobody can dig in. Lowest id wins if several mods mark one.
 
 ---Fields accepted by `game.register_sky`.
@@ -668,6 +668,50 @@ function game.set_sky_modifier(player, modifier) end
 ---@param spec { pos: Tiamat.BlockPos, radius?: number, intensity?: number, colour?: number[]|{ r: number, g: number, b: number }, attack_ticks?: integer, decay_ticks?: integer, player?: string }
 ---@return integer told
 function game.flash(spec) end
+
+---Lightning, drawn: a jagged, forked bolt from `from` to `to`, shown to every
+---player within `radius` of `from` in its domain. Returns how many were told.
+---
+---**Why this and not particles.** A particle is lit by the world, so a bolt at
+---night comes out grey; a burst fills an axis-aligned box, so a jagged line is
+---dozens of bursts of dozens of particles; and bursts are dropped first under
+---load, which is exactly when a storm is on. This sends two ends and a seed.
+---Each client builds the path from `seed` — a trunk from `from` to `to` bent by
+---midpoint displacement, `branches` forks that leave it partway down and fade
+---out before the ground — and draws it unlit and additive, a narrow core in a
+---wider glow, hidden by the terrain in front of it. Full at once, then two or
+---three dips and returns, then gone after `ticks`. The same seed is the same
+---bolt for everyone watching; nothing collides with it or is lit by it, so
+---send a `game.flash` beside it for the light on the sky.
+---
+---```lua
+---game.lightning{ from = { x = x, y = cloud_base, z = z }, to = ground,
+---                seed = game.world_seed + strikes, radius = 1024 }
+---game.flash{ pos = ground, radius = 1024, colour = { 0.9, 0.92, 1.0 } }
+---```
+---
+---Defaults: violet-white `{ 0.85, 0.8, 1.0 }`, `width` 0.4 blocks, three
+---`branches`, eight `ticks`, `radius` 256, and a seed the engine picks — a
+---different one every call, so two unseeded bolts between the same two points
+---are two bolts. Wrong numbers are clamped (colour channels 0 to 2, width up to
+---8, branches up to 8, ticks 1 to 200, radius up to 1024, and a `to` more than
+---4096 blocks from `from` is moved along the bolt towards it); wrong types are
+---errors, and so is a `to` that names a different domain from `from`'s.
+---
+---`seed` is read by its bits: an integer from `game.world_seed` or a mod's own
+---generator crosses exactly, including one past 2^63 that Lua shows as
+---negative. A float that is not a whole number is an error, not a seed.
+---
+---**`radius` is measured from `from`, the top.** A bolt whose top is 300 blocks
+---above the players under it reaches none of them at the default 256 — give a
+---tall bolt the radius you give its flash.
+---
+---`player` sends the bolt to that one player and nobody else, provided they are
+---in the domain and within `radius` — it narrows, never widens, as a flash's
+---does, so a player in a cave under the storm is not shown the sky's bolts.
+---@param spec { from: Tiamat.BlockPos, to: Tiamat.BlockPos, seed?: integer, colour?: number[]|{ r: number, g: number, b: number }, width?: number, branches?: integer, ticks?: integer, radius?: number, player?: string }
+---@return integer told
+function game.lightning(spec) end
 
 ---Sets the rain around one player: an emitter their client runs. Returns
 ---whether the player is here.
@@ -3560,6 +3604,24 @@ function game.hardness(material) end
 ---@param material integer
 ---@return string[]|nil tags
 function game.tags(material) end
+
+---The qualified ids of every block registered so far that carries a tag, in
+---the order they were registered — the other direction from `game.tags`: not
+---what a block is tagged, but which blocks a tag names.
+---
+---Callable in the registration window as well as after freeze. In the
+---window it answers only what has registered before this call: a mod sees
+---the blocks the mods it `depends` on have already registered, and nothing a
+---mod loading after it adds yet — arranging that is what `depends` is for.
+---Called again once every mod has registered, the answer is complete.
+---
+---An unknown tag answers an empty table, not an error or `nil` — a mod
+---classing "every hard block" should not have to guess which tags anything
+---actually uses first. Only blocks can carry a tag (`register_item` has no
+---`tags` field), so nothing here ever names an item.
+---@param tag string
+---@return string[] blocks
+function game.tagged(tag) end
 
 ---Generates a heightmap for a chunk from fractal noise.
 ---

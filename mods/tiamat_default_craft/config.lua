@@ -155,16 +155,11 @@ C.classify = {
     loose = { "dead_log", "marrow" },
 }
 
--- The world's loose ground, by name, for the one thing tags cannot yet do:
--- a tool's slower speed on it is registered at load, and the API reads a
--- block's tags but cannot list the blocks carrying a tag (engine ask 11).
-C.soft_ground = {
-        "dirt", "packed_dirt", "grass", "mud", "black_mud", "dried_mud", "mulch", "gravel", "sand",
-        "white_sand", "dark_sand", "wet_clay", "dry_clay", "charcoal", "volcanic_ash", "pumice",
-        "cobbles", "snow", "permafrost", "ice", "clear_ice", "moss", "lichen", "mycelium",
-        "mushroom_cap", "caul", "marrow", "sulfur", "bramble", "cactus", "dead_log", "dead_coral",
-        "coral_magenta", "coral_cyan", "coral_amber", "barnacles", "pink_algae", "ocean_moss",
-    }
+-- The world's loose ground, by its tags, for a tool's slower speed on it
+-- (engine asks 2 and 11: `speeds` keyed `["#soil"]`, resolved at freeze).
+-- Every word a loose block is tagged with, and this mod's two loose
+-- exceptions by name.
+C.soft_tags = { "soil", "sand", "clay", "gravel", "ash", "snow", "ice", "fungus", "coral", "membrane" }
 
 -- How fast a tool digs a class of block, as a share of its own speed
 -- (engine ask 2). A class a type does not list digs at the tool's speed;
