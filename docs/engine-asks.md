@@ -17,6 +17,8 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 | Item | State | In this mod |
 |---|---|---|
+| 9 reading and taking one slot of a player's view | Open. | the anvil takes its work from its own container, struck with a hammer, not from the off-hand (step 8). |
+| 8 a use at a block reaching the block's handler first | Open. | a fire is opened with an empty hand and food is put in its box, not held over it (step 6). |
 | 7 a drop of another mod's material | Open. | a cracked block drops nothing, and the digger is given the rock (step 3). |
 | 6 a material's tags and hardness | Open. | the dig classes are a table beside the world's blocks (step 2). |
 | 5 enumerating containers | Open. | stations keep an index of where they are in storage (step 4). |
@@ -25,6 +27,65 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 | 2 a tool's speed per material | Open. | a tool digs everything it may dig at one speed (step 2). |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
+
+## 9. Reading and taking one slot of a player's view (2026-09-28): OPEN
+
+**Wanted.** The stack in one slot of a player's view, and a take from that
+slot alone: `game.slot(player, "player:main", 28)` answering `{ material,
+units, shape, detail }` or nil, and `game.take(player, { ..., slot = 28 })`.
+Slot 28 of `player:main` is the off-hand.
+
+**Why the mod cannot.** The brief's anvil is worked in the world: the
+hammer in the main hand, the bloom or bar in the off-hand, a right-click
+a blow. `game.held` answers the main hand only, and `game.inventory`
+answers a view CONSOLIDATED, one entry per material, cut and detail, with
+no slot in it — so there is no way to ask what is in the off-hand, and a
+`game.take` of a bar takes bars from wherever they are, not from the hand
+the player is holding it in. A HUD script is told `state.offhand`, which
+proves the engine has the answer; the server-side API does not ask it.
+
+**Meanwhile.** The anvil is a station with a container: the work goes on it
+through its screen, where the player also chooses what to forge, and each
+use with a hammer in hand is a blow (`anvil.lua`). It works; it is a screen
+where the brief wanted a gesture.
+
+**Smallest change.** A slot-addressed read of a view, and `slot` on
+`game.take` (ask 4 asks the same of `game.give`). With both, the anvil
+reads the off-hand, takes the bloom from it, and gives the bar back into it.
+
+## 8. A use at a block reaching the block's handler first (2026-09-28): OPEN
+
+**Wanted.** A player holding raw meat right-clicks a burning campfire and
+the meat goes over the fire — the gesture the brief designed cooking
+around (§6.2). More generally: a use AT a block reaches the handler of
+THAT block before handlers that act on whatever is held, wherever it is.
+
+**Why the mod cannot.** `register_on_use` callbacks are asked in mod load
+order and the first to handle a use stops the rest. Life loads before
+this mod (Craft names Life in `optional_depends`, on purpose, to read its
+exports) and registers `{ anywhere = true }` to eat food held at any block
+or at the sky; so meat held at a fire is eaten before this mod hears of the
+use. Neither order is wrong for its own mod, and a mod cannot reorder the
+chain: loading Craft first would cost it Life's exports, and asking Life to
+look at every block for somebody else's cooking surface is a list that
+never ends.
+
+**Meanwhile.** A fire has a container: used with an empty hand it opens,
+food is put on it through the screen, and it cooks while it burns
+(`cooking.lua`). Nothing contends with Life's eating; the gesture is lost.
+
+**Smallest change.** Either of:
+
+- a use handler registered for particular materials —
+  `game.register_on_use(fn, { materials = { "tiamat_default_craft:campfire_lit", ... } })` —
+  asked, in load order among themselves, before any handler without a
+  material list, so the block that was clicked answers first and a held
+  item's handler hears only what no block claimed; or
+- a pass order on the option, `{ before_anywhere = true }`, for a callback
+  that only ever handles uses at blocks it owns.
+
+The first needs no mod to know about any other, and is what a door, a
+lever or a cooking surface all want.
 
 ## 7. A drop of another mod's material (2026-09-28): OPEN
 
