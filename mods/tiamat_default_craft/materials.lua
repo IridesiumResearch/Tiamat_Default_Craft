@@ -24,6 +24,55 @@ local function item(id, name, description)
 end
 
 item("stick", "Stick", "Split from a log. Hafts, kindling, a digging stick's shaft.")
+item("tinder", "Tinder", "Dry grass, needles and moss, rubbed to fluff. It catches a spark.")
+
+--- Every block this mod registered, by short id: its numeric material.
+M.blocks = {}
+
+local function block(id, spec)
+    spec.id = id
+    spec.textures = spec.textures or { all = "textures/" .. id .. ".png" }
+    M.blocks[id] = game.register_block(spec)
+    return M.blocks[id]
+end
+
+-- Fire (fire.lua). The lit fire is Life's campfire when Life is here, so
+-- its heat and its burn are Life's; `campfire_lit` is this mod's own, for a
+-- world without Life.
+block("unlit_campfire", {
+    name = "Campfire (unlit)",
+    description = "Sticks, logs and tinder, laid. Strike it with a fire striker.",
+    hardness = 0.4,
+    cutout = true,
+})
+block("campfire_lit", {
+    name = "Campfire",
+    description = "A fire of your own making. Feed it logs; it cracks the rock beside it.",
+    hardness = 0.4,
+    cutout = true,
+    light_emit = { r = 14, g = 9, b = 4 },
+})
+
+-- What fire leaves of rock: the rock it was, cracked, which the hand can
+-- break and which yields the rock whole. Only for the world's rocks that
+-- exist in this world.
+--
+-- It drops NOTHING of its own: the engine lets a block's `drops` name only
+-- the registering mod's materials (engine ask 7), so the rock it yields is
+-- given to the digger by fire.lua as the dig lands.
+M.cracked = {}   -- world short name -> this mod's cracked twin's qualified id
+for _, name in ipairs(tdc.config.cracks) do
+    local parent = tdc.util.world(name)
+    if tdc.util.material(parent) then
+        block("cracked_" .. name, {
+            name = "Cracked " .. string.gsub(name, "_", " "),
+            description = "Fire-cracked. It comes away by hand.",
+            hardness = tdc.config.cracked_hardness,
+            drops = {},
+        })
+        M.cracked[name] = game.mod_id .. ":cracked_" .. name
+    end
+end
 
 --- The qualified id of one of this mod's items.
 function M.id(short)

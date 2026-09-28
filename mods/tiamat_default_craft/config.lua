@@ -46,6 +46,11 @@ C.groups = {
         "juniper_log", "apple_log", "cherry_log", "mangrove_log", "acacia_log",
         "redwood_log", "ironwood_log",
     },
+    -- What catches a spark: dry grass, needles, moss.
+    ["#tinder"] = {
+        "tall_grass", "dead_sagebrush", "fir_needles", "juniper_needles", "redwood_needles", "moss",
+        "lichen", "heather",
+    },
 }
 
 -- Tools ------------------------------------------------------------------------
@@ -91,6 +96,7 @@ C.tools = {
     bronze_knife           = { name = "Bronze knife", type = "knife", tier = 1, uses = 80, weapon = 4 },
     iron_knife             = { name = "Iron knife", type = "knife", tier = 2, uses = 300, weapon = 6 },
     copper_pot             = { name = "Copper pot", type = "pot", tier = 1, uses = 0 },
+    fire_striker           = { name = "Fire striker", type = "striker", tier = 0, uses = 20 },
 
     -- Farm tools, which Life's exports make work: a sickle reaps more of a
     -- ripe crop, a hoe tills.
@@ -126,6 +132,9 @@ C.classes = {
 -- The world's blocks, by class. Plants, leaves and needles are in none: they
 -- come away in anything.
 C.classify = {
+    -- Flint breaks out of its bed by hand: it is what the first fire is
+    -- struck with, and fire is how the hand gets past rock at all.
+    cracked = { "flint" },
     loose = {
         "dirt", "packed_dirt", "grass", "mud", "black_mud", "dried_mud", "mulch", "gravel", "sand",
         "white_sand", "dark_sand", "wet_clay", "dry_clay", "charcoal", "volcanic_ash", "pumice",
@@ -141,7 +150,7 @@ C.classify = {
     rock = {
         "stone", "granite", "slate", "calcite", "dark_basalt", "rust_red_sandstone", "ochre_sandstone",
         "lava_rock", "dark_sediment", "light_sediment", "pale_terracotta", "flowstone", "black_marble",
-        "bone", "salt", "flint", "copper_ore", "iron_ore", "coal", "tin_ore", "silver_ore", "lead_ore",
+        "bone", "salt", "copper_ore", "iron_ore", "coal", "tin_ore", "silver_ore", "lead_ore",
         "gold_ore", "pyrite",
     },
     hard_rock = {
@@ -167,6 +176,30 @@ C.refusal = "That wants a better tool."
 
 -- What wearing out says.
 C.worn_out = "Your %s has worn to nothing."
+
+-- Fire -------------------------------------------------------------------------
+--
+-- A campfire is built unlit and struck alight with a flint striker. It burns
+-- its fuel down and goes out; logs thrown on keep it going. A burning fire
+-- heats the rock beside it, and after long enough the rock cracks: that is
+-- how bare hands get at stone before any pick exists (brief §4.4).
+
+C.fire_fuel = 20 * 60 * 20       -- ticks a newly lit fire burns: twenty minutes
+C.fire_max_fuel = 60 * 60 * 20   -- no fire holds more than an hour
+C.fire_step = 20                 -- fires are looked after once a second
+C.fireset_ticks = 30 * 20        -- burning this long cracks the rock beside it
+
+-- What a fire may be fed, ticks per 27 units.
+C.campfire_fuel = {
+    ["#log"] = 5 * 60 * 20,
+}
+
+-- What fire cracks, into what. A cracked block is class `cracked`, breaks by
+-- hand or maul, and drops the block it was, whole: cracked copper ore yields
+-- exactly what a pick would. Not granite, and nothing hard: that is what
+-- bronze and iron are for.
+C.cracks = { "stone", "slate", "calcite", "dark_basalt", "copper_ore", "iron_ore", "coal" }
+C.cracked_hardness = 0.6
 
 -- A test harness may set `tdc_overrides` before the mod loads; a real
 -- server never does.

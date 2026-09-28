@@ -600,6 +600,8 @@ pub struct Setup {
     pub mode: Option<String>,
     /// Mods that load after this one and use its exports: `(id, source)`.
     pub fixtures: Vec<(String, String)>,
+    /// A restart: the storage and the world of a rig that ran before.
+    pub restart: Option<(Arc<Storage>, Arc<World>, Arc<Boxes>)>,
 }
 
 /// Life's exports as this mod uses them, recording each call; `life heard
@@ -610,8 +612,9 @@ local function note(kind) return function(material, value)
     heard[kind .. " " .. material .. (value and (" " .. tostring(value)) or "")] = true
     return true
 end end
+game.register_block{ id = "campfire", light_emit = { r = 15, g = 9, b = 2 } }
 game.export{ version = 1, add_weapon = note("weapon"), add_harvest_tool = note("harvest"),
-    add_tilling_tool = note("tills") }
+    add_tilling_tool = note("tills"), add_contact_fire = note("fire"), add_heat_source = note("heat") }
 game.register_on_chat(function(e)
     local call = string.match(e.text, "^life heard (.+)$")
     if not call then return end
@@ -640,7 +643,8 @@ pub const WORLD_BLOCKS: &[&str] = &[
     "oak_log", "birch_log", "dead_log", "fir_log", "willow_log", "kapok_log", "juniper_log", "apple_log",
     "cherry_log", "mangrove_log", "acacia_log", "redwood_log", "ironwood_log", "stone", "granite", "dirt",
     "grass", "sand", "gravel", "wet_clay", "dry_clay", "cobbles", "bramble", "flint", "copper_ore",
-    "iron_ore", "tin_ore", "coal", "obsidian", "water",
+    "iron_ore", "tin_ore", "coal", "obsidian", "water", "slate", "calcite", "dark_basalt", "tall_grass",
+    "moss",
 ];
 
 impl Rig {
@@ -648,15 +652,13 @@ impl Rig {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods").join(MOD);
         let mut vm = EngineVm::create(VmLimits::default()).unwrap();
 
-        let storage = Arc::new(Storage::default());
+        let (storage, world, boxes) = setup.restart.clone().unwrap_or_default();
         let inventory = Arc::new(Inventory::default());
-        let boxes = Arc::new(Boxes::default());
         let tools = Arc::new(Tools::default());
         let huds = Arc::new(Huds::default());
         let dialogs = Arc::new(Dialogs::default());
         let sounds = Arc::new(Sounds::default());
         let particles = Arc::new(Particles::default());
-        let world = Arc::new(World::default());
 
         vm.set_storage_access(storage.clone());
         vm.set_entity_access(Arc::new(Entities::new()));
@@ -840,6 +842,50 @@ impl Rig {
     /// The engine tool in a player's hand.
     pub fn tool(&self, player: [u8; 32]) -> Option<String> {
         self.tools.hand.lock().unwrap().get(&player).cloned().flatten()
+    }
+
+    /// The place control at a block, with what the player holds: `None` when
+    /// nobody handled it, `Some(what they were told)` when somebody did.
+    pub fn use_at(&mut self, player: [u8; 32], x: i32, y: i32, z: i32) -> Option<String> {
+        let Reading::Single { material, .. } = sight::Access::block_at(&*self.world, "", BlockPos { x, y, z }) else {
+            panic!("no block")
+        };
+        let held = inventory::Access::held(&*self.inventory, player);
+        let out = self.vm.use_block(&tiamat_core::script::UseEvent {
+            player,
+            domain: "overworld".into(),
+            aim: Some(tiamat_core::script::UseAim {
+                cell: tiamat_core::coords::SubNodePos::new(x * 3 + 1, y * 3 + 2, z * 3 + 1),
+                material,
+            }),
+            held,
+        });
+        assert!(out.faults.is_empty(), "faulted in use: {:?}", out.faults);
+        if out.allowed { None } else { Some(out.reason.unwrap_or_default()) }
+    }
+
+    /// What the world holds at a block, by name, or "air".
+    pub fn block_name(&self, x: i32, y: i32, z: i32) -> String {
+        let Reading::Single { material, occupancy } = sight::Access::block_at(&*self.world, "", BlockPos { x, y, z }) else {
+            return "?".into();
+        };
+        if occupancy == 0 {
+            return "air".into();
+        }
+        self.materials
+            .iter()
+            .find(|(_, m)| **m == material)
+            .map(|(n, _)| n.clone())
+            .unwrap_or_else(|| format!("#{}", material.0))
+    }
+
+    pub fn put(&self, x: i32, y: i32, z: i32, id: &str) {
+        self.world.put(x, y, z, self.material(id));
+    }
+
+    /// What a restart keeps.
+    pub fn saved(&self) -> (Arc<Storage>, Arc<World>, Arc<Boxes>) {
+        (self.storage.clone(), self.world.clone(), self.boxes.clone())
     }
 
     pub fn stack(&self, id: &str, units: u32) -> Stack {

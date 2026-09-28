@@ -108,20 +108,28 @@ tool registered with `register_tool` coming out of `perform` — is given a
 the serial. A tool of yours that reaches a player with no detail still
 works, and wears per player and kind.
 
+### Fire
+
+| Field | Shape | What it does |
+|---|---|---|
+| `is_burning(pos)` | `{ x, y, z, domain? }`, whole blocks | Whether a fire this mod lit burns there. |
+| `add_fuel_at(pos, ticks)` | the same; 1..72000 | Adds fuel to a fire this mod lit, up to an hour. Answers whether there was one. |
+| `register_cracked(material, twin)` | two qualified block ids | `material` cracks into `twin` beside a burning fire, as the world's rock does. Register the twin yourself — breakable by hand, and dropping what it should: this mod gives the world's rock back for its own twins only. |
+
 ### Progression
 
 | Field | Shape | What it does |
 |---|---|---|
 | `set_gate(fn)` | `fn(uuid, node) -> boolean` | The gate every `requires` is asked through. One owner: the first to set it keeps it. With none, everything is open; a gate that answers nothing (its mod faulted) is read as open, so a broken progress mod never stops the world making anything. |
 | `on_crafted(fn)` | `fn(uuid, recipe_id, outputs)` | Hears every recipe made. |
-| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`. Fire, smelting, casting and forging add theirs as they land. |
+| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock. Smelting, casting and forging add theirs as they land. |
 | `on_tool_broken(fn)` | `fn(uuid, tool_id)` | Hears a tool wear out in somebody's hands (step 2). |
 
 ## Identifiers it registers
 
 All are namespaced `tiamat_default_craft:` by the engine.
 
-- **Items:** `stick`, and the tools: `digging_stick`,
+- **Items:** `stick`, `tinder`, and the tools: `fire_striker`, `digging_stick`,
   `ironwood_digging_stick`, `wooden_maul`, `ironwood_maul`, `wooden_wedge`,
   `ironwood_wedge`, `copper_pot`, and in bronze and iron each (`bronze_*`,
   `iron_*`) `spade`, `axe`, `pick`, `chisel`, `hammer`, `knife`, `sickle`,
@@ -129,9 +137,17 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Engine tools:** `hand` (the default), and every tool above that digs:
   the digging sticks, spades, mauls, axes, picks and chisels (the chisels
   with the sub-node brush).
-- **Recipes:** `stick` (by hand: any `#log` → four sticks).
+- **Blocks:** `unlit_campfire`, `campfire_lit` (the lit fire in a world
+  without Life; with Life, a lit fire is Life's `campfire`), and the cracked
+  rocks `cracked_stone`, `cracked_slate`, `cracked_calcite`,
+  `cracked_dark_basalt`, `cracked_copper_ore`, `cracked_iron_ore`,
+  `cracked_coal` (each only when the world's rock exists).
+- **Recipes:** by hand, `stick` (any `#log` → four sticks), `tinder` (a
+  third of a block of `#tinder`), `fire_striker` (two flint),
+  `unlit_campfire` (three sticks, two logs, a tinder).
 - **Stations:** `hand`.
-- **Groups:** `#log`, holding the world's thirteen logs.
+- **Groups:** `#log`, the world's thirteen logs; `#tinder`, its dry grass,
+  needles, moss, lichen and heather.
 
 ## Commands it accepts
 
@@ -145,7 +161,8 @@ one of them is chat. For operators, and everyone in a Creative world:
 
 None for other mods. `game.storage` is private to this mod: it keeps each
 player's firsts (`first:<uuid>:<event>`), the tool serial counter
-(`serial`) and each tool's wear (`wear:<serial>`).
+(`serial`), each tool's wear (`wear:<serial>`), and each fire it lit
+(`fire:<domain>@x,y,z`).
 
 ## What it reads from other mods
 
@@ -153,5 +170,7 @@ Not exports, listed so the direction is clear: it names the blocks of
 `tiamat_default_world` in its recipes, groups and dig classes when that mod
 is loaded; it tells `tiamat_default_life` which of its tools are weapons
 (`add_weapon`), sickles (`add_harvest_tool`) and hoes (`add_tilling_tool`),
-and reads Life's world option `mode`; and it loads after
+lights Life's `campfire` block and makes its own fire burn and warm through
+`add_contact_fire` and `add_heat_source`, and reads Life's world option
+`mode`; and it loads after
 `tiamat_default_ui` so that it may use that mod's exports.

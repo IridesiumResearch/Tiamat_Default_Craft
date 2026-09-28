@@ -32,4 +32,23 @@ R.own{
     outputs = { { M.id("stick"), count = 4 } },
 }
 
+R.own{
+    id = "tinder", station = "hand", name = "Tinder",
+    inputs = { { "#tinder", units = 9 } },
+    outputs = { { M.id("tinder"), count = 1 } },
+}
+
+R.own{
+    id = "fire_striker", station = "hand", name = "Fire striker",
+    inputs = { { U.world("flint"), count = 2 } },
+    outputs = { { M.id("fire_striker"), count = 1 } },
+    first = "craft:fire_striker",
+}
+
+R.own{
+    id = "unlit_campfire", station = "hand", name = "Campfire",
+    inputs = { { M.id("stick"), count = 3 }, { "#log", count = 2 }, { M.id("tinder"), count = 1 } },
+    outputs = { { M.id("unlit_campfire"), count = 1 } },
+}
+
 return {}

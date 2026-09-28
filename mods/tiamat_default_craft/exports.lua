@@ -40,6 +40,12 @@ local function player(uuid)
     return uuid == nil or (type(uuid) == "string" and #uuid <= 64 and string.match(uuid, "^%x+$") ~= nil)
 end
 
+--- A block position, `{ x, y, z, domain? }` in whole blocks.
+local function block_pos(pos)
+    return type(pos) == "table" and math.type(pos.x) == "integer" and math.type(pos.y) == "integer"
+        and math.type(pos.z) == "integer" and (pos.domain == nil or type(pos.domain) == "string")
+end
+
 --- A recipe as plain data another mod may keep.
 local function public_recipe(recipe)
     local function list(entries, key)
@@ -134,6 +140,27 @@ return {
         local n = U.whole(amount, 1, 1000)
         if not n then return nil, "an amount is a whole number" end
         return T.wear_held(uuid, n)
+    end),
+
+    -- Fire ----------------------------------------------------------------
+
+    --- Whether a fire this mod lit burns at `{ x, y, z, domain? }` (blocks).
+    is_burning = safe("is_burning", function(pos)
+        if not block_pos(pos) then return false end
+        return tdc.fire.burning(pos)
+    end),
+
+    --- Adds `ticks` of fuel to a fire this mod lit. Answers whether there was one.
+    add_fuel_at = safe("add_fuel_at", function(pos, ticks)
+        local t = U.whole(ticks, 1, 72000)
+        if not (block_pos(pos) and t) then return false end
+        return tdc.fire.add_fuel(pos, t)
+    end),
+
+    --- `material` cracks into `twin` beside a fire, as the world's rock does.
+    --- Register the twin yourself: breakable by hand, dropping the rock.
+    register_cracked = safe("register_cracked", function(material, twin)
+        return tdc.fire.register_cracked(material, twin)
     end),
 
     -- Progression ---------------------------------------------------------

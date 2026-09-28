@@ -17,6 +17,7 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 | Item | State | In this mod |
 |---|---|---|
+| 7 a drop of another mod's material | Open. | a cracked block drops nothing, and the digger is given the rock (step 3). |
 | 6 a material's tags and hardness | Open. | the dig classes are a table beside the world's blocks (step 2). |
 | 5 enumerating containers | Open. | stations keep an index of where they are in storage (step 4). |
 | 4 a give into one slot of a player's view | Open. | a tool's wear lives in storage, keyed on its serial, not in its `detail` (step 2). |
@@ -24,6 +25,23 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 | 2 a tool's speed per material | Open. | a tool digs everything it may dig at one speed (step 2). |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
+
+## 7. A drop of another mod's material (2026-09-28): OPEN
+
+**Wanted.** `register_block{ drops = { ["tiamat_default_world:stone"] = 27 } }`
+on this mod's `cracked_stone`: fire-cracked rock yields the rock it was.
+
+**Why the mod cannot.** `drops` keys are qualified against the registering
+mod and a foreign namespace is refused at registration ("may not register
+into namespace"). That rule is right for REGISTERING into another mod's
+namespace and wrong for NAMING one: a drop is a reference, and the world's
+stone exists. So the cracked blocks drop nothing and `on_dig_complete`
+gives the digger the rock — one unit per cell the dig took — which goes
+straight into the inventory, never onto the ground, where a mod watching
+drops will not see it.
+
+**Smallest change.** Let a `drops` key name any qualified id, resolved when
+every mod has registered, as `absorbs.becomes` already is.
 
 ## 6. A material's tags and hardness, read back (2026-09-26): OPEN
 

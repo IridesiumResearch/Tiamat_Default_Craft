@@ -129,6 +129,8 @@ fn main() {
     registry();
     tools();
     creative();
+    fire();
+    fire_alone();
     println!("craft native check: all passed");
 }
 
@@ -140,7 +142,7 @@ fn load_alone() {
     r.say("craft stick");
     assert_eq!(r.said(), "cannot make Sticks: nothing registered is #log");
     r.say("recipes");
-    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: stick"]);
+    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: fire_striker, stick, tinder, unlit_campfire"]);
     println!("load alone: ok");
 }
 
@@ -453,4 +455,115 @@ fn creative() {
     }
     assert_eq!(r.details(PLAYER, "bronze_pick"), vec![pick]);
     println!("creative: ok");
+}
+
+/// A fire from nothing: flint, tinder and logs by hand, struck alight, cracking
+/// the rock around it, fed, and burning out after a restart.
+fn fire() {
+    let prelude = "tdc_overrides = { fire_fuel = 1200, fire_max_fuel = 8000 }";
+    let mut r = Rig::new(Setup { world: true, life: true, prelude: prelude.into(), ..Setup::default() });
+    r.join(PLAYER);
+    r.tick(1);
+
+    // Everything a fire needs, by hand.
+    r.give(PLAYER, "tiamat_default_world:flint", 54);
+    r.give(PLAYER, "tiamat_default_world:tall_grass", 9);
+    r.give(PLAYER, "tiamat_default_world:oak_log", 27 * 3);
+    for recipe in ["fire_striker", "tinder", "stick", "unlit_campfire"] {
+        r.say(&format!("craft {recipe}"));
+        assert!(r.said().starts_with("made"), "{recipe}");
+    }
+    assert_eq!(r.units(PLAYER, "unlit_campfire"), 27);
+    assert_eq!(r.units(PLAYER, "stick"), 27, "four sticks made, three laid");
+    let striker = r.details(PLAYER, "fire_striker")[0].clone();
+
+    // Flint is broken out by hand; rock is not.
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:flint"), Ok(()));
+
+    // The fire, and rock round it: beside it, under it, and one further on
+    // through open air. Granite does not crack.
+    r.put(10, 64, 10, "unlit_campfire");
+    r.put(11, 64, 10, "tiamat_default_world:stone");
+    r.put(10, 63, 10, "tiamat_default_world:copper_ore");
+    r.put(9, 64, 10, "tiamat_default_world:granite");
+    r.put(10, 64, 12, "tiamat_default_world:stone");
+    r.put(12, 64, 10, "tiamat_default_world:stone");
+
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some("It wants a spark: strike it with a fire striker."));
+    r.hold(PLAYER, "fire_striker", Some(&striker));
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""));
+    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_life:campfire", "lit as Life's campfire");
+    let serial = striker.trim_start_matches("t=");
+    assert!(r.storage.dump().contains(&format!("wear:{serial}=Number(1.0)")), "{}", r.storage.dump());
+
+    r.tick(560);
+    assert_eq!(r.block_name(11, 64, 10), "tiamat_default_world:stone", "not yet");
+    r.tick(60);
+    assert_eq!(r.block_name(11, 64, 10), "tiamat_default_craft:cracked_stone");
+    assert_eq!(r.block_name(10, 63, 10), "tiamat_default_craft:cracked_copper_ore");
+    assert_eq!(r.block_name(10, 64, 12), "tiamat_default_craft:cracked_stone", "through the air beside it");
+    assert_eq!(r.block_name(9, 64, 10), "tiamat_default_world:granite");
+    assert_eq!(r.block_name(12, 64, 10), "tiamat_default_world:stone", "behind rock, out of reach");
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.dig_start(PLAYER, "cracked_copper_ore"), Ok(()));
+    assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:copper_ore"), Err("Bare hands will not move stone. Fire will crack it, or a bronze pick will break it.".into()));
+    // A cracked block dug by hand is the ore it was, whole. (The rig's digs
+    // aim at the block at 100, 64, 100.)
+    r.put(100, 64, 100, "cracked_copper_ore");
+    let before = r.units(PLAYER, "tiamat_default_world:copper_ore");
+    assert_eq!(r.dig(PLAYER, "cracked_copper_ore"), Ok(()));
+    assert_eq!(r.units(PLAYER, "tiamat_default_world:copper_ore"), before + 27);
+    let dump = r.storage.dump();
+    for first in ["fire:lit", "fireset:copper_ore", "fireset:stone"] {
+        assert!(dump.contains(&format!("first:{}:{first}=", hex(PLAYER))), "{first}");
+    }
+
+    // Fed a log; then too full for another.
+    r.give(PLAYER, "tiamat_default_world:oak_log", 54);
+    r.hold(PLAYER, "tiamat_default_world:oak_log", None);
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""));
+    assert_eq!(r.units(PLAYER, "tiamat_default_world:oak_log"), 27);
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some("The fire is roaring already."));
+    assert_eq!(r.units(PLAYER, "tiamat_default_world:oak_log"), 27, "nothing taken");
+    // Anything else in hand at a fire is somebody else's business.
+    r.give(PLAYER, "tiamat_default_world:dirt", 27);
+    r.hold(PLAYER, "tiamat_default_world:dirt", None);
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10), None);
+
+    // A restart: the fire is read back and burns out where it left off.
+    let mut r = Rig::new(Setup {
+        world: true,
+        life: true,
+        prelude: prelude.into(),
+        restart: Some(r.saved()),
+        ..Setup::default()
+    });
+    r.join(PLAYER);
+    r.tick(6000);
+    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_life:campfire", "still burning");
+    r.tick(1200);
+    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_craft:unlit_campfire", "burned out");
+    assert!(!r.storage.dump().contains("fire:overworld@"), "and forgotten");
+    println!("fire: ok");
+}
+
+/// Without Life the fire is this mod's own; a fire dug away is forgotten.
+fn fire_alone() {
+    let mut r = Rig::new(Setup { world: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let striker = r.details(PLAYER, "fire_striker")[0].clone();
+    r.hold(PLAYER, "fire_striker", Some(&striker));
+    r.put(0, 64, 0, "unlit_campfire");
+    assert_eq!(r.use_at(PLAYER, 0, 64, 0).as_deref(), Some(""));
+    assert_eq!(r.block_name(0, 64, 0), "tiamat_default_craft:campfire_lit");
+    r.tick(40);
+    assert!(r.storage.dump().contains("fire:overworld@0,64,0"));
+    r.world.apply(tiamat_core::BlockPos { x: 0, y: 64, z: 0 }, "engine:air");
+    r.tick(40);
+    assert!(!r.storage.dump().contains("fire:overworld@0,64,0"), "a dug fire is forgotten");
+    println!("fire alone: ok");
 }

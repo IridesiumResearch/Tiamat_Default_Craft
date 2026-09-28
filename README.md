@@ -27,8 +27,8 @@ Built in the brief's order (§12), each step shipping on its own:
 |---|---|---|
 | 1 | The recipe, station and fuel registry, `perform` with rollback, exported | **done** |
 | 2 | Tools: the hand, held → tool sync, dig classes, wear | **done** |
-| 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | next |
-| 4 | Workbench, the Craft tab, the chest | |
+| 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | **done** |
+| 4 | Workbench, the Craft tab, the chest | next |
 | 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | |
 | 6 | Cooking | |
 | 7 | The sluice | |
@@ -36,8 +36,12 @@ Built in the brief's order (§12), each step shipping on its own:
 | 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | |
 | 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | |
 
-Today a player can make **sticks from any log** by hand (`craft stick`),
-and every tool of the ladder exists and works — typed, tiered and worn,
+Today a player can start from nothing: break flint out by hand, rub
+tinder from dry grass, split sticks from a log, lay a campfire and strike it
+alight (`craft fire_striker`, `craft tinder`, `craft stick`, `craft
+unlit_campfire`). A burning fire cracks the rock around it in thirty
+seconds, and cracked rock and ore come away by hand, whole. Feed it logs
+or it goes out. Every tool of the ladder exists and works — typed, tiered and worn,
 with a sentence for each refusal — though only an operator's `toolkit`
 hands them out until the stations that make them land. Bare hands move
 earth, sand, clay and soft logs; rock wants a bronze pick, and the hard
@@ -56,6 +60,7 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   registry.lua               recipes, groups, stations, fuels, the gate; perform
   materials.lua              the items and blocks this mod registers
   tools.lua                  the hand, the tools, held → tool, dig classes, wear
+  fire.lua                   campfires: lighting, fuel, burning out, fire-setting
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
@@ -92,6 +97,31 @@ cargo run --manifest-path tests/native/Cargo.toml
 In a world, `recipes` in chat lists what you could make by hand from what
 you carry, and `craft <recipe> [times]` makes it. An operator's `toolkit`
 gives one of every tool.
+
+## Where this departs from the brief
+
+The brief (`docs/brief.md`) is kept as written; where building it found
+something it did not know, the code follows the engine and the siblings,
+and the change is recorded here.
+
+- **The tool gate is on `register_on_dig_start`**, which landed the day the
+  brief was written: a wrong tool is refused as the dig begins.
+- **Flint is `cracked`, not `rock`.** The first fire is struck with flint,
+  and fire is how the hand gets past rock; flint wanting a pick would make
+  the loop impossible to start. It has no cracked twin.
+- **Class types are lists.** `wood` takes a hand, an axe or a chisel,
+  `cracked` a hand, maul, pick or chisel, and the chisel carves what a pick
+  or axe of its tier may break. A spade on a log is refused ("That wants an
+  axe."), a pick on earth is not.
+- **Bronze and iron sickles and hoes**, which the brief left for later: Life
+  now farms, and its exports ask for the farm tools in bronze and iron.
+- **The campfire is made by hand**, not at the workbench: fire comes before
+  the workshop on the ladder, and the workbench is step 4.
+- **A cracked block drops nothing and the digger is handed the rock**,
+  because the engine lets a block drop only its own mod's materials (engine
+  ask 7).
+- **Fire-setting reaches one block further through open air**, so a face
+  dug back keeps cracking. Quenching with water is not built.
 
 ## Pictures, and replacing them
 

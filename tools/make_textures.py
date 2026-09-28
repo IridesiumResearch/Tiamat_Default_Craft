@@ -213,8 +213,73 @@ def rod(wood):
     return c.p
 
 
+def tinder():
+    c = Canvas()
+    straw, dry = (196, 170, 104), (150, 124, 70)
+    for i, (x0, y0, x1, y1) in enumerate([(3, 12, 9, 5), (5, 13, 12, 7), (4, 10, 13, 10), (7, 13, 6, 4), (9, 12, 12, 4)]):
+        c.line(x0, y0, x1, y1, straw if i % 2 == 0 else dry)
+    return c.p
+
+
+def striker():
+    c = Canvas()
+    flint, edge = (64, 62, 70), (110, 108, 118)
+    c.rect(3, 6, 8, 11, flint)
+    c.line(3, 5, 8, 5, edge)
+    c.rect(9, 7, 13, 10, flint)
+    c.line(9, 6, 13, 6, edge)
+    for x, y in [(8, 3), (10, 2), (9, 4)]:
+        c.dot(x, y, (250, 200, 90))
+    return c.p
+
+
+def campfire(lit):
+    """Crossed logs on a ring of stones, alight or not. Clear round it: the
+    block is cutout, and the gaps are where the ground shows."""
+    c = Canvas()
+    c.line(2, 13, 13, 9, WOOD, 2)
+    c.line(2, 9, 13, 13, WOOD_DARK, 2)
+    for x in range(1, 15, 3):
+        c.rect(x, 14, x + 1, 15, (110, 108, 104))
+    if lit:
+        for row, (half, colour) in enumerate([(1, (255, 236, 150)), (2, (250, 160, 30)), (3, (236, 88, 20)),
+                                             (3, (236, 88, 20)), (2, (250, 160, 30)), (1, (236, 88, 20))]):
+            y = 10 - row
+            c.line(8 - half, y, 7 + half, y, colour)
+        c.dot(7, 3, (236, 88, 20))
+    else:
+        c.rect(6, 9, 9, 10, (180, 164, 120))
+    return c.p
+
+
+# The world's rocks (its tools/make_textures.py), for their cracked twins.
+ROCKS = {
+    "stone": (112, 110, 104),
+    "slate": (72, 78, 90),
+    "calcite": (204, 202, 194),
+    "dark_basalt": (44, 44, 48),
+    "copper_ore": (140, 96, 66),
+    "iron_ore": (122, 96, 86),
+    "coal": (34, 32, 34),
+}
+
+
+def cracked(colour):
+    """A whole block of the rock's colour, crazed with darker cracks."""
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, colour)
+    dark = tuple(max(0, v * 45 // 100) for v in colour)
+    for x0, y0, x1, y1 in [(0, 3, 7, 7), (7, 7, 15, 5), (7, 7, 5, 15), (10, 0, 12, 6), (12, 11, 15, 13), (2, 11, 5, 13)]:
+        c.line(x0, y0, x1, y1, dark)
+    return c.p
+
+
 ITEMS = {
     "stick": lambda: rod(METALS["wooden"]),
+    "tinder": tinder,
+    "fire_striker": striker,
+    "unlit_campfire": lambda: campfire(False),
+    "campfire_lit": lambda: campfire(True),
     "digging_stick": lambda: digging_stick(METALS["wooden"]),
     "ironwood_digging_stick": lambda: digging_stick(METALS["ironwood"]),
     "wooden_maul": lambda: maul(METALS["wooden"]),
@@ -233,6 +298,8 @@ for metal in ("bronze", "iron"):
     ITEMS[metal + "_knife"] = (lambda m: lambda: knife(m))(colours)
     ITEMS[metal + "_sickle"] = (lambda m: lambda: sickle(m))(colours)
     ITEMS[metal + "_hoe"] = (lambda m: lambda: hoe(m))(colours)
+for rock, colour in ROCKS.items():
+    ITEMS["cracked_" + rock] = (lambda col: lambda: cracked(col))(colour)
 
 
 def main():
