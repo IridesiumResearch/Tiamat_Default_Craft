@@ -148,9 +148,6 @@ and the change is recorded here.
   now farms, and its exports ask for the farm tools in bronze and iron.
 - **The campfire is made by hand**, not at the workbench: fire comes before
   the workshop on the ladder, and the workbench is step 4.
-- **A cracked block drops nothing and the digger is handed the rock**,
-  because the engine lets a block drop only its own mod's materials (engine
-  ask 7).
 - **Hafts and cord.** A haft (two sticks and a cord) is what a maul, and
   later every metal head, is fitted to; cord is twisted from bramble.
 - **Station screens are the engine's widgets with the interface's fonts

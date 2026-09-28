@@ -15,22 +15,46 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-09-28)
 
-**Every ask has landed.** 2 to 7 in engine c83fbc9, 8 and 9 in engine
-cbbbc5e. None is adopted in the mod yet; the table says what each would
-replace.
+**One is open: 10.** Everything else landed — 2 to 7 in engine c83fbc9, 8
+and 9 in engine cbbbc5e — and is adopted, except 8, which waits on 10.
+Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
-| 9 reading one slot of a player's view | Landed, engine cbbbc5e. | not yet adopted: the anvil is still a station you open and strike. | the anvil takes its work from its own container, struck with a hammer, not from the off-hand (step 8). |
-| 8 a use at a block reaching the block's handler first | Landed, engine cbbbc5e. | not yet adopted: a fire is still opened with an empty hand. | a fire is opened with an empty hand and food is put in its box, not held over it (step 6). |
-| 7 a drop of another mod's material | Landed, engine c83fbc9. | not yet adopted: a cracked block still drops nothing and hands the rock over. |
-| 6 a material's tags and hardness | Landed, engine c83fbc9. | not yet adopted: the dig classes are still a table. |
-| 5 enumerating containers | Landed, engine c83fbc9. | not yet adopted: stations still keep their own index. |
-| 4 a give into one slot of a player's view | Landed, engine c83fbc9. | not yet adopted: wear still lives in storage. |
+| 10 a listed use handler beside an unlisted one | **Open.** | cooking stays a box on the fire; ask 8 cannot be adopted without it. |
+| 9 reading one slot of a player's view | Landed, engine cbbbc5e. | the anvil works what is in the off-hand. |
+| 8 a use at a block reaching the block's handler first | Landed, engine cbbbc5e. | waits on 10: listing the fires would lose every other station's use. |
+| 7 a drop of another mod's material | Landed, engine c83fbc9. | a cracked block drops the world's rock. |
+| 6 a material's tags and hardness | Landed, engine c83fbc9. | a block nobody classed is classed by its tags. |
+| 5 enumerating containers | Landed, engine c83fbc9. | stations are found by the container listing; no index. |
+| 4 a give into one slot of a player's view | Landed, engine c83fbc9. | a tool's wear rides on the tool, rewritten in its slot. |
 | 3 a drop that depends on the tool | Landed, engine c83fbc9. | nothing needs it yet. |
-| 2 a tool's speed per material | Landed, engine c83fbc9. | not yet adopted: a tool digs at one speed. |
+| 2 a tool's speed per material | Landed, engine c83fbc9. | picks, axes, mauls and chisels are slow on loose ground. |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
+
+## 10. A listed use handler beside an unlisted one (2026-09-28): OPEN
+
+**Seen.** Ask 8 landed as asked: `register_on_use(fn, { materials = {...} })`
+is heard first at those blocks — and, by the same design, at no other
+block. A mod has one `on_use` (a second is refused: "One callback per hook
+per mod"). Craft hears uses at far more blocks than its fires: every
+station block the registry holds, its own and other mods' — Tiamat Default
+Progress's research table opens because Craft handles a use at it, and that
+block is registered after Craft loads, so Craft cannot name it in a list.
+So Craft can list its fires and lose every station another mod adds, or
+list nothing and lose the gesture ask 8 was for: raw meat held out over a
+fire is still eaten by Life, which loads first.
+
+**Meanwhile.** Craft registers `on_use` without a list, as before; cooking
+is the fire's box, opened with an empty hand.
+
+**Smallest change.** Let a mod register `on_use` twice when exactly one of
+the two carries `materials`: the listed one asked first at its blocks, the
+unlisted one in its ordinary place for every other block. Each is still
+one callback, so nothing about a veto's order changes.
+
+Copied to the engine's sheet 2026-09-28.
 
 ## 9. Reading one slot of a player's view (2026-09-28): LANDED 2026-09-28 (engine cbbbc5e)
 
