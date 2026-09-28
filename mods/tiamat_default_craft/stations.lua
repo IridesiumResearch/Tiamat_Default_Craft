@@ -17,10 +17,10 @@
 -- A container is named by what it is and where: `tiamat_default_craft:
 -- <station>:x,y,z` (with `<domain>@` before the position off the
 -- overworld). Container names are not namespaced by the engine; the prefix
--- is what keeps another mod's box at the same place a different box. The
--- engine cannot list containers (engine ask 5), so every station placed is
--- also kept in an index in storage, `station:<name>`, which a station that
--- runs on the tick (the kiln, step 5) walks.
+-- is what keeps another mod's box at the same place a different box. A
+-- station that runs on the tick (a kiln, a sluice) is found by listing the
+-- containers with its prefix, so one a plan stamped runs as one placed by
+-- hand.
 --
 -- # One player at a time
 --
@@ -81,27 +81,13 @@ function ST.name(kind_id, pos)
     return game.mod_id .. ":" .. kind_id .. ":" .. where
 end
 
--- The index: every station container placed, with where it is, kept in
--- storage (`station:<name>` = "kind=...;x=...;y=...;z=...;domain=...") and
--- in memory, read from storage once.
-local index = nil   -- name -> { kind, x, y, z, domain }
+-- Where the stations are is the engine's to say: every container is
+-- listed by `game.containers(prefix)` (engine ask 5), and a station's name
+-- says where it stands. The one thing a name does not hold is who placed
+-- it, which the progression's effects answer to (a sluice's gold): that is
+-- kept in storage, `placer:<name>`.
 
-local function load_index()
-    if index then return index end
-    index = {}
-    for _, key in ipairs(game.storage.keys()) do
-        local name = string.match(key, "^station:(.+)$")
-        if name then
-            local record = U.decode(game.storage.get(key))
-            if type(record.kind) == "string" and math.type(record.x) == "integer" then
-                index[name] = record
-            end
-        end
-    end
-    return index
-end
-
---- Makes a station's container if it has none, and keeps it in the index.
+--- Makes a station's container if it has none; `by` is who placed it.
 local ensure
 
 --- The same, by station id: for a mod file that has to put something into a
@@ -115,39 +101,64 @@ end
 function ensure(kind, pos, by)
     local name = ST.name(kind.id, pos)
     game.make_container(name, kind.size)
-    local idx = load_index()
-    if not idx[name] then
-        local record = { kind = kind.id, x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld",
-            by = by }
-        idx[name] = record
-        game.storage.set("station:" .. name, U.encode(record))
+    if by and not game.storage.get("placer:" .. name) then
+        game.storage.set("placer:" .. name, by)
     end
     return name
 end
 
---- The station a container belongs to, by id, or nil.
+--- Where a container stands, from its name after the kind's prefix:
+--- `x,y,z`, or `domain@x,y,z`.
+local function pos_of_name(rest)
+    local domain, where = string.match(rest, "^(.*)@([^@]+)$")
+    where = where or rest
+    local x, y, z = string.match(where, "^(%-?%d+),(%-?%d+),(%-?%d+)$")
+    if not x then return nil end
+    return { x = math.tointeger(tonumber(x)), y = math.tointeger(tonumber(y)), z = math.tointeger(tonumber(z)),
+        domain = domain }
+end
+
+--- The station a container belongs to, by id, or nil: the longest station
+--- id whose prefix the name has.
 function ST.kind_id(name)
-    local record = load_index()[name]
-    return record and record.kind
+    local best = nil
+    for _, id in ipairs(R.station_ids()) do
+        local prefix = game.mod_id .. ":" .. id .. ":"
+        if string.sub(name, 1, #prefix) == prefix and pos_of_name(string.sub(name, #prefix + 1))
+            and (not best or #id > #best) then
+            best = id
+        end
+    end
+    return best
 end
 
 local function unindex(name)
-    load_index()[name] = nil
-    game.storage.set("station:" .. name, nil)
+    game.storage.set("placer:" .. name, nil)
 end
 
---- Every indexed container of a station, sorted, with where it is:
---- `{ { name, pos } }`.
+-- The index this mod kept before the engine could list containers.
+local cleaned = false
+local function clean_old_index()
+    cleaned = true
+    for _, key in ipairs(game.storage.keys("station:")) do
+        game.storage.set(key, nil)
+    end
+end
+
+--- Every container of a station, sorted, with where it is and who placed
+--- it: `{ { name, pos, by } }`.
 function ST.indexed(kind_id)
+    if not cleaned then clean_old_index() end
+    local prefix = game.mod_id .. ":" .. kind_id .. ":"
     local out = {}
-    local idx = load_index()
-    for _, name in ipairs(U.sorted_keys(idx)) do
-        local r = idx[name]
-        if r.kind == kind_id then
-            out[#out + 1] = { name = name, by = type(r.by) == "string" and r.by or nil,
-                pos = { x = r.x, y = r.y, z = r.z, domain = r.domain ~= "overworld" and r.domain or nil } }
+    for _, name in ipairs(game.containers(prefix)) do
+        local pos = pos_of_name(string.sub(name, #prefix + 1))
+        if pos and ST.kind_id(name) == kind_id then
+            local by = game.storage.get("placer:" .. name)
+            out[#out + 1] = { name = name, pos = pos, by = type(by) == "string" and by or nil }
         end
     end
+    table.sort(out, function(a, b) return a.name < b.name end)
     return out
 end
 

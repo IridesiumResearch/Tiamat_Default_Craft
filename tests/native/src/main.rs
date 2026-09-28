@@ -643,7 +643,7 @@ fn stations() {
     r.place(PLAYER, 5, 64, 5, "workbench").unwrap();
     let bench = "tiamat_default_craft:workbench:5,64,5";
     assert!(r.boxes.exists(bench));
-    assert!(r.storage.dump().contains(&format!("station:{bench}=Text(\"by={};domain=overworld;kind=workbench;x=5;y=64;z=5\")", hex(PLAYER))), "{}", r.storage.dump());
+    assert!(r.storage.dump().contains(&format!("placer:{bench}=Text(\"{}\")", hex(PLAYER))), "{}", r.storage.dump());
 
     // Used: the screen, and the container lent to this player alone.
     assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));

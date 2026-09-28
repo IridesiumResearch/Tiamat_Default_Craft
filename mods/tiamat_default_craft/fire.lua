@@ -111,7 +111,7 @@ end
 
 local function restore()
     restored = true
-    for _, key in ipairs(game.storage.keys()) do
+    for _, key in ipairs(game.storage.keys("fire:")) do
         local rest = string.match(key, "^fire:(.+)$")
         if rest then
             local fire = U.decode(game.storage.get(key))
