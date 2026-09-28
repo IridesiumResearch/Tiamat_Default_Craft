@@ -43,6 +43,7 @@ ST.alias(game.mod_id .. ":unfired_kiln", "kiln")
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 and life.add_heat_source then
     life.add_heat_source(game.mod_id .. ":kiln_lit", 0.6)
+    life.add_heat_source(game.mod_id .. ":bloomery_lit", 0.8)
 end
 
 local states = {}   -- container -> { lit, burn, full, heat, job, progress, by }
@@ -55,6 +56,7 @@ local function state(name)
     s.burn = math.type(s.burn) == "integer" and s.burn or 0
     s.full = math.type(s.full) == "integer" and s.full or 0
     s.heat = math.type(s.heat) == "integer" and s.heat or 0
+    s.fuel_heat = math.type(s.fuel_heat) == "integer" and s.fuel_heat or nil
     s.progress = math.type(s.progress) == "integer" and s.progress or 0
     if type(s.job) ~= "string" or s.job == "" then s.job = nil end
     if type(s.by) ~= "string" or s.by == "" then s.by = nil end
@@ -66,7 +68,7 @@ local function save(name)
     local s = states[name]
     if not s then return end
     game.storage.set("furnace:" .. name, U.encode{
-        lit = s.lit, burn = s.burn, full = s.full, heat = s.heat, progress = s.progress,
+        lit = s.lit, burn = s.burn, full = s.full, heat = s.heat, fuel_heat = s.fuel_heat or 0, progress = s.progress,
         job = s.job or "", by = s.by or "",
     })
 end
@@ -110,6 +112,23 @@ local function next_fuel(station, name)
     return nil
 end
 
+--- Whether a station's boost (bellows) is in its tool slot.
+local function boosted(station, name)
+    if not station.boost then return false end
+    for _, slot in ipairs(station.slots.tool) do
+        local stack = in_slot(name, slot)
+        local id = stack and game.block_of(stack.material)
+        if id and (id == station.boost.tool or R.in_group(station.boost.tool, id)) then return true end
+    end
+    return false
+end
+
+--- The heat a furnace burns at: its fuel's, or its boost's when that is hotter.
+local function heat_of(station, name, fuel_heat)
+    if boosted(station, name) then return math.max(fuel_heat, station.boost.heat) end
+    return fuel_heat
+end
+
 --- Burns the next 27 units of fuel. Answers whether there was any.
 local function stoke(station, name, s)
     local fuel = next_fuel(station, name)
@@ -117,7 +136,8 @@ local function stoke(station, name, s)
     if game.container_take(name, { material = fuel.material, units = U.UNITS, slot = fuel.slot }) < U.UNITS then
         return false
     end
-    s.burn, s.full, s.heat = fuel.ticks, fuel.ticks, fuel.heat
+    s.burn, s.full, s.fuel_heat = fuel.ticks, fuel.ticks, fuel.heat
+    s.heat = heat_of(station, name, fuel.heat)
     return true
 end
 
@@ -145,6 +165,8 @@ local function tend(station, name, pos, step)
     if s.lit ~= 1 then return end
     if game.get_block(pos) == nil then return end   -- not loaded: paused
     s.burn = s.burn - step
+    -- Bellows put in or taken out change the heat at once.
+    if s.burn > 0 and s.fuel_heat then s.heat = heat_of(station, name, s.fuel_heat) end
     if s.burn <= 0 and not stoke(station, name, s) then
         s.lit, s.burn, s.full, s.heat, s.job, s.progress = 0, 0, 0, 0, nil, 0
         swap(station, pos, false)
@@ -197,7 +219,12 @@ function FU.light(e, station, name, pos)
     if held ~= STRIKER then return nil end
     local s = state(name)
     if s.lit == 1 then return "It is burning already." end
-    if not next_fuel(station, name) then return "It wants fuel first." end
+    if not next_fuel(station, name) then
+        for _, slot in ipairs(station.slots.fuel) do
+            if in_slot(name, slot) and station.refuse_fuel then return station.refuse_fuel end
+        end
+        return "It wants fuel first."
+    end
     local was = game.block_of(e.material)
     if not stoke(station, name, s) then return "It wants fuel first." end
     s.lit, s.by, s.job, s.progress = 1, e.player, nil, 0

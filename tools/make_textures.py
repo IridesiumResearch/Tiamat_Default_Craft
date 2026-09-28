@@ -469,6 +469,72 @@ def sluice():
 
 
 ITEMS["sluice"] = sluice
+
+
+def tuyere(colour, dark):
+    c = Canvas()
+    for row in range(5, 11):
+        width = 10 - (row - 5)
+        c.line(2, row, 2 + width, row, colour)
+    c.line(2, 11, 8, 11, dark)
+    c.dot(13, 8, dark)
+    return c.p
+
+
+def bellows():
+    c = Canvas()
+    c.rect(2, 4, 10, 11, PLANK)
+    for y in (6, 9):
+        c.line(3, y, 9, y, PLANK_DARK)
+    c.line(11, 7, 14, 7, COPPER, 2)
+    c.line(0, 7, 1, 7, WOOD_DARK)
+    return c.p
+
+
+def bloomery_block(lit):
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, CLAY_FIRED)
+    c.rect(0, 0, SIZE - 1, 3, (112, 110, 104))
+    for y in (7, 11):
+        c.line(0, y, SIZE - 1, y, CLAY_FIRED_DARK)
+    c.rect(6, 12, 9, 15, (40, 30, 26))
+    c.rect(12, 8, 14, 9, BRONZE)
+    if lit:
+        c.rect(7, 13, 8, 15, (255, 236, 150))
+    return c.p
+
+
+def anvil():
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, (150, 138, 132))
+    c.rect(0, 0, SIZE - 1, 3, (178, 168, 160))
+    c.line(0, 4, SIZE - 1, 4, (98, 90, 86))
+    c.rect(4, 5, 11, SIZE - 1, (132, 122, 116))
+    return c.p
+
+
+ITEMS["bronze_tuyere"] = lambda: tuyere(BRONZE, BRONZE_DARK)
+ITEMS["copper_nozzle"] = lambda: tuyere(COPPER, COPPER_DARK)
+ITEMS["bellows"] = bellows
+ITEMS["bloomery"] = lambda: bloomery_block(False)
+ITEMS["bloomery_lit"] = lambda: bloomery_block(True)
+ITEMS["stone_anvil"] = anvil
+ITEMS["iron_bloom"] = lambda: lump((92, 80, 76), (54, 46, 44))
+ITEMS["iron_bar"] = lambda: ingot(IRON)
+ITEMS["unfired_mould_tuyere"] = lambda: mould(lambda: tuyere(BRONZE, BRONZE_DARK), CLAY_WET, (98, 86, 74))
+ITEMS["mould_tuyere"] = lambda: mould(lambda: tuyere(BRONZE, BRONZE_DARK), CLAY_FIRED, CLAY_FIRED_DARK)
+IRON_SHAPES = {
+    "pick": lambda: pick(METALS["iron"]),
+    "axe": lambda: axe(METALS["iron"]),
+    "spade": lambda: spade(METALS["iron"]),
+    "chisel": lambda: chisel(METALS["iron"]),
+    "hammer": lambda: hammer(METALS["iron"]),
+    "knife": lambda: knife(METALS["iron"]),
+    "sickle": lambda: sickle(METALS["iron"]),
+    "hoe": lambda: hoe(METALS["iron"]),
+}
+for shape, draw in IRON_SHAPES.items():
+    ITEMS["iron_" + shape + "_head"] = (lambda d: lambda: head_of(d))(draw)
 ITEMS["fired_clay"] = lambda: lump(CLAY_FIRED, CLAY_FIRED_DARK)
 ITEMS["unfired_crucible"] = lambda: pot_shape(CLAY_WET, (98, 86, 74))
 ITEMS["crucible"] = lambda: pot_shape(CLAY_FIRED, CLAY_FIRED_DARK)

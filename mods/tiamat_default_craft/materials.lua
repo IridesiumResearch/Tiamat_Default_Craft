@@ -48,6 +48,16 @@ for _, head in ipairs(tdc.util.sorted_keys(tdc.config.heads)) do
     item("bronze_" .. head .. "_head", "Bronze " .. head .. " head", "Cast. It wants a haft at the workbench.")
 end
 item("unfired_mould_pot", "Unfired pot mould", "Clay pressed round a pattern. Fire it in the kiln.")
+item("unfired_mould_tuyere", "Unfired tuyere mould", "Clay pressed round a pattern. Fire it in the kiln.")
+item("bronze_tuyere", "Bronze tuyere", "The nozzle a bloomery's air comes in by.")
+item("copper_nozzle", "Copper nozzle", "The spout of a pair of bellows.")
+
+-- Iron: a bloom out of the bloomery, a bar off the anvil, heads forged from bars.
+item("iron_bloom", "Iron bloom", "Spongy iron and slag. Beat it on an anvil.")
+item("iron_bar", "Wrought iron bar", "Iron beaten clean. Forge it into a head.")
+for _, head in ipairs(tdc.util.sorted_keys(tdc.config.heads)) do
+    item("iron_" .. head .. "_head", "Iron " .. head .. " head", "Forged. It wants a haft at the workbench.")
+end
 
 --- Every block this mod registered, by short id: its numeric material.
 M.blocks = {}
@@ -82,6 +92,24 @@ block("sluice", {
     name = "Sluice",
     description = "A plank trough with riffles. Stand it in running water and give it gravel.",
     hardness = 0.8,
+})
+
+-- The bloomery (furnace.lua) and the anvil (anvil.lua).
+block("bloomery", {
+    name = "Bloomery",
+    description = "A clay stack with a tuyere. Charcoal only; bellows make it burn white.",
+    hardness = 1.5,
+})
+block("bloomery_lit", {
+    name = "Bloomery (burning)",
+    description = "Burning.",
+    hardness = 1.5,
+    light_emit = { r = 14, g = 8, b = 2 },
+})
+block("stone_anvil", {
+    name = "Stone anvil",
+    description = "Granite, squared with a chisel. Put the work on it and strike it with a hammer.",
+    hardness = 2.0,
 })
 
 -- The kiln (furnace.lua): laid of wet clay and cobbles, fired once to be a

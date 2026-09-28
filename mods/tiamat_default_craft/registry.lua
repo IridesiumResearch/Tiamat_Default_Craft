@@ -149,6 +149,9 @@ function R.register_station(spec)
         -- Works on its own, as something outside the registry drives it (a
         -- campfire is burned by fire.lua): its recipes are not pressed.
         auto = spec.auto == true or spec.heat == true,
+        -- Worked by blows: its recipes are chosen on its screen and made by
+        -- striking it (anvil.lua).
+        forge = spec.forge == true,
         inventory = spec.inventory == true,
     }
     if spec.slots ~= nil then
@@ -178,6 +181,19 @@ function R.register_station(spec)
             if not U.qualified(spec[key]) then return nil, key .. " is a qualified block id" end
             record[key] = spec[key]
         end
+    end
+    if spec.boost ~= nil then
+        -- A tool in its tool slot that makes it burn hotter: bellows.
+        local b = spec.boost
+        if type(b) ~= "table" or not (U.qualified(b.tool) or U.group(b.tool)) or not U.whole(b.heat, 1, C.max_heat) then
+            return nil, "boost is { tool, heat }"
+        end
+        if not (record.heat and record.slots.tool) then return nil, "a boost needs heat and a tool slot" end
+        record.boost = { tool = b.tool, heat = U.whole(b.heat, 1, C.max_heat) }
+    end
+    if spec.refuse_fuel ~= nil then
+        if type(spec.refuse_fuel) ~= "string" then return nil, "refuse_fuel is a sentence" end
+        record.refuse_fuel = string.sub(spec.refuse_fuel, 1, 200)
     end
     if spec.fuels ~= nil then
         if type(spec.fuels) ~= "table" or #spec.fuels == 0 then return nil, "fuels is a list of names" end
@@ -307,6 +323,12 @@ function R.register(spec)
     if spec.first ~= nil and (type(spec.first) ~= "string" or #spec.first > 64) then
         return nil, "first is an event name"
     end
+    local strikes = nil
+    if station.forge then
+        strikes = U.whole(spec.strikes or 1, 1, 100)
+        if not strikes then return nil, "strikes is a whole number of blows" end
+        if #tools == 0 then return nil, "a forged recipe names the hammer it takes" end
+    end
 
     -- Conservation is the recipe author's (Schism §2); a recipe that says it
     -- conserves is held to it. Only plain names can be counted: a group's
@@ -331,6 +353,7 @@ function R.register(spec)
         outputs = outputs,
         requires = spec.requires,
         first = spec.first or ("craft:" .. id),
+        strikes = strikes,
     }
     return true
 end

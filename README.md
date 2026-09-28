@@ -32,8 +32,8 @@ Built in the brief's order (§12), each step shipping on its own:
 | 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | **done** |
 | 6 | Cooking | **done** |
 | 7 | The sluice | **done** |
-| 8 | Bloomery, bellows, anvil: iron | next |
-| 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | |
+| 8 | Bloomery, bellows, anvil: iron | **done** |
+| 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | next |
 | 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | |
 
 Today a player can start from nothing: break flint out by hand, rub
@@ -52,9 +52,13 @@ after four pours; a head and a haft at the workbench are a bronze tool.
 hand: meat put on it roasts (and chars if left), meat and fruit in a copper
 pot become Life's hot stew, and the kiln bakes Life's bread from wheat. A sluice of planks stood in a
 river washes gravel into sand and tin grains, and now and then a flake of
-gold, so bronze does not wait on a deep mine. Every tool of the ladder exists and works — typed, tiered and worn,
-with a sentence for each refusal — though iron comes only from an operator's `toolkit` until the bloomery and
-the anvil land. Bare hands move
+gold, so bronze does not wait on a deep mine. Iron is bloomed: a bloomery of
+fired clay and stone with a bronze tuyere, charcoal only, burns white with
+bellows, and ore and charcoal become a bloom; on an anvil squared from
+granite with a bronze chisel, a bloom is beaten into a wrought bar, and bars
+into iron heads with an iron hammer — the first of which is forged with
+bronze. Every tool of the ladder exists and works — typed, tiered and worn,
+with a sentence for each refusal — and every one is made in the world now; `toolkit` is only for trying them. Bare hands move
 earth, sand, clay and soft logs; rock wants a bronze pick, and the hard
 rocks iron. Another mod can register stations, recipes, tools and dig
 classes, and make them.
@@ -77,6 +81,7 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   furnace.lua                stations that burn: lighting, fuel, heat, jobs
   cooking.lua                what a campfire cooks
   sluice.lua                 tin washed out of river gravel
+  anvil.lua                  iron worked by blows
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
@@ -161,6 +166,13 @@ and the change is recorded here.
   first**, so a stew is made from what would also roast.
 - **A sluice has three out slots** (sand, tin, gold) rather than one, and
   the gold's ninth wash is a counter kept with the world, never a roll.
+- **The anvil is a station you strike.** The work goes on it through its
+  screen, where the player also chooses what to forge, and each use with a
+  hammer in hand is a blow, rather than the ingredient in the off-hand: the
+  mod API reads a player's inventory whole, with no slot to name the
+  off-hand by.
+- **The tuyere and the bellows' copper nozzle are cast** in one tuyere mould,
+  from bronze and copper.
 - **Every head has a mould**, the sickle and hoe included, and the pot's
   mould casts the copper pot.
 - **Fire-setting reaches one block further through open air**, so a face

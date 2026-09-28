@@ -96,6 +96,18 @@ uses only what is in it: a crucible or a mould belongs in its tool slot.
 The kiln is one; an alembic registered with `heat = true`, a fuel slot and
 a block is another, with nothing more to write.
 
+**A station with `boost = { tool, heat }`** burns at `heat` while that
+tool (or a member of that group) is in its tool slot: the bloomery's
+bellows. **`refuse_fuel`** is the sentence a strike says when its fuel
+slot holds something it will not burn.
+
+**A station with `forge = true` is worked by blows.** Its recipes carry
+`strikes` (1..100) and must name the hammer they take in `tools`; a player
+chooses one on its screen, puts the work on it, and uses it with that
+hammer in hand, once a blow. The recipe is made on the last blow, the held
+hammer taking the wear. Changing the work or the choice starts the count
+over. The anvil is one.
+
 **A station with `auto = true`** makes things on its own, driven by
 something other than fuel in a slot (the campfire, which fire.lua burns);
 its recipes are not pressed. A heat station is `auto` too. A station that
@@ -147,20 +159,23 @@ works, and wears per player and kind.
 |---|---|---|
 | `set_gate(fn)` | `fn(uuid, node) -> boolean` | The gate every `requires` is asked through. One owner: the first to set it keeps it. With none, everything is open; a gate that answers nothing (its mod faulted) is read as open, so a broken progress mod never stops the world making anything. |
 | `on_crafted(fn)` | `fn(uuid, recipe_id, outputs)` | Hears every recipe made. |
-| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`. Forging adds its own when it lands. |
+| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`. Forging adds its own when it lands. |
 | `on_tool_broken(fn)` | `fn(uuid, tool_id)` | Hears a tool wear out in somebody's hands (step 2). |
 
 ## Identifiers it registers
 
 All are namespaced `tiamat_default_craft:` by the engine.
 
-- **Items:** `stick`, `tinder`, `cord`, `haft`, `tin_grain`, `gold_flake`, `charred_meat`, `charcoal`, `fired_clay`,
+- **Items:** `stick`, `tinder`, `cord`, `haft`, `tin_grain`, `gold_flake`,
+  `iron_bloom`, `iron_bar`, `iron_<tool>_head` (as the bronze heads),
+  `bronze_tuyere`, `copper_nozzle`, `unfired_mould_tuyere`, `charred_meat`, `charcoal`, `fired_clay`,
   `unfired_crucible`, the ingots (`copper_ingot`, `tin_ingot`,
   `bronze_ingot`, `silver_ingot`, `gold_ingot`, `lead_ingot`), the unfired
   moulds (`unfired_mould_<shape>`, for pick, axe, spade, chisel, hammer,
   knife, sickle, hoe and pot), the cast heads (`bronze_<tool>_head`, the
   same less the pot), and the tools: `crucible`, the moulds
-  (`mould_<shape>`, worn out after four pours), `fire_striker`, `fire_striker`, `digging_stick`,
+  (`mould_<shape>`, the tuyere's included, worn out after four pours),
+  `bellows`, `fire_striker`, `fire_striker`, `digging_stick`,
   `ironwood_digging_stick`, `wooden_maul`, `ironwood_maul`, `wooden_wedge`,
   `ironwood_wedge`, `copper_pot`, and in bronze and iron each (`bronze_*`,
   `iron_*`) `spade`, `axe`, `pick`, `chisel`, `hammer`, `knife`, `sickle`,
@@ -168,7 +183,8 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Engine tools:** `hand` (the default), and every tool above that digs:
   the digging sticks, spades, mauls, axes, picks and chisels (the chisels
   with the sub-node brush).
-- **Blocks:** `plank`, `workbench`, `chest`, `sluice`, `unfired_kiln`, `kiln`,
+- **Blocks:** `plank`, `workbench`, `chest`, `sluice`, `bloomery`,
+  `bloomery_lit`, `stone_anvil`, `unfired_kiln`, `kiln`,
   `kiln_lit`, `unlit_campfire`, `campfire_lit` (the lit fire in a world
   without Life; with Life, a lit fire is Life's `campfire`), and the cracked
   rocks `cracked_stone`, `cracked_slate`, `cracked_calcite`,
@@ -193,6 +209,15 @@ All are namespaced `tiamat_default_craft:` by the engine.
   tin grain, every ten seconds, and a gold flake every ninth wash, by a
   counter); in the kiln, `tin_from_grains` and `gold_from_flakes` (nine →
   an ingot, with a crucible, heat 2).
+- **Iron:** at the workbench `bloomery` (nine fired clay, nine stone, a
+  bronze tuyere), `bellows` (four `#plank`, four cord, a copper nozzle) and
+  `stone_anvil` (a block of granite, with a `#chisel` that wears ten); in
+  the kiln `bronze_tuyere` and `copper_nozzle` (the tuyere mould); in the
+  bloomery at heat 3, `iron_bloom` (54 units of iron ore and 27 of
+  charcoal, two minutes); on the anvil `iron_bar` (a bloom, any `#hammer`,
+  three blows), `iron_<tool>_head` (bars as the bronze heads take ingots,
+  the iron hammer, five blows) and `first_iron_hammer_head` (the bronze
+  hammer, eight blows, wear two); hafting `iron_<tool>` at the workbench.
 - **Cooking** (Life's food, when Life is here): on a campfire,
   `spit_roast` (raw meat → cooked, 15 s), `stew` (raw meat and a `#fruit`,
   with a copper pot → hot stew, 30 s), `dry_clay` (wet clay → the world's
@@ -202,8 +227,10 @@ All are namespaced `tiamat_default_craft:` by the engine.
   coal (heat 2, 90 s); charcoal (heat 2, 60 s).
 - **Stations:** `hand`, `workbench` (slots 1–9 in, 10 out), `kiln` (fuel
   1, in 2–3, tool 4, out 5; it burns), `campfire` (in 1–2, a pot 3, out
-  4; it cooks while a fire this mod lit burns), and `sluice` (in 1, out
-  2–4; refused where no water touches it).
+  4; it cooks while a fire this mod lit burns), `sluice` (in 1, out
+  2–4; refused where no water touches it), `bloomery` (as the kiln; charcoal
+  only; bellows in the tool slot burn it white), and `anvil` (in 1, out 2;
+  worked by blows).
 - **Containers:** `tiamat_default_craft:<station>:x,y,z` for every station
   block placed, this mod's or another's, and `tiamat_default_craft:chest:x,y,z`
   (27 slots) for a chest; `<domain>@` before the position off the overworld.
@@ -211,7 +238,7 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Actions:** `craft` (default key V): the Craft tab on the interface's
   screen, or a dialog of its own without it.
 - **Tabs:** `tiamat_default_craft:hand`, "Craft", on Tiamat Default UI's screen.
-- **Groups:** `#fruit`, Life's apples and berries; `#plank`, this mod's plank and the world's three; `#wedge`,
+- **Groups:** `#hammer` and `#chisel`, the bronze and iron ones; `#fruit`, Life's apples and berries; `#plank`, this mod's plank and the world's three; `#wedge`,
   the two wedges; `#log`, the world's thirteen logs; `#tinder`, its dry grass,
   needles, moss, lichen and heather.
 
@@ -230,7 +257,8 @@ player's firsts (`first:<uuid>:<event>`), the tool serial counter
 (`serial`), each tool's wear (`wear:<serial>`), each fire it lit
 (`fire:<domain>@x,y,z`), each furnace's fire and work
 (`furnace:<container>`), each fire's cooking (`cook:<container>`), each sluice's washing
-(`sluice:<container>`), and the index of station containers
+(`sluice:<container>`), each anvil's choice and blows (`anvil:<container>`),
+and the index of station containers
 (`station:<container>`).
 
 ## What it reads from other mods
@@ -239,8 +267,8 @@ Not exports, listed so the direction is clear: it names the blocks of
 `tiamat_default_world` in its recipes, groups and dig classes when that mod
 is loaded; it tells `tiamat_default_life` which of its tools are weapons
 (`add_weapon`), sickles (`add_harvest_tool`) and hoes (`add_tilling_tool`),
-lights Life's `campfire` block and makes its own fire and its burning kiln
-warm through `add_contact_fire` and `add_heat_source`, makes its charred meat food
+lights Life's `campfire` block and makes its own fire and its burning kiln and
+bloomery warm through `add_contact_fire` and `add_heat_source`, makes its charred meat food
 through `add_food`, cooks Life's raw meat, fruit and wheat into Life's own
 cooked meat, hot stew and bread, and reads Life's world option
 `mode`; and it adds a tab to `tiamat_default_ui`'s screen with `add_tab`,

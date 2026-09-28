@@ -35,6 +35,19 @@ assert(R.register_station{
     slots = { input = { 1, 2 }, tool = 3, output = 4 },
 })
 
+-- The bloomery: charcoal only; bellows in the tool slot for white heat.
+assert(R.register_station{
+    id = "bloomery", name = "Bloomery", block = M.id("bloomery"), lit_block = M.id("bloomery_lit"),
+    slots = C.bloomery_slots, heat = true, fuels = { M.id("charcoal") },
+    boost = { tool = M.id("bellows"), heat = 3 }, refuse_fuel = C.coal_spoils,
+})
+
+-- The anvil: the work on it, struck with a hammer (anvil.lua).
+assert(R.register_station{
+    id = "anvil", name = "Anvil", block = M.id("stone_anvil"), forge = true,
+    slots = { input = 1, output = 2 },
+})
+
 -- The sluice: gravel in, sand, tin and now and then gold out (sluice.lua).
 assert(R.register_station{
     id = "sluice", name = "Sluice", block = M.id("sluice"), auto = true,
@@ -50,6 +63,8 @@ for _, name in ipairs(U.sorted_keys(C.groups)) do
 end
 assert(R.register_group("#plank", { M.id("plank") }))
 assert(R.register_group("#wedge", { M.id("wooden_wedge"), M.id("ironwood_wedge") }))
+assert(R.register_group("#hammer", { M.id("bronze_hammer"), M.id("iron_hammer") }))
+assert(R.register_group("#chisel", { M.id("bronze_chisel"), M.id("iron_chisel") }))
 assert(R.register_group("#fruit", { "tiamat_default_life:apple", "tiamat_default_life:berries" }))
 
 -- Fuels: what burns in anything that burns.
@@ -181,17 +196,43 @@ R.own{
     inputs = { { U.world("wet_clay"), count = 2 } },
     outputs = { { M.id("unfired_mould_pot"), count = 1 } },
 }
+R.own{
+    id = "unfired_mould_tuyere", station = "workbench", name = "Tuyere mould (unfired)",
+    inputs = { { U.world("wet_clay"), count = 2 } },
+    outputs = { { M.id("unfired_mould_tuyere"), count = 1 } },
+}
 
--- Hafting, at the workbench: a cast head and a haft are a tool. The small
--- ones take a stick.
-for _, shape in ipairs(U.sorted_keys(C.heads)) do
-    local handle = (shape == "chisel" or shape == "knife") and M.id("stick") or M.id("haft")
-    R.own{
-        id = "bronze_" .. shape, station = "workbench", name = "Bronze " .. shape,
-        inputs = { { M.id("bronze_" .. shape .. "_head"), count = 1 }, { handle, count = 1 } },
-        outputs = { { M.id("bronze_" .. shape), count = 1 } },
-        first = "haft:bronze_" .. shape,
-    }
+-- Iron's workshop, at the workbench: the bloomery, its bellows, the anvil.
+R.own{
+    id = "bloomery", station = "workbench", name = "Bloomery",
+    inputs = { { M.id("fired_clay"), count = 9 }, { U.world("stone"), count = 9 }, { M.id("bronze_tuyere"), count = 1 } },
+    outputs = { { M.id("bloomery"), count = 1 } },
+}
+R.own{
+    id = "bellows", station = "workbench", name = "Bellows",
+    inputs = { { "#plank", count = 4 }, { M.id("cord"), count = 4 }, { M.id("copper_nozzle"), count = 1 } },
+    outputs = { { M.id("bellows"), count = 1 } },
+}
+R.own{
+    id = "stone_anvil", station = "workbench", name = "Stone anvil",
+    inputs = { { U.world("granite"), count = 1 } },
+    tools = { { "#chisel", wear = 10 } },
+    outputs = { { M.id("stone_anvil"), count = 1 } },
+    first = "craft:anvil",
+}
+
+-- Hafting, at the workbench: a cast or forged head and a haft are a tool.
+-- The small ones take a stick.
+for _, metal in ipairs({ "bronze", "iron" }) do
+    for _, shape in ipairs(U.sorted_keys(C.heads)) do
+        local handle = (shape == "chisel" or shape == "knife") and M.id("stick") or M.id("haft")
+        R.own{
+            id = metal .. "_" .. shape, station = "workbench", name = U.title(metal) .. " " .. shape,
+            inputs = { { M.id(metal .. "_" .. shape .. "_head"), count = 1 }, { handle, count = 1 } },
+            outputs = { { M.id(metal .. "_" .. shape), count = 1 } },
+            first = "haft:" .. metal .. "_" .. shape,
+        }
+    end
 end
 
 R.own{
@@ -285,6 +326,11 @@ R.own{
     inputs = { { M.id("unfired_mould_pot"), count = 1 } },
     outputs = { { M.id("mould_pot"), count = 1 } },
 }
+R.own{
+    id = "mould_tuyere", station = "kiln", name = "Tuyere mould", heat = 1, ticks = 600,
+    inputs = { { M.id("unfired_mould_tuyere"), count = 1 } },
+    outputs = { { M.id("mould_tuyere"), count = 1 } },
+}
 
 -- Smelting: 27 units of ore in a crucible is an ingot.
 local SMELT = { copper = 900, tin = 600, silver = 900, gold = 900, lead = 900 }
@@ -334,6 +380,57 @@ for _, shape in ipairs(U.sorted_keys(C.heads)) do
         first = "cast:bronze_" .. shape,
     }
 end
+R.own{
+    id = "bronze_tuyere", station = "kiln", name = "Bronze tuyere", heat = 2, ticks = 600,
+    inputs = { { M.id("bronze_ingot"), count = 2 } },
+    tools = { M.id("mould_tuyere") },
+    outputs = { { M.id("bronze_tuyere"), count = 1 } },
+    first = "cast:bronze_tuyere",
+}
+R.own{
+    id = "copper_nozzle", station = "kiln", name = "Copper nozzle", heat = 2, ticks = 600,
+    inputs = { { M.id("copper_ingot"), count = 1 } },
+    tools = { M.id("mould_tuyere") },
+    outputs = { { M.id("copper_nozzle"), count = 1 } },
+}
+
+-- In the bloomery, at white heat: two parts ore to one of charcoal, and
+-- out comes a bloom.
+R.own{
+    id = "iron_bloom", station = "bloomery", name = "Iron bloom", heat = 3, ticks = C.bloom_ticks,
+    inputs = { { U.world("iron_ore"), units = 54 }, { M.id("charcoal"), units = 27 } },
+    outputs = { { M.id("iron_bloom"), count = 1 } },
+    first = "smelt:iron",
+}
+
+-- On the anvil: a bloom beaten into a bar with any hammer; a bar into a
+-- head with an iron one. The first iron hammer is the exception.
+R.own{
+    id = "iron_bar", station = "anvil", name = "Wrought iron bar", strikes = C.strikes_bar,
+    inputs = { { M.id("iron_bloom"), count = 1 } },
+    tools = { "#hammer" },
+    outputs = { { M.id("iron_bar"), count = 1 } },
+    first = "forge:iron_bar",
+}
+for _, shape in ipairs(U.sorted_keys(C.heads)) do
+    R.own{
+        id = "iron_" .. shape .. "_head", station = "anvil", name = "Iron " .. shape .. " head",
+        strikes = C.strikes_head,
+        inputs = { { M.id("iron_bar"), count = C.heads[shape] } },
+        tools = { M.id("iron_hammer") },
+        outputs = { { M.id("iron_" .. shape .. "_head"), count = 1 } },
+        first = "forge:iron_" .. shape,
+    }
+end
+R.own{
+    id = "first_iron_hammer_head", station = "anvil", name = "First iron hammer head",
+    strikes = C.strikes_first_hammer,
+    inputs = { { M.id("iron_bar"), count = C.heads.hammer } },
+    tools = { { M.id("bronze_hammer"), wear = 2 } },
+    outputs = { { M.id("iron_hammer_head"), count = 1 } },
+    first = "forge:iron_hammer",
+}
+
 R.own{
     id = "copper_pot", station = "kiln", name = "Copper pot", heat = 2, ticks = 600,
     inputs = { { M.id("copper_ingot"), count = 3 } },

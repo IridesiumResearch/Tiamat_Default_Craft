@@ -187,6 +187,8 @@ local function draw(player, first)
             status = tdc.furnace.status(o.container)
         elseif o.station.id == "campfire" and tdc.cooking then
             status = tdc.cooking.status(o.container, o.pos)
+        elseif o.station.forge and tdc.anvil then
+            status = tdc.anvil.status(o.container)
         end
         tree, o.page = S.station(player, o.station, o.container, o.ids, o.page, o.note, status)
     else
@@ -208,6 +210,13 @@ tdc.on_use(function(e)
     if not kind then return nil end
     local pos = pos_of_use(e)
     local name = ensure(kind, pos)
+    -- A station worked by blows is struck with a hammer, not opened.
+    if kind.station and kind.station.forge and tdc.anvil then
+        local tool = e.held and tdc.tools.record(e.held.material)
+        if tool and tool.type == "hammer" then
+            return tdc.anvil.strike(e, kind.station, name)
+        end
+    end
     -- A station that burns is lit with a striker, not opened.
     if kind.station and kind.station.heat and tdc.furnace then
         local lit = tdc.furnace.light(e, kind.station, name, pos)
@@ -233,7 +242,10 @@ tdc.on_dialog(FORM, function(e)
     end
     if e.kind == "pressed" and e.name then
         local index = tonumber(string.match(e.name, "^r(%d+)$"))
-        if index and o.ids[index] and o.station.auto then
+        if index and o.ids[index] and o.station.forge then
+            tdc.anvil.choose(o.container, o.ids[index])
+            o.note = nil
+        elseif index and o.ids[index] and o.station.auto then
             o.note = "It works on its own: put in what it takes."
         elseif index and o.ids[index] then
             local ok, why = R.perform(e.player, o.ids[index], o.container)
@@ -283,6 +295,7 @@ tdc.on_dug(function(e)
     if tdc.furnace then tdc.furnace.forget(name) end
     if tdc.cooking then tdc.cooking.forget(name) end
     if tdc.sluice then tdc.sluice.forget(name) end
+    if tdc.anvil then tdc.anvil.forget(name) end
 end)
 
 -- By hand: the Craft tab, or a dialog of its own ------------------------------------------

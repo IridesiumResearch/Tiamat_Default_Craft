@@ -39,6 +39,7 @@ tdc.stations = load("stations")   -- stations and chests in the world; the Craft
 tdc.furnace = load("furnace")     -- stations that burn: heat, fuel, jobs
 tdc.cooking = load("cooking")     -- what a campfire cooks
 tdc.sluice = load("sluice")       -- tin washed out of river gravel
+tdc.anvil = load("anvil")         -- iron worked by blows
 load("commands")                  -- chat words: listing and crafting by hand
 
 -- What other mods may call. One export per mod, built whole first.

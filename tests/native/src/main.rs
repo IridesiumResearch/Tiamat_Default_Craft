@@ -139,6 +139,7 @@ fn main() {
     kiln();
     cooking();
     sluice();
+    iron();
     println!("craft native check: all passed");
 }
 
@@ -939,4 +940,117 @@ fn sluice() {
     r.tick(400);
     assert!(r.boxes.get(s, 1).is_some(), "no water, no washing");
     println!("sluice: ok");
+}
+
+/// Iron: the anvil squared from granite with a chisel, the bloomery refusing
+/// coal and burning white only with bellows, a bloom beaten into a bar, the
+/// first iron hammer forged with bronze, and an iron head with iron.
+fn iron() {
+    let mut r = Rig::new(Setup { world: true, life: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let d = |r: &Rig, id: &str| r.details(PLAYER, id)[0].clone();
+    let tool = |r: &Rig, id: &str| tiamat_core::inventory::Stack { detail: Some(d(r, id)), ..r.stack(id, 27) };
+
+    // The anvil: a block of granite and a bronze chisel's ten uses.
+    r.give(PLAYER, "workbench", 27);
+    r.place(PLAYER, 50, 64, 50, "workbench").unwrap();
+    let bench = "tiamat_default_craft:workbench:50,64,50";
+    r.boxes.set(bench, 1, Some(r.stack("tiamat_default_world:granite", 27)));
+    assert_eq!(r.use_at(PLAYER, 50, 64, 50).as_deref(), Some(""));
+    r.press_labelled(PLAYER, "station", "Stone anvil");
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.material), Some(r.material("stone_anvil")));
+    let chisels: Vec<String> = r.details(PLAYER, "bronze_chisel");
+    let serial = chisels[0].trim_start_matches("t=");
+    assert!(r.storage.dump().contains(&format!("wear:{serial}=Number(10.0)")), "the chisel wore ten");
+    r.close(PLAYER, "station");
+
+    // The bloomery: coal is refused by name.
+    r.give(PLAYER, "bloomery", 27);
+    r.place(PLAYER, 52, 64, 50, "bloomery").unwrap();
+    let b = "tiamat_default_craft:bloomery:52,64,50";
+    r.boxes.set(b, 1, Some(r.stack("tiamat_default_world:coal", 27)));
+    r.hold(PLAYER, "fire_striker", Some(&d(&r, "fire_striker")));
+    assert_eq!(r.use_at(PLAYER, 52, 64, 50).as_deref(), Some("Coal's sulphur spoils the bloom. It wants charcoal."));
+
+    // Charcoal alone is orange heat: no bloom.
+    r.boxes.set(b, 1, Some(r.stack("charcoal", 27 * 12)));
+    assert_eq!(r.use_at(PLAYER, 52, 64, 50).as_deref(), Some(""));
+    assert_eq!(r.block_name(52, 64, 50), "tiamat_default_craft:bloomery_lit");
+    r.boxes.set(b, 2, Some(r.stack("tiamat_default_world:iron_ore", 54)));
+    r.boxes.set(b, 3, Some(r.stack("charcoal", 27)));
+    r.tick(2500);
+    assert_eq!(r.boxes.get(b, 5), None, "orange heat makes no bloom");
+
+    // Bellows in: white heat, and a bloom.
+    r.boxes.set(b, 4, Some(tool(&r, "bellows")));
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.use_at(PLAYER, 52, 64, 50).as_deref(), Some(""));
+    fit::check("the bloomery", &r.screen(PLAYER));
+    r.tick(40);
+    assert!(r.screen_says(PLAYER, "White heat"));
+    r.close(PLAYER, "station");
+    r.tick(2460);
+    assert_eq!(r.boxes.get(b, 5).map(|s| s.material), Some(r.material("iron_bloom")));
+    assert!(r.storage.dump().contains(&format!("first:{}:smelt:iron=", hex(PLAYER))));
+    r.say("life heard heat tiamat_default_craft:bloomery_lit 0.8");
+    assert_eq!(r.said(), "yes");
+
+    // On the anvil, three blows of a bronze hammer: a bar.
+    r.give(PLAYER, "stone_anvil", 27);
+    r.place(PLAYER, 54, 64, 50, "stone_anvil").unwrap();
+    let a = "tiamat_default_craft:anvil:54,64,50";
+    r.boxes.set(a, 1, r.boxes.get(b, 5));
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.use_at(PLAYER, 54, 64, 50).as_deref(), Some(""), "an empty hand opens it");
+    fit::check("the anvil", &r.screen(PLAYER));
+    r.close(PLAYER, "station");
+    let bronze_hammer = d(&r, "bronze_hammer");
+    r.hold(PLAYER, "bronze_hammer", Some(&bronze_hammer));
+    for _ in 0..2 {
+        assert_eq!(r.use_at(PLAYER, 54, 64, 50).as_deref(), Some(""));
+        assert_eq!(r.boxes.get(a, 2), None, "not yet");
+    }
+    assert_eq!(r.use_at(PLAYER, 54, 64, 50).as_deref(), Some(""));
+    assert_eq!(r.boxes.get(a, 2).map(|s| s.material), Some(r.material("iron_bar")));
+
+    // A head wants an iron hammer...
+    r.boxes.set(a, 2, None);
+    r.boxes.set(a, 1, Some(r.stack("iron_bar", 27 * 5)));
+    r.hold_nothing(PLAYER);
+    r.use_at(PLAYER, 54, 64, 50);
+    r.press_labelled(PLAYER, "station", "Iron pick head");
+    r.close(PLAYER, "station");
+    r.hold(PLAYER, "bronze_hammer", Some(&bronze_hammer));
+    assert_eq!(r.use_at(PLAYER, 54, 64, 50).as_deref(), Some("That takes the iron hammer."));
+
+    // ...but the first iron hammer is forged with bronze, eight blows, double wear.
+    r.hold_nothing(PLAYER);
+    r.use_at(PLAYER, 54, 64, 50);
+    r.press_labelled(PLAYER, "station", "First iron hammer head");
+    r.close(PLAYER, "station");
+    r.hold(PLAYER, "bronze_hammer", Some(&bronze_hammer));
+    for _ in 0..8 {
+        assert_eq!(r.use_at(PLAYER, 54, 64, 50).as_deref(), Some(""));
+    }
+    assert_eq!(r.boxes.get(a, 2).map(|s| s.material), Some(r.material("iron_hammer_head")));
+    let serial = bronze_hammer.trim_start_matches("t=");
+    assert!(r.storage.dump().contains(&format!("wear:{serial}=Number(3.0)")), "one for the bar, two for this");
+
+    // With an iron hammer, five blows and three bars: an iron pick head.
+    r.boxes.set(a, 2, None);
+    r.hold_nothing(PLAYER);
+    r.use_at(PLAYER, 54, 64, 50);
+    r.press_labelled(PLAYER, "station", "Iron pick head");
+    r.close(PLAYER, "station");
+    r.hold(PLAYER, "iron_hammer", Some(&d(&r, "iron_hammer")));
+    for _ in 0..5 {
+        assert_eq!(r.use_at(PLAYER, 54, 64, 50).as_deref(), Some(""));
+    }
+    assert_eq!(r.boxes.get(a, 2).map(|s| s.material), Some(r.material("iron_pick_head")));
+    assert_eq!(r.boxes.get(a, 1), None, "the three bars left went into it");
+    assert!(r.storage.dump().contains(&format!("first:{}:forge:iron_pick=", hex(PLAYER))));
+    println!("iron: ok");
 }
