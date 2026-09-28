@@ -121,9 +121,14 @@ game.register_on_chat(function(e)
 end)
 "##;
 
+/// A stand-in for the tech mod (fixtures/tech.lua).
+const TECH: &str = include_str!("../fixtures/tech.lua");
+
 fn main() {
     load_alone();
     registry();
+    tools();
+    creative();
     println!("craft native check: all passed");
 }
 
@@ -257,4 +262,195 @@ fn registry() {
 
     let _ = MOD;
     println!("registry: ok");
+}
+
+fn tools() {
+    let mut r = Rig::new(Setup {
+        world: true,
+        life: true,
+        fixtures: vec![("schism_tech".into(), TECH.into())],
+        ..Setup::default()
+    });
+    r.join(PLAYER);
+    r.tick(1);
+
+    // The hand is this mod's, and the reference chisel is not in the set.
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
+    let tools = r.vm.registered_tools();
+    let default: Vec<&str> = tools.iter().filter(|t| t.default).map(|t| t.id.as_str()).collect();
+    assert_eq!(default, vec!["tiamat_default_craft:hand"]);
+
+    // The kit is the operator's.
+    r.say("toolkit");
+    assert_eq!(r.said(), "toolkit is for operators");
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    assert_eq!(r.said(), "a toolkit: one of each");
+    let pick = r.details(PLAYER, "bronze_pick");
+    assert_eq!(pick.len(), 1);
+    assert!(pick[0].starts_with("t="), "a tool carries its serial: {pick:?}");
+    r.say("toolkit");
+    let picks = r.details(PLAYER, "bronze_pick");
+    assert_eq!(picks.len(), 2, "two tools never stack: {picks:?}");
+    assert_ne!(picks[0], picks[1]);
+
+    // Held -> tool: set once, on the change, and put back if the tool key moved it.
+    let calls = |r: &Rig| r.tools.calls.lock().unwrap().len();
+    r.hold(PLAYER, "bronze_pick", Some(&pick[0]));
+    let before = calls(&r);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:bronze_pick"));
+    r.tick(5);
+    assert_eq!(calls(&r), before + 1, "set_tool once, not every tick");
+    r.hold(PLAYER, "tiamat_default_world:dirt", None);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
+    let hammer = r.details(PLAYER, "bronze_hammer")[0].clone();
+    r.hold(PLAYER, "bronze_hammer", Some(&hammer));
+    let before = calls(&r);
+    r.tick(1);
+    assert_eq!(calls(&r), before, "a hammer does not dig: still the hand, and nothing called");
+    r.tools.hand.lock().unwrap().insert(PLAYER, Some("tiamat_default_craft:iron_pick".into()));
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"), "the tool key does not stick");
+
+    // Another mod's tools: an engine tool is put in the hand; one that is not
+    // is the hand, and is not asked for again.
+    r.give(PLAYER, "schism_tech:drill", 27);
+    r.hold(PLAYER, "schism_tech:drill", None);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("schism_tech:drill"));
+    r.hold(PLAYER, "schism_tech:rod", None);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
+    let before = calls(&r);
+    r.tick(5);
+    assert_eq!(calls(&r), before, "a refused tool is not asked for every tick");
+
+    // The classes, as a table: what is held, what is dug, what is said.
+    let bronze_pick = pick[0].clone();
+    let rock_by_hand = "Bare hands will not move stone. Fire will crack it, or a bronze pick will break it.";
+    let cases: Vec<(Option<&str>, &str, Result<(), &str>)> = vec![
+        (None, "tiamat_default_world:dirt", Ok(())),
+        (None, "tiamat_default_world:stone", Err(rock_by_hand)),
+        (None, "tiamat_default_world:ironwood_log", Err("Too dense to break by hand. An axe would do it.")),
+        (None, "tiamat_default_world:obsidian", Err("Bare hands will not move this. It wants an iron pick.")),
+        (None, "schism_tech:plain", Ok(())),
+        (None, "schism_tech:alloy_wall", Err("Only a drill.")),
+        (Some("digging_stick"), "tiamat_default_world:dirt", Ok(())),
+        (Some("digging_stick"), "tiamat_default_world:stone", Err("That wants a pick.")),
+        (Some("digging_stick"), "tiamat_default_world:oak_log", Err("That wants an axe.")),
+        (Some("wooden_maul"), "tiamat_default_world:granite", Err("That wants a pick.")),
+        (Some("bronze_pick"), "tiamat_default_world:stone", Ok(())),
+        (Some("bronze_pick"), "tiamat_default_world:granite", Ok(())),
+        (Some("bronze_pick"), "tiamat_default_world:copper_ore", Ok(())),
+        (Some("bronze_pick"), "tiamat_default_world:gravel", Ok(())),
+        (Some("bronze_pick"), "tiamat_default_world:obsidian", Err("The bronze skitters off. This stone wants iron.")),
+        (Some("bronze_pick"), "tiamat_default_world:oak_log", Err("That wants an axe.")),
+        (Some("bronze_pick"), "schism_tech:alloy_wall", Err("Only a drill.")),
+        (Some("iron_pick"), "tiamat_default_world:obsidian", Ok(())),
+        (Some("bronze_axe"), "tiamat_default_world:ironwood_log", Ok(())),
+        (Some("bronze_axe"), "tiamat_default_world:stone", Err("That wants a pick.")),
+        (Some("bronze_chisel"), "tiamat_default_world:stone", Ok(())),
+        (Some("bronze_chisel"), "tiamat_default_world:obsidian", Err("The bronze skitters off. This stone wants iron.")),
+        (Some("bronze_hammer"), "tiamat_default_world:stone", Err(rock_by_hand)),
+    ];
+    // Checked without wearing anything out: only the start and the veto on
+    // completion are asked, never the wear that follows a real dig.
+    for (held, block, want) in cases {
+        match held {
+            Some(id) => {
+                let d = if id == "bronze_pick" { bronze_pick.clone() } else { r.details(PLAYER, id)[0].clone() };
+                r.hold(PLAYER, id, Some(&d));
+            }
+            None => r.hold_nothing(PLAYER),
+        }
+        let got = r.dig_start(PLAYER, block);
+        assert_eq!(got, want.map_err(str::to_owned), "{held:?} on {block}");
+    }
+    r.hold(PLAYER, "schism_tech:drill", None);
+    assert_eq!(r.dig_start(PLAYER, "schism_tech:alloy_wall"), Ok(()));
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.dig_complete(PLAYER, "tiamat_default_world:stone"), Err(rock_by_hand.to_owned()), "and as it completes");
+
+    // The hand on a log is allowed, with a hint the first time only.
+    r.heard(PLAYER);
+    assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:oak_log"), Ok(()));
+    assert_eq!(r.heard(PLAYER), vec!["An axe would make short work of that."]);
+    assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:birch_log"), Ok(()));
+    assert!(r.heard(PLAYER).is_empty(), "the hint is said once");
+
+    // Wear: a hundred digs of stone and the bronze pick is gone.
+    r.hold(PLAYER, "bronze_pick", Some(&bronze_pick));
+    r.tick(1);
+    for _ in 0..99 {
+        r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    }
+    r.say("t tool");
+    assert_eq!(r.said(), "tiamat_default_craft:bronze_pick pick 1 99/100");
+    // A refused dig costs nothing.
+    assert!(r.dig(PLAYER, "tiamat_default_world:obsidian").is_err());
+    r.say("t tool");
+    assert_eq!(r.said(), "tiamat_default_craft:bronze_pick pick 1 99/100");
+    r.heard(PLAYER);
+    r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    assert_eq!(r.heard(PLAYER), vec!["Your bronze pick has worn to nothing."]);
+    let other: Vec<String> = picks.iter().filter(|d| **d != bronze_pick).cloned().collect();
+    assert_eq!(r.details(PLAYER, "bronze_pick"), other, "only the other pick is left");
+    let serial = bronze_pick.trim_start_matches("t=");
+    assert!(!r.storage.dump().contains(&format!("wear:{serial}=")), "its wear key is gone");
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
+    r.hold_nothing(PLAYER);
+    assert!(r.dig_start(PLAYER, "tiamat_default_world:stone").is_err(), "the 101st dig is by hand");
+
+    // Another mod charges wear; a tool of its own breaks and it hears.
+    r.hold(PLAYER, "schism_tech:drill", None);
+    r.say("t wear 2");
+    assert_eq!(r.said(), "true");
+    r.say("t tool");
+    assert_eq!(r.said(), "schism_tech:drill drill 3 2/3");
+    r.say("t wear 1");
+    r.say("t broken");
+    assert_eq!(r.said(), "tiamat_default_craft:bronze_pick schism_tech:drill", "both breaks were heard");
+    assert_eq!(r.units(PLAYER, "schism_tech:drill"), 0);
+
+    // A recipe that makes tools makes each with its own serial.
+    r.give(PLAYER, "stick", 27);
+    let before = r.details(PLAYER, "digging_stick").len();
+    r.say("craft schism_tech:diggers");
+    let after = r.details(PLAYER, "digging_stick");
+    assert_eq!(after.len(), before + 2, "{after:?}");
+    assert!(after.iter().all(|d| d.starts_with("t=")));
+
+    // Life was told which tools are weapons, sickles and hoes.
+    for (call, want) in [
+        ("weapon tiamat_default_craft:iron_axe 7", "yes"),
+        ("weapon tiamat_default_craft:bronze_knife 4", "yes"),
+        ("harvest tiamat_default_craft:bronze_sickle 2", "yes"),
+        ("tills tiamat_default_craft:iron_hoe", "yes"),
+        ("weapon tiamat_default_craft:copper_pot 1", "no"),
+    ] {
+        r.say(&format!("life heard {call}"));
+        assert_eq!(r.said(), want, "{call}");
+    }
+    println!("tools: ok");
+}
+
+/// In a Creative world nothing is refused to the wrong tool and nothing wears.
+fn creative() {
+    let mut r = Rig::new(Setup { world: true, mode: Some("Creative".into()), ..Setup::default() });
+    r.join(PLAYER);
+    r.tick(1);
+    r.say("toolkit");
+    assert_eq!(r.said(), "a toolkit: one of each");
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.dig(PLAYER, "tiamat_default_world:obsidian"), Ok(()));
+    let pick = r.details(PLAYER, "bronze_pick")[0].clone();
+    r.hold(PLAYER, "bronze_pick", Some(&pick));
+    for _ in 0..150 {
+        r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    }
+    assert_eq!(r.details(PLAYER, "bronze_pick"), vec![pick]);
+    println!("creative: ok");
 }

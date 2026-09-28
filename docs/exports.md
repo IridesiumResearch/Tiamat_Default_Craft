@@ -84,6 +84,30 @@ inventory when the station has no slots. It is one transaction: if any
 ingredient is short, or the outputs do not fit, everything goes back to the
 slot it came from.
 
+### Tools and dig classes
+
+| Field | Shape | What it does |
+|---|---|---|
+| `register_tool(spec)` | `{ id, type, tier, uses, digs?, name? }` | Your item, gated and worn by this mod. `id` is an item YOUR mod registered; `digs = true` says you also registered an engine tool of the same id, which this mod then puts in the hand of whoever holds the item (if `game.set_tool` refuses it, the holder gets the hand). `type` is a word (`"pick"`, `"drill"`), `tier` 0..9, `uses` before it wears out (0 never). |
+| `classify(block, class)` | a qualified block id; a class id | Puts a block in a class. |
+| `register_class(spec)` | `{ id, types, tier, refusals? }` | A class of your own: the tool types that may break it (`"hand"` for a bare hand, `"any"` for everything), the least tier, and `refusals = { hand?, type?, tier? }`, the sentences a refusal says. |
+| `tool_of(uuid)` | a UUID in hex | The tool a player holds, `{ id, type, tier, uses, wear }`, or nil. |
+| `wear(uuid, amount)` | a UUID; a whole number | Charges uses to the tool a player holds, as a spell that uses a chisel might. At its last use it is taken away and the player told. Answers whether there was a tool to charge. |
+
+**The classes this mod ships:** `loose` (anything), `cracked` (hand, maul,
+pick, chisel), `wood` (hand, axe, chisel), `hardwood` (axe or chisel, tier
+1), `rock` (pick or chisel, tier 1), `hard_rock` (pick or chisel, tier 2).
+Every solid block of the world is in one; a block in none is diggable by
+anything. A dig is refused as it begins (`register_on_dig_start`), with one
+sentence saying why. In a Creative world (Life's `mode`) nothing is refused
+and nothing wears.
+
+**Tools carry a serial.** Every tool this mod makes — from a recipe, or a
+tool registered with `register_tool` coming out of `perform` — is given a
+`detail` of `"t=<serial>"`, so no two stack. Wear is kept by this mod under
+the serial. A tool of yours that reaches a player with no detail still
+works, and wears per player and kind.
+
 ### Progression
 
 | Field | Shape | What it does |
@@ -97,7 +121,14 @@ slot it came from.
 
 All are namespaced `tiamat_default_craft:` by the engine.
 
-- **Items:** `stick`.
+- **Items:** `stick`, and the tools: `digging_stick`,
+  `ironwood_digging_stick`, `wooden_maul`, `ironwood_maul`, `wooden_wedge`,
+  `ironwood_wedge`, `copper_pot`, and in bronze and iron each (`bronze_*`,
+  `iron_*`) `spade`, `axe`, `pick`, `chisel`, `hammer`, `knife`, `sickle`,
+  `hoe`.
+- **Engine tools:** `hand` (the default), and every tool above that digs:
+  the digging sticks, spades, mauls, axes, picks and chisels (the chisels
+  with the sub-node brush).
 - **Recipes:** `stick` (by hand: any `#log` → four sticks).
 - **Stations:** `hand`.
 - **Groups:** `#log`, holding the world's thirteen logs.
@@ -107,16 +138,20 @@ All are namespaced `tiamat_default_craft:` by the engine.
 Chat words, said by a player and swallowed. For anyone: `recipes
 [station]` lists what could be made by hand from what the player carries,
 and `craft <recipe> [times]` makes it. A sentence that only begins with
-one of them is chat.
+one of them is chat. For operators, and everyone in a Creative world:
+`toolkit`, one of every tool.
 
 ## Data it stores or sends
 
 None for other mods. `game.storage` is private to this mod: it keeps each
-player's firsts (`first:<uuid>:<event>`).
+player's firsts (`first:<uuid>:<event>`), the tool serial counter
+(`serial`) and each tool's wear (`wear:<serial>`).
 
 ## What it reads from other mods
 
 Not exports, listed so the direction is clear: it names the blocks of
-`tiamat_default_world` in its recipes and groups when that mod is loaded,
-and loads after `tiamat_default_life` and `tiamat_default_ui` so that it
-may use theirs.
+`tiamat_default_world` in its recipes, groups and dig classes when that mod
+is loaded; it tells `tiamat_default_life` which of its tools are weapons
+(`add_weapon`), sickles (`add_harvest_tool`) and hoes (`add_tilling_tool`),
+and reads Life's world option `mode`; and it loads after
+`tiamat_default_ui` so that it may use that mod's exports.

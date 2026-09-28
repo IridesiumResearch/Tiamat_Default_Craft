@@ -418,6 +418,11 @@ function R.wear(uuid, found, amount) end
 --- How hot a station's container is burning, as a tier.
 function R.heat_of(container) return 0 end
 
+--- Whether a qualified name is made one at a time with a `detail` of its
+--- own — a tool, which carries its serial — and the detail for a new one.
+function R.minted(name) return false end
+function R.mint(name) return nil end
+
 -- Resolving and planning -------------------------------------------------------
 
 --- A recipe's names as the session's numbers: each input and tool as a list
@@ -620,26 +625,45 @@ local function give_back(source, got, uuid)
     end
 end
 
+--- The stacks one output is given as: itself, or, for a thing made one at a
+--- time (a tool, with its serial in its `detail`), one stack per item.
+local function pieces(out)
+    if not R.minted(out.name) then
+        return { { material = out.material, units = out.units } }
+    end
+    local list = {}
+    local left = out.units
+    while left > 0 do
+        local n = math.min(left, U.UNITS)
+        list[#list + 1] = { material = out.material, units = n, detail = R.mint(out.name) }
+        left = left - n
+    end
+    return list
+end
+
 --- Puts the outputs where they go. Answers what went in, and whether all of it did.
 local function give_outputs(source, outputs)
     local given = {}
     for _, out in ipairs(outputs) do
-        if source.container then
-            local left = out.units
-            for _, slot in ipairs(source.station.slots.output) do
-                if left == 0 then break end
-                local n = game.container_give(source.container, { material = out.material, units = left, slot = slot })
-                if n > 0 then
-                    given[#given + 1] = { slot = slot, material = out.material, units = n }
-                    left = left - n
+        for _, piece in ipairs(pieces(out)) do
+            if source.container then
+                local left = piece.units
+                for _, slot in ipairs(source.station.slots.output) do
+                    if left == 0 then break end
+                    local n = game.container_give(source.container,
+                        { material = piece.material, units = left, slot = slot, detail = piece.detail })
+                    if n > 0 then
+                        given[#given + 1] = { slot = slot, material = piece.material, units = n, detail = piece.detail }
+                        left = left - n
+                    end
                 end
+                if left > 0 then return given, false end
+            else
+                if not game.give(source.player, piece) then
+                    return given, false
+                end
+                given[#given + 1] = piece
             end
-            if left > 0 then return given, false end
-        else
-            if not game.give(source.player, { material = out.material, units = out.units }) then
-                return given, false
-            end
-            given[#given + 1] = { material = out.material, units = out.units }
         end
     end
     return given, true
@@ -648,10 +672,12 @@ end
 --- Takes back outputs that were given, for a rollback.
 local function take_back(source, given)
     for _, g in ipairs(given) do
+        local spec = { material = g.material, units = g.units, slot = g.slot, detail = g.detail }
         if source.container then
-            game.container_take(source.container, { material = g.material, units = g.units, slot = g.slot })
+            game.container_take(source.container, spec)
         else
-            game.take(source.player, { material = g.material, units = g.units })
+            spec.slot = nil
+            game.take(source.player, spec)
         end
     end
 end

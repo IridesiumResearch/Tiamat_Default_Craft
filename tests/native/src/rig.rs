@@ -594,9 +594,31 @@ pub struct Setup {
     pub prelude: String,
     /// A stand-in for the world mod: the blocks this mod names, by name.
     pub world: bool,
+    /// A stand-in for Life: its exports, recording what this mod tells it.
+    pub life: bool,
+    /// Life's world option, "Default", "Creative" or "Adventure".
+    pub mode: Option<String>,
     /// Mods that load after this one and use its exports: `(id, source)`.
     pub fixtures: Vec<(String, String)>,
 }
+
+/// Life's exports as this mod uses them, recording each call; `life heard
+/// <call>` in chat answers whether it was made.
+const LIFE: &str = r##"
+local heard = {}
+local function note(kind) return function(material, value)
+    heard[kind .. " " .. material .. (value and (" " .. tostring(value)) or "")] = true
+    return true
+end end
+game.export{ version = 1, add_weapon = note("weapon"), add_harvest_tool = note("harvest"),
+    add_tilling_tool = note("tills") }
+game.register_on_chat(function(e)
+    local call = string.match(e.text, "^life heard (.+)$")
+    if not call then return end
+    game.chat_to(e.player, heard[call] and "yes" or "no")
+    return false
+end)
+"##;
 
 pub struct Rig {
     pub vm: EngineVm,
@@ -650,6 +672,12 @@ impl Rig {
         vm.set_light_source(world.clone());
         vm.set_world_edit(world.clone());
 
+        if let Some(mode) = &setup.mode {
+            vm.set_world_options(&[(
+                "tiamat_default_life:mode".to_owned(),
+                tiamat_core::modload::WorldOptionValue::Choice(mode.clone()),
+            )]);
+        }
         let mut after = Vec::new();
         if setup.world {
             let list = WORLD_BLOCKS.iter().map(|b| format!("'{b}'")).collect::<Vec<_>>().join(", ");
@@ -663,6 +691,10 @@ impl Rig {
             )
             .unwrap();
             after.push("tiamat_default_world".to_owned());
+        }
+        if setup.life {
+            vm.load_mod("tiamat_default_life", LIFE, &dir).unwrap();
+            after.push("tiamat_default_life".to_owned());
         }
         vm.note_dependencies(MOD, &after);
         let init = format!("{}\n{}", setup.prelude, std::fs::read_to_string(dir.join("init.lua")).unwrap());
@@ -740,6 +772,74 @@ impl Rig {
 
     pub fn units(&self, player: [u8; 32], id: &str) -> u32 {
         self.inventory.units_of(player, self.material(id))
+    }
+
+    /// Puts a stack in the player's hand: into their inventory if it is not
+    /// there, and selected.
+    pub fn hold(&self, player: [u8; 32], id: &str, detail: Option<&str>) {
+        let material = self.material(id);
+        let have = self
+            .inventory
+            .stacks(player)
+            .iter()
+            .any(|s| s.material == material && s.detail.as_deref() == detail);
+        if !have {
+            self.inventory.put(player, Stack { detail: detail.map(str::to_owned), ..Stack::new(material, 27).unwrap() });
+        }
+        self.inventory.held.lock().unwrap().insert(player, (material, detail.map(str::to_owned)));
+    }
+
+    pub fn hold_nothing(&self, player: [u8; 32]) {
+        self.inventory.held.lock().unwrap().remove(&player);
+    }
+
+    /// The details of every stack of a material the player carries.
+    pub fn details(&self, player: [u8; 32], id: &str) -> Vec<String> {
+        let material = self.material(id);
+        let mut out: Vec<String> = self
+            .inventory
+            .stacks(player)
+            .iter()
+            .filter(|s| s.material == material)
+            .map(|s| s.detail.clone().unwrap_or_default())
+            .collect();
+        out.sort();
+        out
+    }
+
+    fn dig_event(&self, player: [u8; 32], material: &str, brush: tiamat_core::dig::Brush) -> tiamat_core::script::DigEvent {
+        tiamat_core::script::DigEvent {
+            player,
+            target: tiamat_core::SubNodePos { x: 301, y: 193, z: 301 },
+            material: self.material(material),
+            brush,
+        }
+    }
+
+    /// A dig of a block of `material` beginning: `Ok` if allowed, `Err` with
+    /// the refusal.
+    pub fn dig_start(&mut self, player: [u8; 32], material: &str) -> Result<(), String> {
+        let out = self.vm.dig_start(&self.dig_event(player, material, tiamat_core::dig::Brush::Block));
+        assert!(out.faults.is_empty(), "faulted in dig start: {:?}", out.faults);
+        if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
+    }
+
+    /// The same dig completing.
+    pub fn dig_complete(&mut self, player: [u8; 32], material: &str) -> Result<(), String> {
+        let out = self.vm.dig_complete(&self.dig_event(player, material, tiamat_core::dig::Brush::Block));
+        assert!(out.faults.is_empty(), "faulted in dig complete: {:?}", out.faults);
+        if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
+    }
+
+    /// A whole dig: start, then complete.
+    pub fn dig(&mut self, player: [u8; 32], material: &str) -> Result<(), String> {
+        self.dig_start(player, material)?;
+        self.dig_complete(player, material)
+    }
+
+    /// The engine tool in a player's hand.
+    pub fn tool(&self, player: [u8; 32]) -> Option<String> {
+        self.tools.hand.lock().unwrap().get(&player).cloned().flatten()
     }
 
     pub fn stack(&self, id: &str, units: u32) -> Stack {

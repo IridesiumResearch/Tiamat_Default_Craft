@@ -31,6 +31,7 @@ tdc.util = load("util")
 load("hooks")                     -- one engine registration per hook, many subscribers
 tdc.registry = load("registry")   -- recipes, groups, stations, fuels, the gate, perform
 tdc.materials = load("materials") -- the items and blocks this mod registers
+tdc.tools = load("tools")         -- the hand, tools, dig classes, wear
 load("recipes")                   -- this mod's own recipes, into the registry
 load("commands")                  -- chat words: listing and crafting by hand
 

@@ -4,9 +4,9 @@
 
 A flat colour for a block, the Spindle's convention: variation across a
 surface is the renderer's (the block's tint), never baked into the picture.
-An item is a flat colour in one silhouette on a clear ground, so a stick
-reads as a stick in a slot. Every picture here is meant to be replaced; the
-README says how.
+An item is flat colours in one silhouette on a clear ground, so a pick reads
+as a pick in a slot: a wooden haft and a head in the metal it is made of.
+Every picture here is meant to be replaced; the README says how.
 
 No dependencies beyond the standard library, and no randomness: the same
 bytes on every machine. Run from the repository root:
@@ -23,6 +23,22 @@ OUT = Path(__file__).resolve().parent.parent / "mods" / "tiamat_default_craft" /
 # The palette, in the world's muted register.
 WOOD = (122, 88, 52)
 WOOD_DARK = (84, 58, 34)
+IRONWOOD = (44, 38, 34)
+IRONWOOD_EDGE = (74, 64, 56)
+BRONZE = (178, 142, 72)
+BRONZE_DARK = (128, 98, 46)
+IRON = (122, 132, 148)
+IRON_DARK = (82, 90, 104)
+COPPER = (176, 102, 62)
+COPPER_DARK = (118, 70, 44)
+
+METALS = {
+    "bronze": (BRONZE, BRONZE_DARK),
+    "iron": (IRON, IRON_DARK),
+    "copper": (COPPER, COPPER_DARK),
+    "wooden": (WOOD, WOOD_DARK),
+    "ironwood": (IRONWOOD, IRONWOOD_EDGE),
+}
 
 
 def png(pixels):
@@ -38,25 +54,185 @@ def png(pixels):
             + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
-def clear():
-    return [[(0, 0, 0, 0) for _ in range(SIZE)] for _ in range(SIZE)]
+class Canvas:
+    def __init__(self):
+        self.p = [[(0, 0, 0, 0) for _ in range(SIZE)] for _ in range(SIZE)]
+
+    def dot(self, x, y, colour):
+        if 0 <= x < SIZE and 0 <= y < SIZE:
+            self.p[y][x] = colour + (255,)
+
+    def line(self, x0, y0, x1, y1, colour, width=1):
+        """A straight run of pixels, `width` wide across x."""
+        steps = max(abs(x1 - x0), abs(y1 - y0), 1)
+        for i in range(steps + 1):
+            x = x0 + (x1 - x0) * i // steps
+            y = y0 + (y1 - y0) * i // steps
+            for w in range(width):
+                self.dot(x + w, y, colour)
+
+    def rect(self, x0, y0, x1, y1, colour):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                self.dot(x, y, colour)
 
 
-def rod(colour, edge, width=2):
-    """A rod from the bottom left to the top right, `width` pixels across,
-    with a darker lower edge so it reads as round."""
-    pixels = clear()
-    for i in range(2, SIZE - 2):
-        x, y = i, SIZE - 1 - i
-        for w in range(width):
-            pixels[y][min(SIZE - 1, x + w)] = colour + (255,)
-        pixels[min(SIZE - 1, y + 1)][x] = edge + (255,)
-    return pixels
+def haft(c, wood, top=(11, 4), foot=(3, 13)):
+    """A handle from the bottom left up towards the top right."""
+    light, dark = wood
+    c.line(foot[0], foot[1], top[0], top[1], light, 2)
+    c.line(foot[0], foot[1] + 1, top[0], top[1] + 1, dark)
+
+
+def pick(metal, wood=METALS["wooden"]):
+    c = Canvas()
+    haft(c, wood)
+    light, dark = metal
+    # A curved head across the top of the haft.
+    c.line(5, 3, 9, 2, light, 2)
+    c.line(9, 2, 13, 4, light, 2)
+    c.line(13, 4, 14, 7, dark)
+    c.line(5, 3, 4, 5, dark)
+    return c.p
+
+
+def axe(metal, wood=METALS["wooden"]):
+    c = Canvas()
+    haft(c, wood)
+    light, dark = metal
+    c.rect(10, 2, 13, 7, light)
+    c.line(14, 2, 14, 8, dark)
+    c.line(10, 8, 13, 8, dark)
+    return c.p
+
+
+def spade(metal, wood=METALS["wooden"]):
+    c = Canvas()
+    light, dark = metal
+    c.line(7, 1, 7, 9, wood[0], 2)
+    c.line(6, 1, 9, 1, wood[1])
+    c.rect(5, 10, 10, 13, light)
+    c.line(6, 14, 9, 14, dark)
+    return c.p
+
+
+def digging_stick(wood):
+    c = Canvas()
+    light, dark = wood
+    c.line(3, 13, 12, 3, light, 2)
+    c.line(3, 14, 12, 4, dark)
+    c.dot(13, 2, light)
+    return c.p
+
+
+def maul(wood):
+    c = Canvas()
+    haft(c, METALS["wooden"])
+    light, dark = wood
+    c.rect(9, 1, 14, 6, light)
+    c.line(9, 7, 14, 7, dark)
+    return c.p
+
+
+def wedge(wood):
+    c = Canvas()
+    light, dark = wood
+    for row in range(4, 13):
+        half = (row - 4) // 2
+        c.line(8 - half, row, 8 + half, row, light)
+    c.line(4, 13, 12, 13, dark)
+    return c.p
+
+
+def chisel(metal):
+    c = Canvas()
+    c.line(3, 13, 8, 8, WOOD, 2)
+    c.line(9, 7, 13, 3, metal[0], 2)
+    c.line(13, 2, 14, 3, metal[1])
+    return c.p
+
+
+def hammer(metal):
+    c = Canvas()
+    haft(c, METALS["wooden"])
+    light, dark = metal
+    c.rect(9, 2, 14, 5, light)
+    c.line(9, 6, 14, 6, dark)
+    return c.p
+
+
+def knife(metal):
+    c = Canvas()
+    c.line(3, 13, 6, 10, WOOD, 2)
+    light, dark = metal
+    c.line(7, 9, 13, 3, light, 2)
+    c.line(7, 10, 13, 4, dark)
+    return c.p
+
+
+def sickle(metal):
+    c = Canvas()
+    c.line(4, 14, 6, 11, WOOD, 2)
+    light, dark = metal
+    points = [(6, 10), (5, 8), (5, 6), (6, 4), (8, 3), (10, 3), (12, 4), (13, 6)]
+    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+        c.line(x0, y0, x1, y1, light, 2)
+    c.dot(13, 7, dark)
+    return c.p
+
+
+def hoe(metal):
+    c = Canvas()
+    haft(c, METALS["wooden"], top=(12, 3))
+    light, dark = metal
+    c.rect(11, 3, 14, 4, light)
+    c.rect(13, 5, 14, 7, light)
+    c.dot(14, 8, dark)
+    return c.p
+
+
+def pot(metal):
+    c = Canvas()
+    light, dark = metal
+    c.line(3, 5, 12, 5, dark)
+    for row in range(6, 12):
+        inset = max(0, row - 9)
+        c.line(3 + inset, row, 12 - inset, row, light)
+    c.line(6, 12, 9, 12, dark)
+    c.dot(2, 6, dark)
+    c.dot(13, 6, dark)
+    return c.p
+
+
+def rod(wood):
+    """A stick: a rod from the bottom left to the top right."""
+    c = Canvas()
+    light, dark = wood
+    c.line(2, 13, 13, 2, light, 2)
+    c.line(2, 14, 13, 3, dark)
+    return c.p
 
 
 ITEMS = {
-    "stick": lambda: rod(WOOD, WOOD_DARK),
+    "stick": lambda: rod(METALS["wooden"]),
+    "digging_stick": lambda: digging_stick(METALS["wooden"]),
+    "ironwood_digging_stick": lambda: digging_stick(METALS["ironwood"]),
+    "wooden_maul": lambda: maul(METALS["wooden"]),
+    "ironwood_maul": lambda: maul(METALS["ironwood"]),
+    "wooden_wedge": lambda: wedge(METALS["wooden"]),
+    "ironwood_wedge": lambda: wedge(METALS["ironwood"]),
+    "copper_pot": lambda: pot(METALS["copper"]),
 }
+for metal in ("bronze", "iron"):
+    colours = METALS[metal]
+    ITEMS[metal + "_pick"] = (lambda m: lambda: pick(m))(colours)
+    ITEMS[metal + "_axe"] = (lambda m: lambda: axe(m))(colours)
+    ITEMS[metal + "_spade"] = (lambda m: lambda: spade(m))(colours)
+    ITEMS[metal + "_chisel"] = (lambda m: lambda: chisel(m))(colours)
+    ITEMS[metal + "_hammer"] = (lambda m: lambda: hammer(m))(colours)
+    ITEMS[metal + "_knife"] = (lambda m: lambda: knife(m))(colours)
+    ITEMS[metal + "_sickle"] = (lambda m: lambda: sickle(m))(colours)
+    ITEMS[metal + "_hoe"] = (lambda m: lambda: hoe(m))(colours)
 
 
 def main():

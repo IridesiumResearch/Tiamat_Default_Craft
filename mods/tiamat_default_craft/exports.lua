@@ -21,6 +21,7 @@
 -- Bump `version` when a change would break a reader, and only then.
 
 local R = tdc.registry
+local T = tdc.tools
 local U = tdc.util
 
 --- `fn` under pcall: a fault here is logged and answered as `nil, why`.
@@ -104,6 +105,35 @@ return {
         if type(id) ~= "string" then return nil, "a recipe is named by its id" end
         if container ~= nil and type(container) ~= "string" then return nil, "a container is named" end
         return R.perform(uuid, id, container)
+    end),
+
+    -- Tools and dig classes -------------------------------------------------
+
+    --- `{ id, type, tier, uses, digs?, name? }`: your item, worn and gated by
+    --- this mod. `digs = true` when you registered an engine tool of the same
+    --- id, which this mod then puts in the hand of whoever holds the item.
+    register_tool = safe("register_tool", function(spec) return T.register(spec) end),
+
+    --- A block into a class: "loose", "cracked", "wood", "hardwood", "rock",
+    --- "hard_rock", or one registered with `register_class`.
+    classify = safe("classify", function(block, class) return T.classify(block, class) end),
+
+    --- `{ id, types, tier, refusals? }`: a class of your own.
+    register_class = safe("register_class", function(spec) return T.register_class(spec) end),
+
+    --- The tool a player holds — `{ id, type, tier, uses, wear }` — or nil.
+    tool_of = safe("tool_of", function(uuid)
+        if not player(uuid) or uuid == nil then return nil end
+        return T.of(uuid)
+    end),
+
+    --- Charges `amount` uses to the tool a player holds. Answers whether
+    --- there was one to charge.
+    wear = safe("wear", function(uuid, amount)
+        if not player(uuid) or uuid == nil then return nil, "a player is a UUID in hex" end
+        local n = U.whole(amount, 1, 1000)
+        if not n then return nil, "an amount is a whole number" end
+        return T.wear_held(uuid, n)
     end),
 
     -- Progression ---------------------------------------------------------

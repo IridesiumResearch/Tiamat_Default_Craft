@@ -81,6 +81,13 @@ function U.decode(text)
     return record
 end
 
+--- A whole number kept in `game.storage`, as an integer: storage hands a
+--- number back as a float, and a float in a string reads "6.0".
+function U.stored_int(key)
+    local value = game.storage.get(key)
+    return type(value) == "number" and math.tointeger(value) or 0
+end
+
 --- A block position as a key: "x,y,z".
 function U.key(x, y, z)
     return x .. "," .. y .. "," .. z

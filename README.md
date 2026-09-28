@@ -26,8 +26,8 @@ Built in the brief's order (§12), each step shipping on its own:
 | Step | What | State |
 |---|---|---|
 | 1 | The recipe, station and fuel registry, `perform` with rollback, exported | **done** |
-| 2 | Tools: the hand, held → tool sync, dig classes, wear | next |
-| 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | |
+| 2 | Tools: the hand, held → tool sync, dig classes, wear | **done** |
+| 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | next |
 | 4 | Workbench, the Craft tab, the chest | |
 | 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | |
 | 6 | Cooking | |
@@ -37,8 +37,12 @@ Built in the brief's order (§12), each step shipping on its own:
 | 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | |
 
 Today a player can make **sticks from any log** by hand (`craft stick`),
-and another mod can register stations and recipes into the registry and
-make them. Everything else is to come.
+and every tool of the ladder exists and works — typed, tiered and worn,
+with a sentence for each refusal — though only an operator's `toolkit`
+hands them out until the stations that make them land. Bare hands move
+earth, sand, clay and soft logs; rock wants a bronze pick, and the hard
+rocks iron. Another mod can register stations, recipes, tools and dig
+classes, and make them.
 
 ## Layout
 
@@ -51,6 +55,7 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   hooks.lua                  one engine registration per hook, many subscribers
   registry.lua               recipes, groups, stations, fuels, the gate; perform
   materials.lua              the items and blocks this mod registers
+  tools.lua                  the hand, the tools, held → tool, dig classes, wear
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
@@ -85,7 +90,8 @@ cargo run --manifest-path tests/native/Cargo.toml
 ```
 
 In a world, `recipes` in chat lists what you could make by hand from what
-you carry, and `craft <recipe> [times]` makes it.
+you carry, and `craft <recipe> [times]` makes it. An operator's `toolkit`
+gives one of every tool.
 
 ## Pictures, and replacing them
 

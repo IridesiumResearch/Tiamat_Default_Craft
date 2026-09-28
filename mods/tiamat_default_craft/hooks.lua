@@ -20,6 +20,7 @@ local leaves = {}
 local dialogs = {}
 local dig_starts = {}
 local dig_completes = {}
+local dug = {}
 local places = {}
 local uses = {}
 
@@ -85,6 +86,13 @@ end
 -- Runs `fn(event)` when a dig completes. Answer a string to refuse with it.
 function tdc.on_dig_complete(fn)
     dig_completes[#dig_completes + 1] = fn
+end
+
+-- Runs `fn(event)` when a dig completes and nothing of this mod's refused it:
+-- for what happens BECAUSE of a dig (a tool wearing), as against whether it
+-- may happen. Answers are ignored.
+function tdc.on_dug(fn)
+    dug[#dug + 1] = fn
 end
 
 -- Runs `fn(event)` before a placement. The first non-nil answer wins.
@@ -158,7 +166,11 @@ game.register_on_dig_start(function(event)
 end)
 
 game.register_on_dig_complete(function(event)
-    return first_verdict(dig_completes, event)
+    local verdict = first_verdict(dig_completes, event)
+    if verdict ~= nil then return verdict end
+    for _, fn in ipairs(dug) do
+        fn(event)
+    end
 end)
 
 game.register_on_place(function(event)
