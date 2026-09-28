@@ -511,6 +511,35 @@ function R.tool_broken(uuid, tool)
     end
 end
 
+-- Glyphs -------------------------------------------------------------------------
+--
+-- A glyph is a carved shape with a meaning (Schism §7.1): the 27-cell mask a
+-- player cuts a block to, which both the magic and the tech trees read the
+-- same way. A carved block is a stack with a `shape`, so reading one needs
+-- nothing but the stack; the registry says which masks mean something.
+
+local glyphs = {}   -- mask -> id
+
+--- Registers a glyph: the mask, a 27-bit occupancy (`x + 3*y + 9*z`), and
+--- a qualified id for what it means. While mods load; one id a mask.
+function R.register_glyph(mask, id)
+    if not tdc.loading() then return nil, "glyphs are registered while mods load" end
+    local m = U.whole(mask, 1, (1 << 27) - 1)
+    if not m then return nil, "a glyph is a 27-cell mask, not empty" end
+    if not U.qualified(id) then return nil, "a glyph's id is qualified" end
+    if glyphs[m] then return nil, "that mask is already " .. glyphs[m] end
+    glyphs[m] = id
+    return true
+end
+
+--- The glyph a stack is carved to — or a bare mask — or nil.
+function R.glyph_of(x)
+    local mask = x
+    if type(x) == "table" then mask = x.shape end
+    if math.type(mask) ~= "integer" then return nil end
+    return glyphs[mask]
+end
+
 -- Hooks the later files fill in. The registry does not know what a tool's
 -- wear is or how hot a kiln is; the files that do replace these.
 

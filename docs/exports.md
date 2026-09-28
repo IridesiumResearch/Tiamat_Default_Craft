@@ -34,6 +34,8 @@ keep.
 | `recipes(station?)` | a station id, or nothing for all | Every recipe (or a station's), sorted by id, as `{ id, name, station, inputs = { { name, units } }, tools = { { name, wear } }, heat, ticks, outputs = { { name, units } }, requires }`. |
 | `can(uuid, recipe_id, container?)` | a UUID in hex; a recipe id; a container name | Whether that player could make it now: `true`, or `nil` and why. |
 | `perform(uuid, recipe_id, container?)` | the same | Makes it: `true` and `{ { material, units } }`, or `nil` and why, with everything taken put back. |
+| `register_glyph(mask, id)` | a 27-bit mask (`x + 3*y + 9*z`), not empty; a qualified id | A glyph: a carved shape that means something to both trees (Schism §7.1). One meaning a mask; while mods load. |
+| `glyph_of(x)` | a stack (its `shape`) or a mask | The glyph it is carved to, or nil. A carved block is a stack with a shape, so nothing but the stack is needed. |
 | `in_group(group, name)` | `"#log"`, `"mod:thing"` | Whether a group holds a name. |
 
 **Registration** — `register`, `register_group`, `register_station`,

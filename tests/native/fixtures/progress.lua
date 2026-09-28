@@ -41,6 +41,18 @@ assert(craft.register{ id = "tiamat_default_progress:bad", station = "tiamat_def
     conserve = true, inputs = { { "tiamat_default_craft:copper_ingot", count = 1 } }, outputs = {} } == nil,
     "a study that says it conserves is refused")
 
+-- Glyphs: a carved mask means something, and a carved stack reads as it.
+local RING = 0
+for x = 0, 2 do for z = 0, 2 do if not (x == 1 and z == 1) then RING = RING | (1 << (x + 9 * z)) end end end
+assert(craft.register_glyph(RING, "tiamat_default_progress:ring") == true)
+assert(craft.register_glyph(RING, "tiamat_default_progress:other") == nil, "one meaning a mask")
+assert(craft.register_glyph(0, "tiamat_default_progress:none") == nil)
+assert(craft.register_glyph(1 << 27, "tiamat_default_progress:none") == nil)
+assert(craft.glyph_of({ material = 1, shape = RING }) == "tiamat_default_progress:ring")
+assert(craft.glyph_of(RING) == "tiamat_default_progress:ring")
+assert(craft.glyph_of({ material = 1 }) == nil)
+assert(craft.glyph_of("nonsense") == nil)
+
 local insight = 0
 assert(craft.on_crafted(function(uuid, id, outputs)
     if id == "tiamat_default_progress:study_copper" and #outputs == 0 then insight = insight + 10 end

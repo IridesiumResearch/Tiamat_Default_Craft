@@ -147,7 +147,12 @@ each.
 
 ## Tiamat Default UI
 
-### U3. The carved mask from the shape crafter (2026-09-26): OPEN, for later
+### U3. The carved mask from the shape crafter (2026-09-26): WITHDRAWN 2026-09-28
+
+The glyph registry (`register_glyph`, `glyph_of`) is built without it: a
+block carved in the shape crafter is a stack with a `shape`, which is the
+mask, so a glyph is read off the stack a player holds or puts down. Nothing
+is needed from the interface. The ask as it was:
 
 **Wanted.** The shape crafter's `chiselled` mask exported to a listener, so a
 glyph registry (Schism §7.1, reserved here as `register_glyph`) could read

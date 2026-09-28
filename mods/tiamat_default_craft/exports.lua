@@ -190,6 +190,12 @@ return {
     --- `fn(uuid, tool_id)` when a tool wears out in somebody's hands.
     on_tool_broken = safe("on_tool_broken", function(fn) return R.on_tool_broken(fn) end),
 
+    --- A glyph: a carved 27-cell mask and what it means (a qualified id).
+    register_glyph = safe("register_glyph", function(mask, id) return R.register_glyph(mask, id) end),
+
+    --- The glyph a stack is carved to (its `shape`), or a bare mask's, or nil.
+    glyph_of = safe("glyph_of", function(x) return R.glyph_of(x) end),
+
     --- Whether a group holds a qualified id.
     in_group = safe("in_group", function(group, name)
         if not (U.group(group) and U.qualified(name)) then return false end
