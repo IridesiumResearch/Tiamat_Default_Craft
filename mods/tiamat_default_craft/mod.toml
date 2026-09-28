@@ -1,17 +1,33 @@
-# Tiamat Default Craft: a Tiamat mod, started from the engine's template.
+# Tiamat Default Craft — the first loop: gather, fire, smelt, cast or forge,
+# and dig faster and deeper.
 #
-# `id` is the namespace of everything this mod registers: `beacon` in init.lua
-# is `tiamat_default_craft:beacon` to every other mod. Lowercase letters, digits and
-# underscores, starting with a letter.
+# Recipes and the stations that run them, a chest, fire, cooking, and tools
+# that wear: wood, then bronze, then iron. The recipe registry is exported,
+# so the mods that come after (progress, magic, tech) register into it.
 id = "tiamat_default_craft"
 name = "Tiamat Default Craft"
 version = "0.1.0"
-description = "A tour of the mod API: a block, a tool, a sound, an action, a dialog, an entity."
-# An SPDX licence identifier, yours to choose. The engine's scripting API is
-# MIT and its licence exception says a mod is not a derivative work of the
-# engine, so any terms are open to you.
+depends = ["core >=0.1"]
+# Loaded AFTER each of these when it is here, which is what the optional edge
+# buys. Without it the engine's alphabetical tiebreak loads Craft before Life
+# and the UI (c < l < u), and `game.exports` finds nothing:
+#
+# - The world, whose ores, logs, clay and rock this mod names in its recipes
+#   and dig classes (config.lua).
+# - Life, whose food, fire and farm exports cooking and the farm tools use.
+# - The interface, whose screen the Craft tab sits on and whose look the
+#   station dialogs borrow.
+#
+# Optional, so the mod still loads on a bare engine for the test harness.
+optional_depends = ["tiamat_default_world", "tiamat_default_life", "tiamat_default_ui"]
+# The engine's reference tools stand aside. Not for the hand, which a real
+# mod's default already beats, but for the reference chisel and its
+# `chisel_mode` action: this mod's chisel is a craftable tool that wears.
+conflicts = ["core_tools"]
+description = "Workbench, chest, kiln and bloomery; campfire cooking; wood, bronze and iron tools."
 license = "GPL-3.0-only"
-# Mods this one needs loaded first, with version bounds if you want them:
-#     depends = ["some_world >=0.2, <1"]
-# Mods this one cannot run beside:
-#     conflicts = ["another_mod"]
+
+# NO `[theme]` HERE, ON PURPOSE. The engine wears the LAST theme in load
+# order, and this mod loads after the interface mod that owns the look; a
+# theme declared here would replace the whole interface's. Life follows the
+# same rule.

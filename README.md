@@ -3,69 +3,129 @@
 
 # Tiamat Default Craft
 
-The crafting layer of the default game: recipes, a chest, a kiln for the
-world's ores, cooking, and tools with wear. The mod itself is
-`mods/tiamat_default_craft/`; this repository sits beside the engine
-(`Tiamat`) and its four siblings, and the engine's `bundle.toml` pins the
-commit a release carries.
+The crafting layer for the [Tiamat](https://github.com/IridesiumResearch/Tiamat-Voxel-Game)
+voxel engine, and the first loop a player climbs: **gather → fire → smelt →
+cast or forge → dig faster, deeper**. Recipes and the stations that run
+them, a chest, fire, cooking, and tools that wear.
 
-A Tiamat mod, started from the engine's template. It registers one of each
-kind of thing the API offers — a block, a tool, a sound, an action, a dialog,
-an entity — so every part has a worked example beside it. Keep what you need.
+The ladder is not Minecraft's. There are no stone tools and no diamond
+tools: it runs **wood → bronze → iron**, and it is climbed the way people
+climbed it. Fire cracks rock before any pick does, copper is found green on
+the surface, tin is washed out of river gravel, bronze is cast into clay
+moulds, and iron is bloomed and hammered.
 
-## What is here
+Written against the engine's public Lua API and nothing else. The rules that
+shape it are in [`AGENTS.md`](AGENTS.md) (vendored from the engine's `api/`),
+and [`stubs/game.lua`](stubs/game.lua) is the API itself. The design is
+[`docs/brief.md`](docs/brief.md).
 
-| File | What |
-|---|---|
-| `mod.toml` | The manifest: id, name, version, licence, and what this mod depends on or conflicts with. |
-| `init.lua` | Runs once at load. Everything is registered here; the hooks it installs run for ever after. |
-| `textures/block.png` | The beacon's face, 16 by 16. |
-| `sounds/ping.wav` | The beacon's sound. WAV or Ogg Vorbis. |
-| `../../stubs/game.lua` | The whole mod API as editor annotations, vendored from the engine. Documentation and completion in one file. |
-| `../../AGENTS.md` | How to write a mod, for an AI coding assistant and the person supervising it. |
-| `../../.luarc.json` | Points a Lua language server at `stubs/`. |
+## Where it is
+
+Built in the brief's order (§12), each step shipping on its own:
+
+| Step | What | State |
+|---|---|---|
+| 1 | The recipe, station and fuel registry, `perform` with rollback, exported | **done** |
+| 2 | Tools: the hand, held → tool sync, dig classes, wear | next |
+| 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | |
+| 4 | Workbench, the Craft tab, the chest | |
+| 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | |
+| 6 | Cooking | |
+| 7 | The sluice | |
+| 8 | Bloomery, bellows, anvil: iron | |
+| 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | |
+| 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | |
+
+Today a player can make **sticks from any log** by hand (`craft stick`),
+and another mod can register stations and recipes into the registry and
+make them. Everything else is to come.
+
+## Layout
+
+```
+mods/tiamat_default_craft/   the mod (this is what the engine loads)
+  mod.toml                   manifest
+  init.lua                   load order only
+  config.lua                 every number a designer might turn
+  util.lua                   helpers with no opinion about the game
+  hooks.lua                  one engine registration per hook, many subscribers
+  registry.lua               recipes, groups, stations, fuels, the gate; perform
+  materials.lua              the items and blocks this mod registers
+  recipes.lua                this mod's own stations and recipes, as data
+  commands.lua               chat words: `recipes`, `craft`
+  exports.lua                what other mods may call (docs/exports.md)
+  textures/*.png             placeholders from tools/make_textures.py
+tests/native/                the mod run through the engine's real script VM
+tools/make_textures.py       the placeholder pictures (stdlib Python only)
+docs/brief.md                the design
+docs/exports.md              what this mod exports: the licence boundary
+docs/engine-asks.md          what this mod needed from the engine and could not get
+docs/sibling-asks.md         what it needs from World, Life and the interface
+```
 
 ## Try it
 
 Check it without starting a server — a second, no world left behind:
 
 ```sh
-server --check-mods <the directory this mod is in>
+cargo run -p server -- --check-mods <a mods directory holding this mod>
 ```
 
-It prints the mods it found in load order and every block they registered;
-a mod with a mistake in it is named, with the line.
+from the engine's checkout. Beside the other default mods it loads after
+the interface, the world and Life, and before the weather, and the engine's
+reference `core_tools` stands aside for it.
 
-Then put this directory in the server's mods directory (`mods_path` in the
-server's config; `game/` in the engine repository) and start the server. In
-the world: dig anything with the hand, place a beacon, use it, and press the
-wave key (J unless you moved it) for the dialog.
+The native check runs the mod through the engine's real script VM, with a
+fake server around it and fixture mods that stand in for the progress and
+magic mods. From this repository's root, with the engine checked out beside
+it as `../Tiamat`:
 
-## Your editor
+```sh
+cargo run --manifest-path tests/native/Cargo.toml
+```
 
-Any editor with the Lua language server reads `.luarc.json` and gets
-completion, signatures and types for every `game.*` call from `stubs/game.lua`.
-The stubs are kept in step with the engine by its CI, so when you update the
-engine, copy its `api/stubs/game.lua` over yours.
+In a world, `recipes` in chat lists what you could make by hand from what
+you carry, and `craft <recipe> [times]` makes it.
 
-## Where to read next
+## Pictures, and replacing them
 
-- `AGENTS.md` — the rules that fail quietly when broken, and the shape of every
-  kind of thing a mod can register.
-- `stubs/game.lua` — every function, with the reason it behaves as it does.
-- The engine repository's `game/` directory — reference mods, each the
-  smallest thing that proves one mechanism.
+Every texture is a placeholder: a flat colour, and for an item one shape on
+a clear ground, drawn by `tools/make_textures.py` in the world's muted
+palette. To use your own, drop a PNG of the same name into
+`mods/tiamat_default_craft/textures/`; the engine serves textures itself, so
+there is nothing to hash. Running the generator again overwrites the
+placeholders, so keep yours out of its list (`ITEMS` in the script) or do
+not run it.
+
+## For other mods
+
+`game.exports("tiamat_default_craft")`, for a mod that lists this one in
+`depends` or `optional_depends`, is the recipe registry: register a station
+and recipes into it, make them with `perform`, set the progression gate,
+and hear what players make. [`docs/exports.md`](docs/exports.md) is the
+list and the contract. Nothing raises: a malformed call answers `nil` and
+a reason.
+
+## Out of scope
+
+Stone tools and diamond tools, never. Steel (the tech tree's, from coke).
+Uses for silver, gold, lead, crystal, diamond, orichalcum and the world's
+`metal` — mined and kept for the trees. Insight, research and the Fork
+(the progress mod). Farming, which is Life's: Craft adds bronze and iron
+farm tools through Life's exports, nothing more. Items lying on the ground.
+Shaped (grid-position) recipes: a recipe is a multiset.
 
 ## Licence
 
 GPL-3.0-only, © Iridesium, with an Additional Permission under GPLv3 §7 in
 `LICENSE.EXCEPTION` (version 1.0, 24 September 2026): a mod that interacts
-with Tiamat Default Craft only through its exports, the engine's scripting API or
-the network protocol is an independent work and may be licensed however
-its author likes. Copying or adapting this mod's code or assets is not
-covered by that permission and stays under the GPL. `docs/exports.md`
-lists the exports; the engine's `MOD-LICENSING.md` has the plain-language
-version and a matrix of what needs which permission. Third-party assets
-are listed in `docs/assets.md` with their own licences. Contributions are
-taken under the Developer Certificate of Origin with authors retaining
-copyright; see `CONTRIBUTING.md`.
+with Tiamat Default Craft only through its exports, the engine's scripting
+API or the network protocol is an independent work and may be licensed
+however its author likes. Copying or adapting this mod's code or assets is
+not covered by that permission and stays under the GPL.
+[`docs/exports.md`](docs/exports.md) lists the exports; the engine's
+`MOD-LICENSING.md` has the plain-language version and a matrix of what
+needs which permission. Third-party assets are listed in `docs/assets.md`
+with their own licences. Contributions are taken under the Developer
+Certificate of Origin with authors retaining copyright; see
+`CONTRIBUTING.md`.

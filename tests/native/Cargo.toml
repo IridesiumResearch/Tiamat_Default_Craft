@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Iridesium
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# A native check that runs the mod through the engine's real script VM with a
+# fake server around it: a player, an inventory, containers, storage, the tool
+# in hand, blocks where the test puts them. Run from the repository root, with
+# the engine checkout beside it as ../Tiamat:
+#
+#     cargo run --manifest-path tests/native/Cargo.toml
+[package]
+name = "craft-native-check"
+version = "0.1.0"
+edition = "2024"
+default-run = "craft-native-check"
+
+[workspace]
+
+[dependencies]
+tiamat-core = { path = "../../../Tiamat/crates/core" }

@@ -1,0 +1,79 @@
+<!-- SPDX-FileCopyrightText: Iridesium -->
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+
+# Asks of the sibling mods
+
+What this mod needs from the OTHER default mods — the world, Life and the
+interface — as `docs/engine-asks.md` holds what it needs from the engine.
+Each says what was wanted, what stands in for it today, and the smallest
+change that would answer it. Newest first within each mod.
+
+## Tiamat Default Life
+
+Life answered the first plan's asks before this mod existed: `add_food`,
+`add_weapon`, `add_drop`, `add_feed`, `add_crop`, `add_harvest_tool`,
+`add_tilling_tool` and `drop` are all exported (its `docs/exports.md`), and
+its animals drop hide, bone and sinew. Its own asks of this mod (its
+`docs/sibling-asks.md`, C1 the kitchen and C2 leather, cord and cloth) are
+this mod's to build.
+
+### L3. Who cooks (2026-09-26): SETTLED
+
+Life's roadmap once said "X while looking at a campfire cooks what you
+hold". Cooking is this mod's (brief §6.2): the campfire, the kiln as an
+oven, the pot and the stew, all handing out Life's own food items so its X
+key eats them. Life's C1 says the same from its side.
+
+### L1, L2, L4, L5: LANDED
+
+`add_food` (L1), `add_weapon` (L2), `drop` (L4), and hide, bone and sinew
+from the animals (L5). This mod will register its bronze and iron tools as
+weapons, its charred meat and cured food as food, and its farm tools
+through `add_tilling_tool` and `add_harvest_tool`, as the steps land.
+
+## Tiamat Default World
+
+### W4. White sand for glass (2026-09-26): OPEN, for step 10
+
+**Wanted.** Confirmation that `white_sand` is the sand glass is made from.
+Glass is after the loop; nothing waits on it yet.
+
+### W3. Pitchblende (2026-09-26): OPEN, for the tech tree
+
+**Wanted.** A `pitchblende` vein at 1,200 blocks and deeper, beside lead and
+silver, where it really occurs. It is the one ore of the Schism design with
+no block in the world. Nothing in this mod needs it; the tech tree's fission
+does. (Zinc is not asked for: bronze gears stand in for brass ones.)
+
+### W2. Tags on the world's blocks (2026-09-26): OPEN, nice to have
+
+**Wanted.** `tags = { "ore" }`, `{ "rock" }`, `{ "log" }` on the world's
+blocks, so that engine ask 6 — reading tags back — would have something to
+read, and the dig classes could become a rule rather than a table.
+
+### W1. Nothing required
+
+This mod names the world's blocks and adds no planks per tree, on purpose:
+it registers one generic `plank`, and the world keeps its rule of one of
+each.
+
+## Tiamat Default UI
+
+### U3. The carved mask from the shape crafter (2026-09-26): OPEN, later
+
+**Wanted.** The shape crafter's `chiselled` mask exported to a listener, so a
+glyph registry (Schism §7.1, reserved here as `register_glyph`) could read
+what a player carved.
+
+### U2. An item grid on another mod's tab (2026-09-26): OPEN
+
+**Wanted.** Confirmation that an `item_grid` naming a container works on a
+tab another mod added, in a real window. The interface's README says the
+path is untested. The Craft tab needs it for the workbench (step 4).
+
+### U1. A dialog in the theme (2026-09-26): OPEN
+
+**Wanted.** An `open_dialog_in_theme(player, form, tree)` helper, so a
+station's own dialog wears the interface's frame without re-implementing it
+from `theme` and `widgets`. A recipe export is NOT asked for: recipes live
+in this mod's registry.
