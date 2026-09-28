@@ -24,10 +24,10 @@ hold". Cooking is this mod's (brief §6.2): the campfire, the kiln as an
 oven, the pot and the stew, all handing out Life's own food items so its X
 key eats them. Life's C1 says the same from its side.
 
-Built as a box on the fire rather than a use of it: Life's use handler
-eats any food in the hand at any block, and loads first, so meat in hand at
-a fire is eaten before this mod hears of it. That is right and nothing is
-asked of Life; a fire opens with an empty hand instead. Life's C1 is
+Built as the brief had it once the engine allowed (its asks 8 and 10):
+this mod's handler for its fires is asked before Life's eating, so meat
+held out over a burning fire goes on it, and a fire's box opens with an
+empty hand. Nothing was asked of Life. Life's C1 is
 answered for bread (the kiln, from wheat) and hot stew (a fire and a
 copper pot); cured meat waits on a salt recipe.
 
@@ -59,7 +59,14 @@ Its asks of this mod (its `docs/sibling-asks.md`, C1 to C5), answered
 - **C1, gating from outside:** `set_requires(recipe_id, node)`, while mods
   load, on a recipe with no requirement.
 
-### P1. Hand in `effects_of` (2026-09-28): OPEN, one line
+### P1, P2, P3: ANSWERED (Progress ec121b6)
+
+Progress's `craft.lua` calls `set_effects` right after `set_gate`, so node
+effects are live; `study_iron` takes one `iron_bloom`; and the charcoal
+clamp reads "A log gives a third more charcoal." Nothing either mod asked
+of the other is open. The asks as they were:
+
+### P1. Hand in `effects_of` (2026-09-28): ANSWERED
 
 **Wanted.** `craft.set_effects(function(uuid, prefix) return effects_of(uuid, prefix) end)`
 at Progress's load, beside its `set_gate`.
@@ -70,13 +77,13 @@ dependency; naming Progress back would be a cycle. So Craft takes the
 function the way it takes the gate. Until it is called, every effect reads
 0 — nothing breaks, nothing moves.
 
-### P2. `study_iron` names an ingot that does not exist (2026-09-28): OPEN
+### P2. `study_iron` names an ingot that does not exist (2026-09-28): ANSWERED
 
 **Wanted.** `tiamat_default_craft:iron_bar` (or `iron_bloom`) in
 `study_iron`'s input. Iron is bloomed and wrought here, never an ingot; the
 recipe registers and is logged as unmakeable the first time it is asked.
 
-### P3. The charcoal clamp's sentence (2026-09-28): OPEN, words only
+### P3. The charcoal clamp's sentence (2026-09-28): ANSWERED
 
 **Wanted.** Its text says "27 logs yields 12 charcoal, not 9", from the
 brief's draft. Craft makes a charcoal of a log, one for one, and reads
@@ -97,7 +104,17 @@ silver, where it really occurs. It is the one ore of the Schism design with
 no block in the world. Nothing in this mod needs it; the tech tree's fission
 does. (Zinc is not asked for: bronze gears stand in for brass ones.)
 
-### W2. Tags on the world's blocks (2026-09-26): OPEN, nice to have
+### W2. Tags on the world's blocks (2026-09-26): ANSWERED, awaiting World's commit
+
+World tags every block (`blocks.lua`, `TAGS`), most particular word first,
+and this mod now classes the world's blocks by them: its table naming them
+one by one is gone but for four exceptions, where it reads a block
+otherwise than its tags (flint is cracked, bone rock, dead logs and marrow
+loose). The tags are in World's working tree and not yet committed; a World
+without them leaves every block of it unclassed, which this mod says in
+the log at load. A world of rock, ore and logs must ship with its tags.
+
+The ask as it was:
 
 **Wanted.** `tags = { "ore" }`, `{ "rock" }`, `{ "log" }` on the world's
 blocks, so that engine ask 6 — reading tags back — would have something to
@@ -111,7 +128,7 @@ each.
 
 ## Tiamat Default UI
 
-### U3. The carved mask from the shape crafter (2026-09-26): OPEN, later
+### U3. The carved mask from the shape crafter (2026-09-26): OPEN, for later
 
 **Wanted.** The shape crafter's `chiselled` mask exported to a listener, so a
 glyph registry (Schism §7.1, reserved here as `register_glyph`) could read

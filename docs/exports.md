@@ -138,8 +138,11 @@ slot it came from.
 **The classes this mod ships:** `loose` (anything), `cracked` (hand, maul,
 pick, chisel), `wood` (hand, axe, chisel), `hardwood` (axe or chisel, tier
 1), `rock` (pick or chisel, tier 1), `hard_rock` (pick or chisel, tier 2).
-Every solid block of the world is in one; a block in none is diggable by
-anything. A dig is refused as it begins (`register_on_dig_start`), with one
+A block is classed by `classify`, else by its own tags — the first word
+it lists that is a class's name or one of `stone`, `ore` (rock), `hard`
+(hard rock), `log`, `plank`, `wood` (wood), `hardwood`, `soil`, `sand`,
+`plant` (loose), `cracked` — so tag your blocks and they are classed; the
+world's are, by their tags. A block in no class is diggable by anything. A dig is refused as it begins (`register_on_dig_start`), with one
 sentence saying why. In a Creative world (Life's `mode`) nothing is refused
 and nothing wears.
 

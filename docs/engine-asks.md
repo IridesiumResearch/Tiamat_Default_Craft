@@ -15,17 +15,18 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-09-28)
 
-**One is open: 10.** Everything else landed — 2 to 7 in engine c83fbc9, 8
-and 9 in engine cbbbc5e — and is adopted, except 8, which waits on 10.
+**One is open: 11.** Everything else landed — 2 to 7 in engine c83fbc9, 8
+and 9 in engine cbbbc5e, 10 in engine 7cf1c73 — and is adopted.
 Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
-| 10 a listed use handler beside an unlisted one | **Open.** | cooking stays a box on the fire; ask 8 cannot be adopted without it. |
+| 11 the blocks carrying a tag | **Open.** | a tool's slower speeds on the world's loose ground are a list of its blocks by name (`C.soft_ground`). |
+| 10 a listed use handler beside an unlisted one | Landed, engine 7cf1c73. | the fires have a listed handler, every other block the unlisted one. |
 | 9 reading one slot of a player's view | Landed, engine cbbbc5e. | the anvil works what is in the off-hand. |
-| 8 a use at a block reaching the block's handler first | Landed, engine cbbbc5e. | waits on 10: listing the fires would lose every other station's use. |
+| 8 a use at a block reaching the block's handler first | Landed, engine cbbbc5e. | meat held out over a burning fire goes on it, before Life can eat it. |
 | 7 a drop of another mod's material | Landed, engine c83fbc9. | a cracked block drops the world's rock. |
-| 6 a material's tags and hardness | Landed, engine c83fbc9. | a block nobody classed is classed by its tags. |
+| 6 a material's tags and hardness | Landed, engine c83fbc9. | the world's blocks are classed by their tags, four exceptions aside; the table of them is gone. |
 | 5 enumerating containers | Landed, engine c83fbc9. | stations are found by the container listing; no index. |
 | 4 a give into one slot of a player's view | Landed, engine c83fbc9. | a tool's wear rides on the tool, rewritten in its slot. |
 | 3 a drop that depends on the tool | Landed, engine c83fbc9. | nothing needs it yet. |
@@ -33,7 +34,29 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 10. A listed use handler beside an unlisted one (2026-09-28): OPEN
+## 11. The blocks carrying a tag (2026-09-28): OPEN
+
+**Seen.** Ask 6 gave `game.tags(material)`, and the world now tags its
+blocks, so this mod classes them by rule: `stone` is rock, `hard` hard
+rock, `soil` loose. What it cannot do is go the other way — ask which
+blocks are `soil` — and a tool's per-material speeds (ask 2) are a table
+registered at load, block by block. So a pick's slower speed on earth
+still needs a list of the world's loose blocks by name, the one table of
+another mod's blocks this mod still keeps.
+
+**Smallest change.** `game.tagged(tag)`: the qualified ids of every block
+registered so far with that tag, in registration order — callable in the
+registration window, after the mods one depends on have registered.
+Or `speeds` on `register_tool` accepting `{ tag = "soil" }` keys,
+resolved at freeze.
+
+Copied to the engine's sheet 2026-09-28.
+
+## 10. A listed use handler beside an unlisted one (2026-09-28): LANDED 2026-09-28 (engine 7cf1c73)
+
+`on_use` has two slots, one registration with `materials` and one without;
+the listed one is asked first at its blocks and only there. The history
+follows.
 
 **Seen.** Ask 8 landed as asked: `register_on_use(fn, { materials = {...} })`
 is heard first at those blocks — and, by the same design, at no other

@@ -140,6 +140,8 @@ and the change is recorded here.
 - **Flint is `cracked`, not `rock`.** The first fire is struck with flint,
   and fire is how the hand gets past rock; flint wanting a pick would make
   the loop impossible to start. It has no cracked twin.
+- **The world's blocks are classed by their tags**, with four exceptions
+  kept by name (flint cracked, bone rock, dead logs and marrow loose).
 - **Class types are lists.** `wood` takes a hand, an axe or a chisel,
   `cracked` a hand, maul, pick or chisel, and the chisel carves what a pick
   or axe of its tier may break. A spade on a log is refused ("That wants an
@@ -162,11 +164,12 @@ and the change is recorded here.
 - **A burning station runs whatever its contents make**, first recipe by
   id, rather than a player choosing: pressing a recipe on its screen says
   so. Any station registered with `heat = true` burns the same way.
-- **Cooking is a box on the fire, not a use of it.** Life hears every use
-  first and eats whatever food is in the hand, which is right for eating and
-  leaves nothing to cook with. A fire opens with an empty hand; what is put
-  on it cooks while it burns. Stew is Life's hot stew, made on a fire with a
-  copper pot rather than with the pot in the off-hand.
+- **What is on a fire is in a box.** Meat held out over a burning fire goes
+  on it (this mod's handler for its fires is asked before Life's eating,
+  engine asks 8 and 10), and the fire opens with an empty hand to show what
+  is on it, take off what is done, or add a pot. Stew is Life's hot stew,
+  made on a fire with a copper pot rather than with the pot in the
+  off-hand.
 - **The kiln bakes Life's bread**, three wheat to a loaf: Life's kitchen ask
   (its C1) wants a source for bread, and the kiln is the oven.
 - **A station that works on its own tries its most particular recipe
