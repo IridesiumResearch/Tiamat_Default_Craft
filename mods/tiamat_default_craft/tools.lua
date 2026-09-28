@@ -31,10 +31,14 @@
 -- # Wear
 --
 -- Each tool is minted with a serial in its `detail` ("t=12"), so no two
--- tools stack and a take can find exactly one. Its wear is kept in
--- `game.storage` under that serial rather than in the detail: rewriting a
--- detail is a take and a give, and the give lands wherever the engine puts
--- it, not in the hand the player is holding (engine ask 4).
+-- tools stack and a take can find exactly one, and its wear rides in the
+-- same detail ("t=12;w=40"): it goes where the tool goes, into a chest and
+-- out, onto the ground and back. Wearing a tool rewrites it IN ITS SLOT —
+-- taken from that slot and given back into it (engine ask 4) — so the pick
+-- a player is digging with never leaves their hand. The slot is found by
+-- the serial, which no other stack has (`game.slot`, engine ask 9). A world
+-- from before this kept wear in storage under the serial; that is read once
+-- and moved onto the tool.
 
 local C = tdc.config
 local U = tdc.util
@@ -262,18 +266,91 @@ end
 R.minted = function(name) return tools[name] ~= nil end
 R.mint = function(name) return T.mint() end
 
---- Where a tool's wear is kept: under its serial, or — for a tool that
---- reached somebody with no serial, from another mod's plain give — under
---- the player and the kind.
-local function wear_key(tool, detail, uuid)
-    local serial = type(detail) == "string" and string.match(detail, "^t=(%d+)$")
-    if serial then return "wear:" .. serial end
-    return "wear:" .. tostring(uuid) .. ":" .. tool.id
+--- A tool's detail read: `{ t = serial, w = wear, c = carry }`, each an
+--- integer or nil.
+local function read(detail)
+    local r = U.decode(detail)
+    return {
+        t = math.type(r.t) == "integer" and r.t or nil,
+        w = math.type(r.w) == "integer" and r.w or nil,
+        c = math.type(r.c) == "integer" and r.c or nil,
+    }
+end
+
+--- And written: serial first, so "t=12" is how a tool is known.
+local function write(r)
+    local parts = { "t=" .. r.t }
+    if (r.w or 0) > 0 then parts[#parts + 1] = "w=" .. r.w end
+    if (r.c or 0) > 0 then parts[#parts + 1] = "c=" .. r.c end
+    return table.concat(parts, ";")
+end
+
+--- Wear a world from before kept in storage: under the serial, or for a
+--- tool with no serial under the player and the kind. Read and cleared.
+local function legacy_wear(tool, r, uuid, clear)
+    local key = r.t and ("wear:" .. r.t) or ("wear:" .. tostring(uuid) .. ":" .. tool.id)
+    local worn = U.stored_int(key)
+    local carry = U.stored_int(key .. ":carry")
+    if clear then
+        game.storage.set(key, nil)
+        game.storage.set(key .. ":carry", nil)
+    end
+    return worn, carry
 end
 
 --- How worn a tool is, in uses.
 function T.worn(tool, detail, uuid)
-    return U.stored_int(wear_key(tool, detail, uuid))
+    local r = read(detail)
+    if r.w or r.c then return r.w or 0 end
+    return (legacy_wear(tool, r, uuid, false))
+end
+
+--- The one-based slot of `player:main` holding exactly this stack, or nil.
+local function slot_of(player, material, detail)
+    for n = 1, C.slot_scan do
+        local stack = game.slot(player, "player:main", n)
+        if stack and stack.material == material and stack.detail == detail then return n end
+    end
+    return nil
+end
+
+--- Rewrites a tool's detail where it lies: in its slot of a container, or
+--- of the player's pack. Whatever cannot go back where it was goes anywhere.
+local function rewrite(uuid, found, new)
+    local old = { material = found.material, units = U.UNITS, detail = found.detail }
+    local fresh = { material = found.material, units = U.UNITS, detail = new }
+    if found.container then
+        old.slot, fresh.slot = found.slot, found.slot
+        if game.container_take(found.container, old) < U.UNITS then return false end
+        if game.container_give(found.container, fresh) < U.UNITS then
+            fresh.slot = nil
+            if game.container_give(found.container, fresh) < U.UNITS and uuid then U.give(uuid, fresh) end
+        end
+        return true
+    end
+    local player = found.player or uuid
+    local slot = slot_of(player, found.material, found.detail)
+    old.slot, fresh.slot = slot, slot
+    if game.take(player, old) < U.UNITS then return false end
+    local gave = game.give(player, fresh)
+    if not gave then
+        fresh.slot = nil
+        U.give(player, fresh)
+    end
+    return true
+end
+
+--- Takes a worn-out tool away from where it lies.
+local function remove(uuid, found)
+    local spec = { material = found.material, units = U.UNITS, detail = found.detail }
+    if found.container then
+        spec.slot = found.slot
+        game.container_take(found.container, spec)
+    else
+        local player = found.player or uuid
+        spec.slot = slot_of(player, found.material, found.detail)
+        game.take(player, spec)
+    end
 end
 
 local TIERS = { [0] = "wood", [1] = "bronze", [2] = "iron" }
@@ -290,38 +367,34 @@ function T.uses(tool, uuid)
 end
 
 --- Charges `amount` uses to one tool, where it was found: `{ material,
---- detail, container?, slot?, player? }`. At its last use it is taken away
---- and the player told.
+--- detail, container?, slot?, player? }`. The wear is written onto the tool
+--- in its slot; at its last use it is taken away and the player told.
 function T.charge(uuid, found, amount)
     if creative then return false end
     local tool = T.record(found.material)
     if not tool or tool.uses == 0 or amount <= 0 then return false end
-    local key = wear_key(tool, found.detail, uuid)
+    local r = read(found.detail)
+    if not (r.w or r.c) then
+        -- First wear since this mod kept it in storage, or ever: moved over.
+        r.w, r.c = legacy_wear(tool, r, uuid, true)
+    end
     -- A chisel may wear slower than a use a use: the fraction is carried,
-    -- in hundredths, under the tool's own key.
+    -- in hundredths, on the tool.
     if tool.type == "chisel" then
         local pct = R.effect(uuid, "craft.chisel_wear_percent")
         if pct ~= 0 then
-            local carry = U.stored_int(key .. ":carry") + amount * math.max(0, 100 + pct)
+            local carry = (r.c or 0) + amount * math.max(0, 100 + pct)
             amount = carry // 100
-            game.storage.set(key .. ":carry", carry % 100)
-            if amount <= 0 then return true end
+            r.c = carry % 100
         end
     end
-    local worn = U.stored_int(key) + amount
-    if worn < T.uses(tool, uuid) then
-        game.storage.set(key, worn)
+    r.t = r.t or math.tointeger(string.match(T.mint(), "%d+"))
+    r.w = (r.w or 0) + amount
+    if r.w < T.uses(tool, uuid) then
+        if write(r) ~= found.detail then rewrite(uuid, found, write(r)) end
         return true
     end
-    local spec = { material = found.material, units = U.UNITS, detail = found.detail }
-    if found.container then
-        spec.slot = found.slot
-        game.container_take(found.container, spec)
-    else
-        game.take(found.player or uuid, spec)
-    end
-    game.storage.set(key, nil)
-    game.storage.set(key .. ":carry", nil)
+    remove(uuid, found)
     if uuid then
         game.chat_to(uuid, string.format(C.worn_out, lower(tool.name)))
         tdc.sounds.at_player("tool_break", uuid)

@@ -90,29 +90,47 @@ impl Storage {
 
 // --- Inventory -------------------------------------------------------------------
 
-/// Each player's views, consolidated per material, cut and detail as the
-/// engine reports them; and which stack is in the hand.
+/// Each player's views as SLOTS, as the engine keeps them — a stack a slot,
+/// ninety items to one — reported consolidated per material, cut and detail
+/// by `contents`, as the engine reports them; and which slot is selected.
 #[derive(Default)]
 pub struct Inventory {
-    pub views: Mutex<HashMap<([u8; 32], String), Vec<Stack>>>,
-    pub held: Mutex<HashMap<[u8; 32], (MaterialId, Option<String>)>>,
+    pub views: Mutex<HashMap<([u8; 32], String), Vec<Option<Stack>>>>,
+    /// The selected slot of `player:main`, zero-based.
+    pub held: Mutex<HashMap<[u8; 32], usize>>,
 }
 
 fn same(a: &Stack, material: MaterialId, shape: Option<Shape>, detail: Option<&str>) -> bool {
     a.material == material && a.shape == shape && a.detail.as_deref() == detail
 }
 
+/// Whether a stack's detail is `detail`, or starts with it and a `;`: a tool
+/// named by its serial (`t=6`) is the same tool worn (`t=6;w=3`).
+fn detail_matches(stack: &Stack, detail: Option<&str>) -> bool {
+    match (stack.detail.as_deref(), detail) {
+        (None, None) => true,
+        (Some(have), Some(want)) => have == want || have.starts_with(&format!("{want};")),
+        _ => false,
+    }
+}
+
 impl Inventory {
+    fn consolidated(&self, player: [u8; 32], view: &str) -> Vec<Stack> {
+        let views = self.views.lock().unwrap();
+        let mut out: Vec<Stack> = Vec::new();
+        for stack in views.get(&(player, view.to_owned())).into_iter().flatten().flatten() {
+            match out.iter_mut().find(|s| same(s, stack.material, stack.shape, stack.detail.as_deref())) {
+                Some(existing) => existing.units += stack.units,
+                None => out.push(stack.clone()),
+            }
+        }
+        out
+    }
     pub fn units_of(&self, player: [u8; 32], material: MaterialId) -> u32 {
-        self.views
-            .lock()
-            .unwrap()
-            .get(&(player, "player:main".into()))
-            .map(|v| v.iter().filter(|s| s.material == material).map(|s| s.units).sum())
-            .unwrap_or(0)
+        self.stacks(player).iter().filter(|s| s.material == material).map(|s| s.units).sum()
     }
     pub fn stacks(&self, player: [u8; 32]) -> Vec<Stack> {
-        self.views.lock().unwrap().get(&(player, "player:main".into())).cloned().unwrap_or_default()
+        self.consolidated(player, "player:main")
     }
     pub fn put(&self, player: [u8; 32], stack: Stack) {
         inventory::Access::give(self, player, "player:main", None, stack);
@@ -121,61 +139,124 @@ impl Inventory {
         self.views.lock().unwrap().remove(&(player, "player:main".into()));
         self.held.lock().unwrap().remove(&player);
     }
+    /// Selects the slot holding this material and detail (or the tool of
+    /// this serial), putting a block's worth in a free slot if none does.
+    pub fn select(&self, player: [u8; 32], material: MaterialId, detail: Option<&str>) {
+        let found = {
+            let views = self.views.lock().unwrap();
+            views
+                .get(&(player, "player:main".into()))
+                .and_then(|slots| {
+                    slots.iter().position(|s| s.as_ref().is_some_and(|s| s.material == material && detail_matches(s, detail)))
+                })
+        };
+        let index = match found {
+            Some(i) => i,
+            None => {
+                let stack = Stack { detail: detail.map(str::to_owned), ..Stack::new(material, 27).unwrap() };
+                let mut views = self.views.lock().unwrap();
+                let slots = views.entry((player, "player:main".into())).or_default();
+                match slots.iter().position(Option::is_none) {
+                    Some(i) => {
+                        slots[i] = Some(stack);
+                        i
+                    }
+                    None => {
+                        slots.push(Some(stack));
+                        slots.len() - 1
+                    }
+                }
+            }
+        };
+        self.held.lock().unwrap().insert(player, index);
+    }
 }
 
 impl inventory::Access for Inventory {
     fn contents(&self, player: [u8; 32], view: &str) -> Vec<Stack> {
-        self.views.lock().unwrap().get(&(player, view.to_owned())).cloned().unwrap_or_default()
+        self.consolidated(player, view)
     }
-    /// The view is kept consolidated, so a named slot lands where any give
-    /// would: nothing here reads slot positions in a player's view.
-    fn give(&self, player: [u8; 32], view: &str, _slot: Option<usize>, stack: Stack) -> u32 {
-
+    fn give(&self, player: [u8; 32], view: &str, slot: Option<usize>, stack: Stack) -> u32 {
         let mut views = self.views.lock().unwrap();
-        let list = views.entry((player, view.to_owned())).or_default();
-        if let Some(existing) = list.iter_mut().find(|s| same(s, stack.material, stack.shape, stack.detail.as_deref())) {
-            existing.units += stack.units;
-        } else {
-            list.push(stack);
+        let slots = views.entry((player, view.to_owned())).or_default();
+        let cap = stack_capacity(stack.shape);
+        if let Some(i) = slot {
+            // Whole or not at all, into that slot.
+            while slots.len() <= i {
+                slots.push(None);
+            }
+            return match &mut slots[i] {
+                None => {
+                    slots[i] = Some(stack);
+                    0
+                }
+                Some(existing)
+                    if same(existing, stack.material, stack.shape, stack.detail.as_deref())
+                        && existing.units + stack.units <= cap =>
+                {
+                    existing.units += stack.units;
+                    0
+                }
+                Some(_) => stack.units,
+            };
+        }
+        let mut left = stack.units;
+        for existing in slots.iter_mut().flatten() {
+            if left == 0 {
+                break;
+            }
+            if same(existing, stack.material, stack.shape, stack.detail.as_deref()) {
+                let room = cap.saturating_sub(existing.units).min(left);
+                existing.units += room;
+                left -= room;
+            }
+        }
+        while left > 0 {
+            let put = cap.min(left);
+            let piece = Some(Stack { units: put, ..stack.clone() });
+            match slots.iter().position(Option::is_none) {
+                Some(i) => slots[i] = piece,
+                None => slots.push(piece),
+            }
+            left -= put;
         }
         0
     }
-    /// The view is kept consolidated, with no slot positions: nothing here
-    /// reads one yet.
-    fn slot(&self, _: [u8; 32], _: &str, _: usize) -> Option<Stack> {
-        None
+    fn slot(&self, player: [u8; 32], view: &str, slot: usize) -> Option<Stack> {
+        self.views.lock().unwrap().get(&(player, view.to_owned()))?.get(slot)?.clone()
     }
     fn held(&self, player: [u8; 32]) -> Option<Stack> {
-        let (material, detail) = self.held.lock().unwrap().get(&player).cloned()?;
-        self.views
-            .lock()
-            .unwrap()
-            .get(&(player, "player:main".into()))?
-            .iter()
-            .find(|s| s.material == material && s.detail == detail)
-            .cloned()
+        let index = *self.held.lock().unwrap().get(&player)?;
+        inventory::Access::slot(self, player, "player:main", index)
     }
     fn take(
         &self,
         player: [u8; 32],
         view: &str,
-        _slot: Option<usize>,
+        slot: Option<usize>,
         material: MaterialId,
         shape: Option<Shape>,
         detail: Option<&str>,
         units: u32,
     ) -> u32 {
         let mut views = self.views.lock().unwrap();
-        let Some(list) = views.get_mut(&(player, view.to_owned())) else { return 0 };
+        let Some(slots) = views.get_mut(&(player, view.to_owned())) else { return 0 };
+        let indices: Vec<usize> = match slot {
+            Some(i) => vec![i],
+            None => (0..slots.len()).collect(),
+        };
         let mut got = 0;
-        for stack in list.iter_mut() {
+        for i in indices {
+            let Some(Some(stack)) = slots.get_mut(i) else { continue };
             if same(stack, material, shape, detail) {
                 let take = units.saturating_sub(got).min(stack.units);
                 stack.units -= take;
                 got += take;
+                if stack.units == 0 {
+                    slots[i] = None;
+                }
             }
         }
-        list.retain(|s| s.units > 0);
         got
     }
 }
@@ -819,16 +900,7 @@ impl Rig {
     /// Puts a stack in the player's hand: into their inventory if it is not
     /// there, and selected.
     pub fn hold(&self, player: [u8; 32], id: &str, detail: Option<&str>) {
-        let material = self.material(id);
-        let have = self
-            .inventory
-            .stacks(player)
-            .iter()
-            .any(|s| s.material == material && s.detail.as_deref() == detail);
-        if !have {
-            self.inventory.put(player, Stack { detail: detail.map(str::to_owned), ..Stack::new(material, 27).unwrap() });
-        }
-        self.inventory.held.lock().unwrap().insert(player, (material, detail.map(str::to_owned)));
+        self.inventory.select(player, self.material(id), detail);
     }
 
     pub fn hold_nothing(&self, player: [u8; 32]) {

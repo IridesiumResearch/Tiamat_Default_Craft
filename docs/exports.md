@@ -143,9 +143,12 @@ and nothing wears.
 
 **Tools carry a serial.** Every tool this mod makes — from a recipe, or a
 tool registered with `register_tool` coming out of `perform` — is given a
-`detail` of `"t=<serial>"`, so no two stack. Wear is kept by this mod under
-the serial. A tool of yours that reaches a player with no detail still
-works, and wears per player and kind.
+`detail` of `"t=<serial>"`, so no two stack, and its wear rides in the same
+detail — `"t=<serial>;w=<uses>"`, with `c=<hundredths>` for a chisel's
+carried fraction — rewritten in the slot the tool lies in, so it travels
+with the tool. Read a tool's wear from its detail, or ask `tool_of`. A tool
+of yours that reaches a player with no detail is given a serial the first
+time it wears.
 
 ### Fire
 
@@ -320,12 +323,12 @@ To its own HUD script only: `wear` (per mille of the held tool left, or -1)
 and `warn` (whether it can break what the crosshair is on). `game.storage`
 is private to this mod: it keeps each
 player's firsts (`first:<uuid>:<event>`), the tool serial counter
-(`serial`), each tool's wear (`wear:<serial>`), each fire it lit
+(`serial`), who placed each station (`placer:<container>`), each fire it lit
 (`fire:<domain>@x,y,z`), each furnace's fire and work
 (`furnace:<container>`), each fire's cooking (`cook:<container>`), each sluice's washing
-(`sluice:<container>`), each anvil's choice and blows (`anvil:<container>`),
-and the index of station containers
-(`station:<container>`).
+(`sluice:<container>`) and each anvil's choice and blows
+(`anvil:<container>`). Stations themselves are found by the engine's
+container listing, and a tool's wear rides on the tool.
 
 ## What it reads from other mods
 

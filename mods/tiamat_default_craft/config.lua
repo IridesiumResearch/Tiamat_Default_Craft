@@ -203,6 +203,12 @@ C.refusals = {
 }
 C.refusal = "That wants a better tool."
 
+-- How many slots of a player's pack are looked through for the tool being
+-- worn: the hotbar first, then the pack and the off-hand. A pack grows when
+-- nothing fixes its size, so the ceiling is generous; the scan stops at the
+-- tool, which is almost always in the hotbar.
+C.slot_scan = 128
+
 -- What wearing out says.
 C.worn_out = "Your %s has worn to nothing."
 

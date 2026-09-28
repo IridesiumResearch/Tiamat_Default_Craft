@@ -145,6 +145,7 @@ fn main() {
     torch_and_hud();
     after_the_loop();
     progress_asks();
+    wear_on_the_tool();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -446,7 +447,7 @@ fn tools() {
     let other: Vec<String> = picks.iter().filter(|d| **d != bronze_pick).cloned().collect();
     assert_eq!(r.details(PLAYER, "bronze_pick"), other, "only the other pick is left");
     let serial = bronze_pick.trim_start_matches("t=");
-    assert!(!r.storage.dump().contains(&format!("wear:{serial}=")), "its wear key is gone");
+    assert!(!r.storage.dump().contains("wear:"), "no wear is kept in storage");
     r.tick(1);
     assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
     r.hold_nothing(PLAYER);
@@ -543,7 +544,7 @@ fn fire() {
     assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""));
     assert_eq!(r.block_name(10, 64, 10), "tiamat_default_life:campfire", "lit as Life's campfire");
     let serial = striker.trim_start_matches("t=");
-    assert!(r.storage.dump().contains(&format!("wear:{serial}=Number(1.0)")), "{}", r.storage.dump());
+    assert_eq!(r.details(PLAYER, "fire_striker"), vec![format!("t={serial};w=1")], "the wear is on the striker");
 
     r.tick(560);
     assert_eq!(r.block_name(11, 64, 10), "tiamat_default_world:stone", "not yet");
@@ -659,8 +660,7 @@ fn stations() {
     r.press_labelled(PLAYER, "station", "Planks x4");
     assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(4 * 27), "four planks out");
     assert_eq!(r.boxes.get(bench, 1), None);
-    let wedge = r.details(PLAYER, "wooden_wedge")[0].trim_start_matches("t=").to_owned();
-    assert!(r.storage.dump().contains(&format!("wear:{wedge}=Number(1.0)")), "the wedge wore");
+    assert!(r.details(PLAYER, "wooden_wedge").iter().any(|d| d.ends_with(";w=1")), "the wedge wore: {:?}", r.details(PLAYER, "wooden_wedge"));
     r.press_labelled(PLAYER, "station", "Planks x4");
     assert!(r.screen_says(PLAYER, "Cannot: missing log."), "the screen says why");
 
@@ -982,8 +982,7 @@ fn iron() {
     r.press_labelled(PLAYER, "station", "Stone anvil");
     assert_eq!(r.boxes.get(bench, 10).map(|s| s.material), Some(r.material("stone_anvil")));
     let chisels: Vec<String> = r.details(PLAYER, "bronze_chisel");
-    let serial = chisels[0].trim_start_matches("t=");
-    assert!(r.storage.dump().contains(&format!("wear:{serial}=Number(10.0)")), "the chisel wore ten");
+    assert!(chisels.iter().any(|d| d.ends_with(";w=10")), "the chisel wore ten, on the chisel: {chisels:?}");
     r.close(PLAYER, "station");
 
     // The bloomery: coal is refused by name.
@@ -1056,7 +1055,7 @@ fn iron() {
     }
     assert_eq!(r.boxes.get(a, 2).map(|s| s.material), Some(r.material("iron_hammer_head")));
     let serial = bronze_hammer.trim_start_matches("t=");
-    assert!(r.storage.dump().contains(&format!("wear:{serial}=Number(3.0)")), "one for the bar, two for this");
+    assert!(r.details(PLAYER, "bronze_hammer").contains(&format!("t={serial};w=3")), "one for the bar, two for this");
 
     // With an iron hammer, five blows and three bars: an iron pick head.
     r.boxes.set(a, 2, None);
@@ -1344,4 +1343,33 @@ fn progress_asks() {
     r.say("q tool");
     assert_eq!(r.said(), "1/250", "one wear for two uses (and bronze lasts a quarter longer)");
     println!("progress asks: ok");
+}
+
+/// Wear rides on the tool: rewritten in the slot it is held in, and an old
+/// world's wear, kept in storage, moved onto it at its next use.
+fn wear_on_the_tool() {
+    let mut r = Rig::new(Setup { world: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let pick = r.details(PLAYER, "bronze_pick")[0].clone();
+    let serial = pick.trim_start_matches("t=").to_owned();
+    r.hold(PLAYER, "bronze_pick", Some(&pick));
+    let slot = *r.inventory.held.lock().unwrap().get(&PLAYER).unwrap();
+
+    // An old world kept fifty uses of wear in storage.
+    use tiamat_core::storage::Access;
+    r.storage.set(MOD, &format!("wear:{serial}"), Some(tiamat_core::storage::Value::Number(50.0)));
+    r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    assert_eq!(r.details(PLAYER, "bronze_pick"), vec![format!("t={serial};w=51")]);
+    assert!(!r.storage.dump().contains("wear:"), "moved off storage");
+
+    // Still in the hand, in the same slot, and still the tool in hand.
+    assert_eq!(*r.inventory.held.lock().unwrap().get(&PLAYER).unwrap(), slot);
+    let held = tiamat_core::inventory::Access::held(&*r.inventory, PLAYER).expect("held");
+    assert_eq!(held.detail.as_deref(), Some(format!("t={serial};w=51").as_str()));
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:bronze_pick"));
+    println!("wear on the tool: ok");
 }
