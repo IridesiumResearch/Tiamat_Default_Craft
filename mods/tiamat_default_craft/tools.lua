@@ -316,7 +316,7 @@ end)
 --- Gives a player `n` of a tool, each with its serial.
 function T.give(uuid, id, n)
     for _ = 1, n or 1 do
-        game.give(uuid, { material = id, count = 1, detail = T.mint() })
+        U.give(uuid, { material = id, count = 1, detail = T.mint() })
     end
 end
 

@@ -15,10 +15,14 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-09-28)
 
+**Every ask has landed.** 2 to 7 in engine c83fbc9, 8 and 9 in engine
+cbbbc5e. None is adopted in the mod yet; the table says what each would
+replace.
+
 | Item | State | In this mod |
 |---|---|---|
-| 9 reading one slot of a player's view | Open (the take and give halves landed with 4). | the anvil takes its work from its own container, struck with a hammer, not from the off-hand (step 8). |
-| 8 a use at a block reaching the block's handler first | Open. | a fire is opened with an empty hand and food is put in its box, not held over it (step 6). |
+| 9 reading one slot of a player's view | Landed, engine cbbbc5e. | not yet adopted: the anvil is still a station you open and strike. | the anvil takes its work from its own container, struck with a hammer, not from the off-hand (step 8). |
+| 8 a use at a block reaching the block's handler first | Landed, engine cbbbc5e. | not yet adopted: a fire is still opened with an empty hand. | a fire is opened with an empty hand and food is put in its box, not held over it (step 6). |
 | 7 a drop of another mod's material | Landed, engine c83fbc9. | not yet adopted: a cracked block still drops nothing and hands the rock over. |
 | 6 a material's tags and hardness | Landed, engine c83fbc9. | not yet adopted: the dig classes are still a table. |
 | 5 enumerating containers | Landed, engine c83fbc9. | not yet adopted: stations still keep their own index. |
@@ -28,10 +32,12 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 9. Reading one slot of a player's view (2026-09-28): OPEN
+## 9. Reading one slot of a player's view (2026-09-28): LANDED 2026-09-28 (engine cbbbc5e)
 
-Copied to the engine's sheet 2026-09-28. Ask 4 landed `slot` on
-`game.take` and `game.give`; what is left is the read.
+`game.slot(player, view, n)`, one-based, answering what `game.held` answers
+or nil. With ask 4's `slot` on `take` and `give`, the anvil can read slot
+28 (the off-hand), take the bloom from it and give the bar back into it.
+The history follows.
 
 **Wanted.** The stack in one slot of a player's view, and a take from that
 slot alone: `game.slot(player, "player:main", 28)` answering `{ material,
@@ -56,9 +62,13 @@ where the brief wanted a gesture.
 `game.take` (ask 4 asks the same of `game.give`). With both, the anvil
 reads the off-hand, takes the bloom from it, and gives the bar back into it.
 
-## 8. A use at a block reaching the block's handler first (2026-09-28): OPEN
+## 8. A use at a block reaching the block's handler first (2026-09-28): LANDED 2026-09-28 (engine cbbbc5e)
 
-Copied to the engine's sheet 2026-09-28.
+`game.register_on_use(fn, { materials = { ... } })`, the first form asked
+for: a handler with a list is asked about a use at one of those blocks
+before any handler without one, and about no other block. A bare id is
+the mod's own; `anywhere = true` beside it still hears uses at nothing.
+The history follows.
 
 **Wanted.** A player holding raw meat right-clicks a burning campfire and
 the meat goes over the fire — the gesture the brief designed cooking

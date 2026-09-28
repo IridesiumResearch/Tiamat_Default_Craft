@@ -88,6 +88,29 @@ function U.stored_int(key)
     return type(value) == "number" and math.tointeger(value) or 0
 end
 
+--- Gives a player a stack, and answers how many units did not go in.
+---
+--- An inventory grew for ever once; a mod may now fix the size of a
+--- player's main view (Tiamat Default UI does), and then a full pack leaves
+--- units over. What is left over is put on the ground at the player's feet
+--- through Life's `drop` when Life is here, where its pickup finds it, and
+--- is logged otherwise: nothing is destroyed quietly (charter rule 5).
+function U.give(uuid, spec)
+    local gave, left = game.give(uuid, spec)
+    left = math.tointeger(left) or 0
+    if gave or left <= 0 then return 0 end
+    local over = { material = spec.material, units = left, shape = spec.shape, detail = spec.detail }
+    local life = game.exports("tiamat_default_life")
+    local id = game.player_entity(uuid)
+    local body = id and game.entity(id)
+    if life and life.drop and body and life.drop(body.pos, over, { owner = uuid }) then
+        return 0
+    end
+    game.log(string.format("tiamat_default_craft: %d units of %s had no room in %s's pack",
+        left, tostring(spec.material), tostring(uuid)))
+    return left
+end
+
 --- A block position as a key: "x,y,z".
 function U.key(x, y, z)
     return x .. "," .. y .. "," .. z

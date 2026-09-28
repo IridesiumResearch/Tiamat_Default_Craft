@@ -63,8 +63,14 @@ impl storage::Access for Storage {
             }
         }
     }
-    fn keys(&self, mod_id: &str) -> Vec<String> {
-        self.0.lock().unwrap().keys().filter(|(m, _)| m == mod_id).map(|(_, k)| k.clone()).collect()
+    fn keys(&self, mod_id: &str, prefix: &str) -> Vec<String> {
+        self.0
+            .lock()
+            .unwrap()
+            .keys()
+            .filter(|(m, k)| m == mod_id && k.starts_with(prefix))
+            .map(|(_, k)| k.clone())
+            .collect()
     }
 }
 
@@ -123,7 +129,8 @@ impl inventory::Access for Inventory {
     }
     /// The view is kept consolidated, so a named slot lands where any give
     /// would: nothing here reads slot positions in a player's view.
-    fn give(&self, player: [u8; 32], view: &str, _slot: Option<usize>, stack: Stack) -> bool {
+    fn give(&self, player: [u8; 32], view: &str, _slot: Option<usize>, stack: Stack) -> u32 {
+
         let mut views = self.views.lock().unwrap();
         let list = views.entry((player, view.to_owned())).or_default();
         if let Some(existing) = list.iter_mut().find(|s| same(s, stack.material, stack.shape, stack.detail.as_deref())) {
@@ -131,7 +138,12 @@ impl inventory::Access for Inventory {
         } else {
             list.push(stack);
         }
-        true
+        0
+    }
+    /// The view is kept consolidated, with no slot positions: nothing here
+    /// reads one yet.
+    fn slot(&self, _: [u8; 32], _: &str, _: usize) -> Option<Stack> {
+        None
     }
     fn held(&self, player: [u8; 32]) -> Option<Stack> {
         let (material, detail) = self.held.lock().unwrap().get(&player).cloned()?;

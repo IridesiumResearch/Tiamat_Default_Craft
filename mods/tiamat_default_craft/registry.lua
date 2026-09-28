@@ -719,7 +719,7 @@ local function give_back(source, got, uuid)
         end
         if left > 0 then
             local to = source.player or uuid
-            if not (to and game.give(to, { material = g.material, units = left })) then
+            if not to or U.give(to, { material = g.material, units = left }) > 0 then
                 game.log(string.format("tiamat_default_craft: %d units of %s had nowhere to go back to",
                     left, tostring(game.block_of(g.material))))
             end
@@ -761,7 +761,14 @@ local function give_outputs(source, outputs)
                 end
                 if left > 0 then return given, false end
             else
-                if not game.give(source.player, piece) then
+                -- A pack of fixed size may take part of it: what went in is
+                -- given, and taken back with the rest on a rollback.
+                local gave, left = game.give(source.player, piece)
+                left = math.tointeger(left) or 0
+                if not gave then
+                    if left < piece.units then
+                        given[#given + 1] = { material = piece.material, units = piece.units - left, detail = piece.detail }
+                    end
                     return given, false
                 end
                 given[#given + 1] = piece

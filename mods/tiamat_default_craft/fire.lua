@@ -113,7 +113,7 @@ tdc.on_dug(function(e)
         end
     end
     if units > 0 then
-        game.give(e.player, { material = parent, units = units })
+        U.give(e.player, { material = parent, units = units })
     end
 end)
 

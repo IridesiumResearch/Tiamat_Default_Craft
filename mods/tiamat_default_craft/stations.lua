@@ -300,7 +300,7 @@ tdc.on_dug(function(e)
     -- Nothing is destroyed (charter rule 5): what was inside goes to the
     -- digger. Units, not counts: a stack is blocks and loose nodes.
     for _, stack in ipairs(game.break_container(name)) do
-        game.give(e.player, { material = stack.material, units = stack.units, shape = stack.shape,
+        U.give(e.player, { material = stack.material, units = stack.units, shape = stack.shape,
             detail = stack.detail })
     end
     unindex(name)
