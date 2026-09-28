@@ -252,7 +252,10 @@ C.bloomery_slots = { fuel = 1, input = { 2, 3 }, tool = 4, output = 5 }
 C.bloom_ticks = 120 * 20
 C.coal_spoils = "Coal's sulphur spoils the bloom. It wants charcoal."
 
--- The anvil: blows to beat a bloom into a bar, and a bar into a head.
+-- The anvil: blows to beat a bloom into a bar, and a bar into a head. With
+-- nothing on it, a blow works what is in the off-hand, this slot of the
+-- player's pack.
+C.offhand_slot = 28
 C.strikes_bar = 3
 C.strikes_head = 5
 C.strikes_first_hammer = 8

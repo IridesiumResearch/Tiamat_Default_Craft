@@ -176,11 +176,10 @@ and the change is recorded here.
   first**, so a stew is made from what would also roast.
 - **A sluice has three out slots** (sand, tin, gold) rather than one, and
   the gold's ninth wash is a counter kept with the world, never a roll.
-- **The anvil is a station you strike.** The work goes on it through its
-  screen, where the player also chooses what to forge, and each use with a
-  hammer in hand is a blow, rather than the ingredient in the off-hand: the
-  mod API reads a player's inventory whole, with no slot to name the
-  off-hand by.
+- **The anvil can also be worked through its screen.** As the brief has
+  it, the work is held in the off-hand and each use with a hammer is a blow;
+  the anvil's screen is where a player chooses what a bar becomes, and work
+  put on the anvil there is struck the same way.
 - **The tuyere and the bellows' copper nozzle are cast** in one tuyere mould,
   from bronze and copper.
 - **Torches are made by hand** (a stick, a bark strip, a tinder), with bark

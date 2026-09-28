@@ -104,9 +104,11 @@ bellows. **`refuse_fuel`** is the sentence a strike says when its fuel
 slot holds something it will not burn.
 
 **A station with `forge = true` is worked by blows.** Its recipes carry
-`strikes` (1..100) and must name the hammer they take in `tools`; a player
-chooses one on its screen, puts the work on it, and uses it with that
-hammer in hand, once a blow. The recipe is made on the last blow, the held
+`strikes` (1..100) and must name the hammer they take in `tools`. The work
+is held in the off-hand (slot 28 of the pack) or put on the station through
+its screen, where a player may also choose what to forge, and each use with
+that hammer in hand is a blow; from the off-hand, the product goes back
+into it when it fits, else into the pack. The recipe is made on the last blow, the held
 hammer taking the wear. Changing the work or the choice starts the count
 over. The anvil is one.
 

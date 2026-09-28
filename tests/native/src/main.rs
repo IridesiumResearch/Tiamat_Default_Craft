@@ -146,6 +146,7 @@ fn main() {
     after_the_loop();
     progress_asks();
     wear_on_the_tool();
+    anvil_offhand();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -1372,4 +1373,56 @@ fn wear_on_the_tool() {
     r.tick(1);
     assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:bronze_pick"));
     println!("wear on the tool: ok");
+}
+
+/// The anvil worked as the brief meant: the work in the off-hand, a hammer
+/// in the main hand, a blow a use.
+fn anvil_offhand() {
+    let mut r = Rig::new(Setup { world: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let d = |r: &Rig, id: &str| r.details(PLAYER, id)[0].clone();
+    r.give(PLAYER, "stone_anvil", 27);
+    r.place(PLAYER, 90, 64, 90, "stone_anvil").unwrap();
+
+    // The off-hand is slot 28 of the pack (27 zero-based).
+    let offhand = |r: &Rig, stack: Option<tiamat_core::inventory::Stack>| {
+        let mut views = r.inventory.views.lock().unwrap();
+        let slots = views.entry((PLAYER, "player:main".into())).or_default();
+        while slots.len() < 28 {
+            slots.push(None);
+        }
+        slots[27] = stack;
+    };
+    let in_offhand = |r: &Rig| tiamat_core::inventory::Access::slot(&*r.inventory, PLAYER, "player:main", 27);
+
+    // A bloom in the off-hand, three blows of a bronze hammer: a bar, in the off-hand.
+    offhand(&r, Some(r.stack("iron_bloom", 27)));
+    r.hold(PLAYER, "bronze_hammer", Some(&d(&r, "bronze_hammer")));
+    for _ in 0..3 {
+        assert_eq!(r.use_at(PLAYER, 90, 64, 90).as_deref(), Some(""));
+    }
+    assert_eq!(in_offhand(&r).map(|s| (s.material, s.units)), Some((r.material("iron_bar"), 27)));
+    assert!(r.storage.dump().contains(&format!("first:{}:forge:iron_bar=", hex(PLAYER))));
+
+    // Five bars held; the pick head chosen on the anvil's screen; five blows
+    // of the iron hammer. The head goes to the pack, the two bars left stay.
+    offhand(&r, Some(r.stack("iron_bar", 27 * 5)));
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.use_at(PLAYER, 90, 64, 90).as_deref(), Some(""));
+    r.press_labelled(PLAYER, "station", "Iron pick head");
+    r.close(PLAYER, "station");
+    r.hold(PLAYER, "iron_hammer", Some(&d(&r, "iron_hammer")));
+    for _ in 0..5 {
+        assert_eq!(r.use_at(PLAYER, 90, 64, 90).as_deref(), Some(""));
+    }
+    assert_eq!(in_offhand(&r).map(|s| s.units), Some(54), "two bars left in the hand");
+    assert_eq!(r.units(PLAYER, "iron_pick_head"), 27);
+
+    // Nothing the hammer can work: said so.
+    offhand(&r, Some(r.stack("tiamat_default_world:dirt", 27)));
+    assert_eq!(r.use_at(PLAYER, 90, 64, 90).as_deref(), Some("Nothing in your off-hand that hammer can work."));
+    println!("anvil off-hand: ok");
 }

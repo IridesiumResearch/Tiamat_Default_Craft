@@ -874,11 +874,17 @@ function R.perform(uuid, id, opts)
     for i, out in ipairs(job.resolved.outputs) do
         outputs[i] = { material = out.name, units = out.units }
     end
+    R.announce(uuid, id, outputs)
+    return true, outputs
+end
+
+--- Tells the subscribers a recipe was made, for a maker that did not go
+--- through `perform` (the anvil worked from the off-hand).
+function R.announce(uuid, id, outputs)
     for _, fn in ipairs(subscribers.crafted) do
         fn(uuid, id, U.copy(outputs))
     end
-    R.first(uuid, recipe.first)
-    return true, outputs
+    R.first(uuid, recipes[id].first)
 end
 
 return R
