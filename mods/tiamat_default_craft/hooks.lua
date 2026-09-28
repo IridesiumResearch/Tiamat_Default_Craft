@@ -182,8 +182,21 @@ game.register_on_place(function(event)
     end
 end)
 
-game.register_on_use(function(event)
+local function use(event)
     return first_verdict(uses, event)
-end)
+end
+
+-- Twice: once for every block, and once LISTED for the fires, so that a use
+-- at a fire reaches this mod before any mod's handler for what is held
+-- (engine asks 8 and 10) — Life, loaded first, eats food held at any block,
+-- and the meat a player holds out over a fire is for the fire. At a listed
+-- block only the listed callback is asked, so it is the same dispatch: the
+-- striker, the fuel and the fire's box are all heard there too.
+game.register_on_use(use)
+local fires = { game.mod_id .. ":campfire_lit" }
+if tdc.util.material("tiamat_default_life:campfire") then
+    fires[#fires + 1] = "tiamat_default_life:campfire"
+end
+game.register_on_use(use, { materials = fires })
 
 return {}

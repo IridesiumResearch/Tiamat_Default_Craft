@@ -724,6 +724,13 @@ end
 game.export{ version = 1, add_weapon = note("weapon"), add_harvest_tool = note("harvest"),
     add_tilling_tool = note("tills"), add_contact_fire = note("fire"), add_heat_source = note("heat"),
     add_food = note("food") }
+-- Life eats food held, at any block or at nothing, and loads first.
+game.register_on_use(function(e)
+    if e.held and game.block_of(e.held.material) == "tiamat_default_life:raw_meat" then
+        game.take(e.player, { material = e.held.material, units = 27 })
+        return "eaten"
+    end
+end, { anywhere = true })
 game.register_on_chat(function(e)
     local call = string.match(e.text, "^life heard (.+)$")
     if not call then return end
@@ -748,6 +755,29 @@ pub struct Rig {
 
 /// The world's blocks this mod names, registered by a stand-in under the
 /// world mod's id.
+/// The world's tags for the blocks the stand-in registers, as World's
+/// blocks.lua gives them (its sibling ask W2).
+const WORLD_TAGS: &str = r#"
+TAGS = {}
+local function tag(list, ...) for _, id in ipairs(list) do TAGS[id] = { ... } end end
+tag({ "dirt", "grass" }, "soil")
+tag({ "dry_clay", "wet_clay" }, "clay", "soil")
+tag({ "volcanic_ash" }, "ash", "soil")
+tag({ "sand", "white_sand" }, "sand")
+tag({ "gravel", "cobbles" }, "gravel")
+tag({ "stone", "granite", "slate", "calcite", "dark_basalt" }, "stone")
+tag({ "obsidian" }, "hard", "stone", "glass")
+tag({ "copper_ore", "iron_ore", "tin_ore", "silver_ore", "lead_ore", "gold_ore" }, "ore", "metal_ore")
+tag({ "coal" }, "ore", "fuel")
+tag({ "flint" }, "flint", "stone")
+tag({ "oak_log", "birch_log", "fir_log", "willow_log", "kapok_log", "juniper_log", "apple_log", "cherry_log" }, "log", "wood")
+tag({ "ironwood_log", "mangrove_log", "acacia_log", "redwood_log" }, "hardwood", "log", "wood")
+tag({ "dead_log" }, "log", "wood", "dead")
+tag({ "tall_grass", "moss" }, "plant")
+tag({ "bramble" }, "plant", "bush")
+tag({ "water" }, "fluid")
+"#;
+
 pub const WORLD_BLOCKS: &[&str] = &[
     "oak_log", "birch_log", "dead_log", "fir_log", "willow_log", "kapok_log", "juniper_log", "apple_log",
     "cherry_log", "mangrove_log", "acacia_log", "redwood_log", "ironwood_log", "stone", "granite", "dirt",
@@ -802,7 +832,8 @@ impl Rig {
             vm.load_mod(
                 "tiamat_default_world",
                 &format!(
-                    "for _, id in ipairs({{ {list} }}) do game.register_block{{ id = id }} end
+                    "{WORLD_TAGS}
+                     for _, id in ipairs({{ {list} }}) do game.register_block{{ id = id, tags = TAGS[id] }} end
                      game.register_fluid{{ id = 'water', material = 'water' }}"
                 ),
                 &dir,

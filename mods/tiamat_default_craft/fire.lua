@@ -276,7 +276,12 @@ tdc.on_use(function(e)
 
     if is_lit(name) and held then
         local ticks = fuel_ticks(held)
-        if not ticks then return nil end
+        if not ticks then
+            -- Not fuel: food (or clay) held out over a fire this mod lit goes
+            -- on it, into its box (cooking.lua).
+            if fires[key_of(pos)] and tdc.cooking then return tdc.cooking.put_on(e, pos) end
+            return nil
+        end
         local key = key_of(pos)
         local fire = fires[key]
         if not fire then return "That fire needs nothing from you." end

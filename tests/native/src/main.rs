@@ -874,6 +874,17 @@ fn cooking() {
     fit::check("the campfire", &r.screen(PLAYER));
     assert!(r.screen_says(PLAYER, "Burning"));
 
+    // Raw meat held out over the fire goes on it — the fire is asked before
+    // Life's eating — and held at the ground it is Life's meal.
+    r.give(PLAYER, "tiamat_default_life:raw_meat", 27 * 3);
+    r.hold(PLAYER, "tiamat_default_life:raw_meat", None);
+    assert_eq!(r.use_at(PLAYER, 30, 64, 30).as_deref(), Some(""));
+    assert_eq!(r.boxes.get(fire, 1).map(|s| s.units), Some(27), "on the fire");
+    assert_eq!(r.units(PLAYER, "tiamat_default_life:raw_meat"), 54);
+    r.put(31, 64, 31, "tiamat_default_world:dirt");
+    assert_eq!(r.use_at(PLAYER, 31, 64, 31).as_deref(), Some("eaten"), "Life eats it away from a fire");
+    assert_eq!(r.units(PLAYER, "tiamat_default_life:raw_meat"), 27);
+
     // Two raw meat on the fire: one after the other, cooked.
     r.boxes.set(fire, 1, Some(r.stack("tiamat_default_life:raw_meat", 54)));
     r.tick(320);
@@ -910,6 +921,7 @@ fn cooking() {
     r.world.apply(tiamat_core::BlockPos { x: 30, y: 64, z: 30 }, "tiamat_default_craft:unlit_campfire");
     r.tick(400);
     assert_eq!(r.boxes.get(fire, 4), None, "an unlit fire cooks nothing");
+    r.hold_nothing(PLAYER);
     assert_eq!(r.use_at(PLAYER, 30, 64, 30).as_deref(), Some(""), "and its box still opens");
     assert!(r.screen_says(PLAYER, "The fire is out."));
     r.close(PLAYER, "station");

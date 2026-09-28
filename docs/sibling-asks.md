@@ -117,15 +117,29 @@ each.
 glyph registry (Schism §7.1, reserved here as `register_glyph`) could read
 what a player carved.
 
-### U2. An item grid on another mod's tab (2026-09-26): OPEN
+### U2. An item grid on another mod's tab (2026-09-26): ANSWERED
 
 **Wanted.** Confirmation that an `item_grid` naming a container works on a
 tab another mod added, in a real window. The interface's README says the
 path is untested. The Craft tab needs it for the workbench (step 4).
 
-### U1. A dialog in the theme (2026-09-26): OPEN
+**Answered.** An `item_grid` with `view` set to a container's name passes
+through a tab untouched; the interface's native check now carries one
+(`addon:bench:1,2,3`) to the engine's checker. The container stays lent to
+the player until their screen sends `Closed`, or they leave, so switching
+tabs and every redraw keep it open, and shift-click moves between it and
+`player:main`. Order: `make_container`, `open_container` (false means
+somebody else has it), then `ui.open(player, "<your tab id>")`. Not yet seen
+in a real window; the first workbench will be.
+
+### U1. A dialog in the theme (2026-09-26): ANSWERED, nothing to add
 
 **Wanted.** An `open_dialog_in_theme(player, form, tree)` helper, so a
 station's own dialog wears the interface's frame without re-implementing it
 from `theme` and `widgets`. A recipe export is NOT asked for: recipes live
 in this mod's registry.
+
+**Answered.** Any dialog already wears it: the interface's `[theme]` is the
+engine's, and the engine frames EVERY sheet with it and sets its fonts, a
+station's own `show_dialog` included. For the rest, build the tree with
+`ui.widgets` and `ui.theme.colours` and it matches the inventory exactly.

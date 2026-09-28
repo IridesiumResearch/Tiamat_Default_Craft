@@ -5,13 +5,13 @@
 --
 -- # Why the fire has a box
 --
--- The brief had a player use a fire holding raw meat. Life hears every use
--- first — it loads before this mod — and eats whatever food is in the hand,
--- at a fire or anywhere, which is right for eating and leaves nothing to
--- cook with. So a fire has a container, as a station does: used with an
--- empty hand it opens, with two slots on the fire, one for a pot and one for
--- what comes off, and a burning fire cooks whatever is on it on its own.
--- Nothing here reaches past Life's eating; the two never contend.
+-- A player holds raw meat out over a burning fire and it goes on the fire:
+-- this mod's use handler for its fires is asked before Life's eating
+-- (engine asks 8 and 10), so the meat is the fire's and not a meal. What is
+-- on a fire is in its container: used with an empty hand the fire opens,
+-- two slots on it, one for a pot and one for what comes off, and a burning
+-- fire cooks whatever is on it on its own. Away from a fire, food held is
+-- Life's to eat as ever.
 --
 -- # What a fire does
 --
@@ -146,6 +146,46 @@ function CO.status(name, pos)
         status.progress = recipe.ticks > 0 and (s.progress * 1000) // recipe.ticks or 0
     end
     return status
+end
+
+--- What may go on a fire: every input of a campfire recipe, by numeric
+--- material.
+local takes = nil
+local function cookable(material)
+    if not takes then
+        takes = {}
+        for _, recipe in ipairs(R.list("campfire")) do
+            for _, input in ipairs(recipe.inputs) do
+                for _, member in ipairs(R.members(input.name)) do
+                    local m = U.material(member)
+                    if m then takes[m] = true end
+                end
+            end
+        end
+    end
+    return takes[material] == true
+end
+
+--- The place control at a burning fire with something held: a block's worth
+--- of it goes on the fire, into its box, if it is something a fire cooks.
+--- Answers nil for anything else, so the use passes on.
+function CO.put_on(e, pos)
+    local held = e.held
+    if not (held and held.shape == nil and held.detail == nil and cookable(held.material)) then return nil end
+    if held.units < U.UNITS then return nil end
+    local name = ST.ensure("campfire", pos)
+    local station = R.station("campfire")
+    local got = game.take(e.player, { material = held.material, units = U.UNITS })
+    if got == 0 then return nil end
+    local left = got
+    for _, slot in ipairs(station.slots.input) do
+        if left == 0 then break end
+        left = left - game.container_give(name, { material = held.material, units = left, slot = slot })
+    end
+    if left > 0 then U.give(e.player, { material = held.material, units = left }) end
+    if left == got then return "There is no room on the fire." end
+    ST.redraw(name)
+    return ""
 end
 
 function CO.forget(name)

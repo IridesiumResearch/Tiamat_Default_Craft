@@ -136,35 +136,33 @@ C.classes = {
     hard_rock = { types = { "pick", "chisel" }, tier = 2 },
 }
 
--- The world's blocks, by class. Plants, leaves and needles are in none: they
--- come away in anything.
+-- The world's blocks are classed by their own tags (World's sibling ask W2,
+-- engine ask 6): `stone` is rock, `hard` is hard rock, `ore` is rock, `log`
+-- and `plank` wood, `hardwood` hardwood, `soil` and `sand` loose — the words
+-- in `C.tag_classes` below, the first a block lists that this mod knows. A
+-- block no word classes is diggable by anything, which is what loose means.
+-- These are the exceptions, where this mod reads a block otherwise than its
+-- tags would.
 C.classify = {
     -- Flint breaks out of its bed by hand: it is what the first fire is
     -- struck with, and fire is how the hand gets past rock at all.
     cracked = { "flint" },
-    loose = {
+    -- Bone is as hard as stone to cut.
+    rock = { "bone" },
+    -- A dead log is punky, and marrow is spongy: the hand has them.
+    loose = { "dead_log", "marrow" },
+}
+
+-- The world's loose ground, by name, for the one thing tags cannot yet do:
+-- a tool's slower speed on it is registered at load, and the API reads a
+-- block's tags but cannot list the blocks carrying a tag (engine ask 11).
+C.soft_ground = {
         "dirt", "packed_dirt", "grass", "mud", "black_mud", "dried_mud", "mulch", "gravel", "sand",
         "white_sand", "dark_sand", "wet_clay", "dry_clay", "charcoal", "volcanic_ash", "pumice",
         "cobbles", "snow", "permafrost", "ice", "clear_ice", "moss", "lichen", "mycelium",
         "mushroom_cap", "caul", "marrow", "sulfur", "bramble", "cactus", "dead_log", "dead_coral",
         "coral_magenta", "coral_cyan", "coral_amber", "barnacles", "pink_algae", "ocean_moss",
-    },
-    wood = {
-        "oak_log", "birch_log", "fir_log", "willow_log", "kapok_log", "juniper_log", "apple_log",
-        "cherry_log", "willow_planks", "kapok_planks",
-    },
-    hardwood = { "ironwood_log", "mangrove_log", "acacia_log", "redwood_log", "ironwood_planks" },
-    rock = {
-        "stone", "granite", "slate", "calcite", "dark_basalt", "rust_red_sandstone", "ochre_sandstone",
-        "lava_rock", "dark_sediment", "light_sediment", "pale_terracotta", "flowstone", "black_marble",
-        "bone", "salt", "copper_ore", "iron_ore", "coal", "tin_ore", "silver_ore", "lead_ore",
-        "gold_ore", "pyrite",
-    },
-    hard_rock = {
-        "morphic_rock", "scorch", "obsidian", "apex_stone", "metal", "crystal", "chromium_ore",
-        "diamond", "orichalcum", "magma", "magma_crust", "hot_fiber_stone", "cold_fiber_stone",
-    },
-}
+    }
 
 -- How fast a tool digs a class of block, as a share of its own speed
 -- (engine ask 2). A class a type does not list digs at the tool's speed;
@@ -185,7 +183,7 @@ C.tag_classes = {
     wood = "wood", log = "wood", plank = "wood",
     hardwood = "hardwood",
     rock = "rock", stone = "rock", ore = "rock",
-    hard_rock = "hard_rock",
+    hard_rock = "hard_rock", hard = "hard_rock",
 }
 
 -- What a refused dig says, by class and by what was wrong: `hand` for a bare

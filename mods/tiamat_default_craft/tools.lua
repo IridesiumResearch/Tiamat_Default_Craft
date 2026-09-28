@@ -117,7 +117,7 @@ local function speeds_of(spec)
     if not shares then return nil end
     local out, any = {}, false
     for _, class in ipairs(U.sorted_keys(shares)) do
-        for _, short in ipairs(C.classify[class] or {}) do
+        for _, short in ipairs(class == "loose" and C.soft_ground or {}) do
             local id = U.world(short)
             if U.material(id) then
                 out[id] = spec.speed * shares[class]
@@ -195,8 +195,8 @@ local function class_from_tags(material)
     return nil
 end
 
---- The class of a numeric material, or nil: this mod's table first, then
---- what the block's tags say.
+--- The class of a numeric material, or nil: this mod's exceptions first,
+--- then what the block's tags say.
 function T.class(material)
     local known = class_of[material]
     if known ~= nil then return known or nil end
@@ -568,6 +568,16 @@ function T.of(uuid)
     if not tool then return nil end
     return { id = tool.id, type = tool.type, tier = tool.tier, uses = T.uses(tool, uuid),
         wear = T.worn(tool, held.detail, uuid) }
+end
+
+-- A world that predates its tags has no dig classes at all: say so once,
+-- rather than let bare hands quietly break stone.
+if U.material(U.world("stone")) then
+    local tags = game.tags(U.material(U.world("stone")))
+    if type(tags) ~= "table" or #tags == 0 then
+        game.log("tiamat_default_craft: " .. C.world .. " tags none of its blocks (its sibling ask W2): "
+            .. "without tags nothing of it is classed, and every tool breaks everything")
+    end
 end
 
 -- Life's side of it ----------------------------------------------------------------------
