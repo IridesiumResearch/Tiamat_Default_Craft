@@ -109,7 +109,7 @@ impl Inventory {
         self.views.lock().unwrap().get(&(player, "player:main".into())).cloned().unwrap_or_default()
     }
     pub fn put(&self, player: [u8; 32], stack: Stack) {
-        inventory::Access::give(self, player, "player:main", stack);
+        inventory::Access::give(self, player, "player:main", None, stack);
     }
     pub fn clear(&self, player: [u8; 32]) {
         self.views.lock().unwrap().remove(&(player, "player:main".into()));
@@ -121,7 +121,9 @@ impl inventory::Access for Inventory {
     fn contents(&self, player: [u8; 32], view: &str) -> Vec<Stack> {
         self.views.lock().unwrap().get(&(player, view.to_owned())).cloned().unwrap_or_default()
     }
-    fn give(&self, player: [u8; 32], view: &str, stack: Stack) -> bool {
+    /// The view is kept consolidated, so a named slot lands where any give
+    /// would: nothing here reads slot positions in a player's view.
+    fn give(&self, player: [u8; 32], view: &str, _slot: Option<usize>, stack: Stack) -> bool {
         let mut views = self.views.lock().unwrap();
         let list = views.entry((player, view.to_owned())).or_default();
         if let Some(existing) = list.iter_mut().find(|s| same(s, stack.material, stack.shape, stack.detail.as_deref())) {
@@ -145,6 +147,7 @@ impl inventory::Access for Inventory {
         &self,
         player: [u8; 32],
         view: &str,
+        _slot: Option<usize>,
         material: MaterialId,
         shape: Option<Shape>,
         detail: Option<&str>,
@@ -302,6 +305,9 @@ impl inventory::Containers for Boxes {
     fn holder(&self, name: &str) -> Option<[u8; 32]> {
         self.holders.lock().unwrap().get(name).copied()
     }
+    fn names(&self, prefix: &str) -> Vec<String> {
+        self.slots.lock().unwrap().keys().filter(|n| n.starts_with(prefix)).cloned().collect()
+    }
 }
 
 // --- Tools -------------------------------------------------------------------
@@ -367,6 +373,8 @@ pub struct Dialogs {
 
 impl uihost::Access for Dialogs {
     fn show(&self, request: &ShowRequest) -> bool {
+        tiamat_core::ui::check(&request.tree, tiamat_core::ui::Limits::default())
+            .expect("every tree the mod sends passes the engine's checker");
         self.shown.lock().unwrap().push(request.clone());
         true
     }
@@ -596,6 +604,9 @@ pub struct Setup {
     pub world: bool,
     /// A stand-in for Life: its exports, recording what this mod tells it.
     pub life: bool,
+    /// The real interface mod, from its checkout beside this repository
+    /// (`../Tiamat_Default_Inventory`), loaded first as a world has it.
+    pub ui: bool,
     /// Life's world option, "Default", "Creative" or "Adventure".
     pub mode: Option<String>,
     /// Mods that load after this one and use its exports: `(id, source)`.
@@ -681,6 +692,13 @@ impl Rig {
             )]);
         }
         let mut after = Vec::new();
+        if setup.ui {
+            let ui = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../Tiamat_Default_Inventory/mods/tiamat_default_ui");
+            let source = std::fs::read_to_string(ui.join("init.lua")).expect("the interface mod beside this repo");
+            vm.load_mod("tiamat_default_ui", &source, &ui).expect("the interface mod loads");
+            after.push("tiamat_default_ui".to_owned());
+        }
         if setup.world {
             let list = WORLD_BLOCKS.iter().map(|b| format!("'{b}'")).collect::<Vec<_>>().join(", ");
             vm.load_mod(
@@ -826,6 +844,21 @@ impl Rig {
         if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
     }
 
+    /// A dig completing at a block of the world, whatever is there.
+    pub fn dig_complete_at(&mut self, player: [u8; 32], x: i32, y: i32, z: i32) -> Result<(), String> {
+        let Reading::Single { material, .. } = sight::Access::block_at(&*self.world, "", BlockPos { x, y, z }) else {
+            panic!("no block")
+        };
+        let out = self.vm.dig_complete(&tiamat_core::script::DigEvent {
+            player,
+            target: tiamat_core::SubNodePos { x: x * 3 + 1, y: y * 3 + 1, z: z * 3 + 1 },
+            material,
+            brush: tiamat_core::dig::Brush::Block,
+        });
+        assert!(out.faults.is_empty(), "faulted in dig complete: {:?}", out.faults);
+        if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
+    }
+
     /// The same dig completing.
     pub fn dig_complete(&mut self, player: [u8; 32], material: &str) -> Result<(), String> {
         let out = self.vm.dig_complete(&self.dig_event(player, material, tiamat_core::dig::Brush::Block));
@@ -881,6 +914,57 @@ impl Rig {
 
     pub fn put(&self, x: i32, y: i32, z: i32, id: &str) {
         self.world.put(x, y, z, self.material(id));
+    }
+
+    /// A player placing a whole block of `id`: the mod's veto, then the
+    /// block written if it allowed it.
+    pub fn place(&mut self, player: [u8; 32], x: i32, y: i32, z: i32, id: &str) -> Result<(), String> {
+        let out = self.vm.place(&tiamat_core::script::PlaceEvent {
+            player,
+            block: BlockPos { x, y, z },
+            material: self.material(id),
+            occupancy: 0x7FF_FFFF,
+            units: 27,
+        });
+        assert!(out.faults.is_empty(), "faulted in place: {:?}", out.faults);
+        if !out.allowed {
+            return Err(out.reason.unwrap_or_default());
+        }
+        self.put(x, y, z, id);
+        Ok(())
+    }
+
+    /// Something done in one of this mod's dialogs (`form` unqualified).
+    pub fn dialog(&mut self, player: [u8; 32], form: &str, event: tiamat_core::proto::DialogEvent) {
+        let _ = self.vm.dialog_event(&tiamat_core::script::DialogEvent {
+            player,
+            mod_id: MOD.into(),
+            form: format!("{MOD}:{form}"),
+            event,
+        });
+        self.assert_healthy(form);
+    }
+
+    pub fn press(&mut self, player: [u8; 32], form: &str, name: &str) {
+        self.dialog(player, form, tiamat_core::proto::DialogEvent::Pressed { name: name.into() });
+    }
+
+    /// A dialog closed, and the container it lent put back, as the engine does.
+    pub fn close(&mut self, player: [u8; 32], form: &str) {
+        self.dialog(player, form, tiamat_core::proto::DialogEvent::Closed);
+        self.boxes.holders.lock().unwrap().retain(|_, p| *p != player);
+    }
+
+    pub fn action(&mut self, player: [u8; 32], id: &str) {
+        for pressed in [true, false] {
+            let _ = self.vm.action(&tiamat_core::script::ActionEvent { player, id: id.into(), pressed });
+        }
+        self.assert_healthy(id);
+    }
+
+    /// The form of the last dialog shown to anybody.
+    pub fn last_form(&self) -> String {
+        self.dialogs.shown.lock().unwrap().last().map(|d| d.form.clone()).unwrap_or_default()
     }
 
     /// What a restart keeps.

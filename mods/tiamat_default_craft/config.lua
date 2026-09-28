@@ -46,6 +46,8 @@ C.groups = {
         "juniper_log", "apple_log", "cherry_log", "mangrove_log", "acacia_log",
         "redwood_log", "ironwood_log",
     },
+    -- Planks: this mod's own, one for every tree, and the world's three.
+    ["#plank"] = { "willow_planks", "kapok_planks", "ironwood_planks" },
     -- What catches a spark: dry grass, needles, moss.
     ["#tinder"] = {
         "tall_grass", "dead_sagebrush", "fir_needles", "juniper_needles", "redwood_needles", "moss",
@@ -176,6 +178,10 @@ C.refusal = "That wants a better tool."
 
 -- What wearing out says.
 C.worn_out = "Your %s has worn to nothing."
+
+-- Stations ---------------------------------------------------------------------
+
+C.chest_slots = 27
 
 -- Fire -------------------------------------------------------------------------
 --

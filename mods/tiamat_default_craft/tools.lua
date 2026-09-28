@@ -141,6 +141,11 @@ for _, class in ipairs(U.sorted_keys(C.classify)) do
         class_names[U.world(short)] = class
     end
 end
+-- This mod's own blocks: planks are wood; the stations come away in anything.
+class_names[game.mod_id .. ":plank"] = "wood"
+for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit" }) do
+    class_names[game.mod_id .. ":" .. short] = "loose"
+end
 
 --- The class of a numeric material, or nil.
 function T.class(material)

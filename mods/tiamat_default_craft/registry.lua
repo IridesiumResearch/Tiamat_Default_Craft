@@ -187,6 +187,11 @@ function R.station(id)
     return stations[id]
 end
 
+--- Every station's id, sorted.
+function R.station_ids()
+    return U.sorted_keys(stations)
+end
+
 -- Fuels ----------------------------------------------------------------------
 
 --- `material` burns at `heat` (a tier) for `ticks` per 27 units.

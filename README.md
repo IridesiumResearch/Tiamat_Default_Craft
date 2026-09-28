@@ -28,8 +28,8 @@ Built in the brief's order (§12), each step shipping on its own:
 | 1 | The recipe, station and fuel registry, `perform` with rollback, exported | **done** |
 | 2 | Tools: the hand, held → tool sync, dig classes, wear | **done** |
 | 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | **done** |
-| 4 | Workbench, the Craft tab, the chest | next |
-| 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | |
+| 4 | Workbench, the Craft tab, the chest | **done** |
+| 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | next |
 | 6 | Cooking | |
 | 7 | The sluice | |
 | 8 | Bloomery, bellows, anvil: iron | |
@@ -41,9 +41,11 @@ tinder from dry grass, split sticks from a log, lay a campfire and strike it
 alight (`craft fire_striker`, `craft tinder`, `craft stick`, `craft
 unlit_campfire`). A burning fire cracks the rock around it in thirty
 seconds, and cracked rock and ore come away by hand, whole. Feed it logs
-or it goes out. Every tool of the ladder exists and works — typed, tiered and worn,
-with a sentence for each refusal — though only an operator's `toolkit`
-hands them out until the stations that make them land. Bare hands move
+or it goes out. Cord from brambles and a workbench of logs, by hand; at
+the bench, planks split with a wedge, hafts, digging sticks, mauls, and a
+chest. V opens the Craft tab (the interface's, when it is here). Every tool of the ladder exists and works — typed, tiered and worn,
+with a sentence for each refusal — though the metal ones come only from an operator's `toolkit` until the
+kiln and the anvil land. Bare hands move
 earth, sand, clay and soft logs; rock wants a bronze pick, and the hard
 rocks iron. Another mod can register stations, recipes, tools and dig
 classes, and make them.
@@ -61,6 +63,8 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   materials.lua              the items and blocks this mod registers
   tools.lua                  the hand, the tools, held → tool, dig classes, wear
   fire.lua                   campfires: lighting, fuel, burning out, fire-setting
+  screens.lua                dialog trees, in Tiamat Default UI's look when present
+  stations.lua               stations and chests in the world; the Craft tab and V
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
@@ -94,7 +98,7 @@ it as `../Tiamat`:
 cargo run --manifest-path tests/native/Cargo.toml
 ```
 
-In a world, `recipes` in chat lists what you could make by hand from what
+In a world, V opens the Craft tab, `recipes` in chat lists what you could make by hand from what
 you carry, and `craft <recipe> [times]` makes it. An operator's `toolkit`
 gives one of every tool.
 
@@ -120,6 +124,11 @@ and the change is recorded here.
 - **A cracked block drops nothing and the digger is handed the rock**,
   because the engine lets a block drop only its own mod's materials (engine
   ask 7).
+- **Hafts and cord.** A haft (two sticks and a cord) is what a maul, and
+  later every metal head, is fitted to; cord is twisted from bramble.
+- **Station screens are the engine's widgets with the interface's fonts
+  and colours**, not its builders: what those answer is a read-only view
+  that cannot be sent inside another mod's tree.
 - **Fire-setting reaches one block further through open air**, so a face
   dug back keeps cracking. Quenching with water is not built.
 

@@ -25,6 +25,8 @@ end
 
 item("stick", "Stick", "Split from a log. Hafts, kindling, a digging stick's shaft.")
 item("tinder", "Tinder", "Dry grass, needles and moss, rubbed to fluff. It catches a spark.")
+item("cord", "Cord", "Bramble cane, stripped and twisted. It binds a haft and hangs a lid.")
+item("haft", "Haft", "A straight handle, bound. A head goes on it.")
 
 --- Every block this mod registered, by short id: its numeric material.
 M.blocks = {}
@@ -35,6 +37,24 @@ local function block(id, spec)
     M.blocks[id] = game.register_block(spec)
     return M.blocks[id]
 end
+
+-- The workshop (stations.lua). One plank for every tree: the world keeps
+-- its rule of one of each, and a plank is a plank.
+block("plank", {
+    name = "Plank",
+    description = "Split from a log with a wedge and a maul.",
+    hardness = 0.8,
+})
+block("workbench", {
+    name = "Workbench",
+    description = "Logs lashed with cord. What is made of several things is made here.",
+    hardness = 1.0,
+})
+block("chest", {
+    name = "Chest",
+    description = "Planks pegged into a box. Use it to open it; dig it to take it away, contents and all.",
+    hardness = 1.0,
+})
 
 -- Fire (fire.lua). The lit fire is Life's campfire when Life is here, so
 -- its heat and its burn are Life's; `campfire_lit` is this mod's own, for a

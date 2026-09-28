@@ -274,8 +274,73 @@ def cracked(colour):
     return c.p
 
 
+PLANK = (170, 128, 80)
+PLANK_DARK = (126, 92, 56)
+
+
+def planks():
+    """A whole block of boards: three planks and their seams."""
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, PLANK)
+    for y in (0, 5, 10, 15):
+        c.line(0, y, SIZE - 1, y, PLANK_DARK)
+    for x, y in ((6, 1), (12, 6), (3, 11)):
+        c.line(x, y, x, y + 3, PLANK_DARK)
+    return c.p
+
+
+def workbench():
+    """A plank top with the grain showing, over a log-dark frame."""
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, WOOD_DARK)
+    c.rect(0, 0, SIZE - 1, 5, PLANK)
+    c.line(0, 6, SIZE - 1, 6, (60, 42, 26))
+    c.rect(2, 7, 4, SIZE - 1, WOOD)
+    c.rect(11, 7, 13, SIZE - 1, WOOD)
+    c.line(5, 10, 10, 10, (196, 170, 104))
+    return c.p
+
+
+def chest():
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, PLANK)
+    c.line(0, 5, SIZE - 1, 5, PLANK_DARK)
+    c.line(0, 6, SIZE - 1, 6, PLANK_DARK)
+    for y in (0, 10, 15):
+        c.line(0, y, SIZE - 1, y, PLANK_DARK)
+    c.rect(7, 5, 8, 8, (196, 170, 104))
+    return c.p
+
+
+def cord():
+    c = Canvas()
+    straw, dark = (176, 150, 96), (120, 98, 60)
+    for i in range(12):
+        x = 2 + i
+        y = 8 + (2 if i % 4 < 2 else -2) // 2
+        c.dot(x, y, straw)
+        c.dot(x, y + 1, dark if i % 2 else straw)
+    c.line(2, 4, 4, 7, straw)
+    c.line(13, 10, 14, 13, straw)
+    return c.p
+
+
+def haft_item():
+    c = Canvas()
+    c.line(3, 13, 12, 4, WOOD, 2)
+    c.line(3, 14, 12, 5, WOOD_DARK)
+    for x, y in ((6, 10), (7, 9), (8, 8)):
+        c.dot(x, y, (176, 150, 96))
+    return c.p
+
+
 ITEMS = {
     "stick": lambda: rod(METALS["wooden"]),
+    "plank": planks,
+    "workbench": workbench,
+    "chest": chest,
+    "cord": cord,
+    "haft": haft_item,
     "tinder": tinder,
     "fire_striker": striker,
     "unlit_campfire": lambda: campfire(False),

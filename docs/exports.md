@@ -78,6 +78,13 @@ with `inventory = true`. `heat = true` makes it burn; `fuels` is the list
 of the only fuels it takes. `block` and `lit_block` are the blocks it is
 in the world.
 
+**A station with a `block` is a station in the world**, whoever registered
+it. This mod makes its container when the block is placed (named
+`tiamat_default_craft:<station>:x,y,z`), opens it with a screen of the
+station's recipes when the block is used — one player at a time — and
+hands its contents to whoever digs it. An alembic is a station record, a
+block and some recipes; register them and it works.
+
 **`perform`** takes from the container's input slots and gives to its output
 slots when a container is named, and from and to the player's own
 inventory when the station has no slots. It is one transaction: if any
@@ -129,7 +136,7 @@ works, and wears per player and kind.
 
 All are namespaced `tiamat_default_craft:` by the engine.
 
-- **Items:** `stick`, `tinder`, and the tools: `fire_striker`, `digging_stick`,
+- **Items:** `stick`, `tinder`, `cord`, `haft`, and the tools: `fire_striker`, `digging_stick`,
   `ironwood_digging_stick`, `wooden_maul`, `ironwood_maul`, `wooden_wedge`,
   `ironwood_wedge`, `copper_pot`, and in bronze and iron each (`bronze_*`,
   `iron_*`) `spade`, `axe`, `pick`, `chisel`, `hammer`, `knife`, `sickle`,
@@ -137,16 +144,28 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Engine tools:** `hand` (the default), and every tool above that digs:
   the digging sticks, spades, mauls, axes, picks and chisels (the chisels
   with the sub-node brush).
-- **Blocks:** `unlit_campfire`, `campfire_lit` (the lit fire in a world
+- **Blocks:** `plank`, `workbench`, `chest`, `unlit_campfire`, `campfire_lit` (the lit fire in a world
   without Life; with Life, a lit fire is Life's `campfire`), and the cracked
   rocks `cracked_stone`, `cracked_slate`, `cracked_calcite`,
   `cracked_dark_basalt`, `cracked_copper_ore`, `cracked_iron_ore`,
   `cracked_coal` (each only when the world's rock exists).
 - **Recipes:** by hand, `stick` (any `#log` → four sticks), `tinder` (a
   third of a block of `#tinder`), `fire_striker` (two flint),
-  `unlit_campfire` (three sticks, two logs, a tinder).
-- **Stations:** `hand`.
-- **Groups:** `#log`, the world's thirteen logs; `#tinder`, its dry grass,
+  `unlit_campfire` (three sticks, two logs, a tinder), `cord` (a bramble →
+  two), `workbench` (four logs, four cord). At the workbench: `plank` (a log
+  → four, with a `#wedge`), `haft`, `digging_stick`, `wooden_wedge`,
+  `wooden_maul`, the three in ironwood, and `chest` (nine `#plank`, two
+  cord).
+- **Stations:** `hand`, and `workbench` (slots 1–9 in, 10 out).
+- **Containers:** `tiamat_default_craft:<station>:x,y,z` for every station
+  block placed, this mod's or another's, and `tiamat_default_craft:chest:x,y,z`
+  (27 slots) for a chest; `<domain>@` before the position off the overworld.
+- **Dialogs:** `station` (a station's or a chest's screen) and `hand`.
+- **Actions:** `craft` (default key V): the Craft tab on the interface's
+  screen, or a dialog of its own without it.
+- **Tabs:** `tiamat_default_craft:hand`, "Craft", on Tiamat Default UI's screen.
+- **Groups:** `#plank`, this mod's plank and the world's three; `#wedge`,
+  the two wedges; `#log`, the world's thirteen logs; `#tinder`, its dry grass,
   needles, moss, lichen and heather.
 
 ## Commands it accepts
@@ -161,8 +180,9 @@ one of them is chat. For operators, and everyone in a Creative world:
 
 None for other mods. `game.storage` is private to this mod: it keeps each
 player's firsts (`first:<uuid>:<event>`), the tool serial counter
-(`serial`), each tool's wear (`wear:<serial>`), and each fire it lit
-(`fire:<domain>@x,y,z`).
+(`serial`), each tool's wear (`wear:<serial>`), each fire it lit
+(`fire:<domain>@x,y,z`), and the index of station containers
+(`station:<container>`).
 
 ## What it reads from other mods
 
@@ -172,5 +192,6 @@ is loaded; it tells `tiamat_default_life` which of its tools are weapons
 (`add_weapon`), sickles (`add_harvest_tool`) and hoes (`add_tilling_tool`),
 lights Life's `campfire` block and makes its own fire burn and warm through
 `add_contact_fire` and `add_heat_source`, and reads Life's world option
-`mode`; and it loads after
-`tiamat_default_ui` so that it may use that mod's exports.
+`mode`; and it adds a tab to `tiamat_default_ui`'s screen with `add_tab`,
+opens it with `open`, and borrows its `theme`'s fonts and colours for its
+own dialogs.

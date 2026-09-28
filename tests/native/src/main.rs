@@ -8,6 +8,7 @@
 // The rig carries fakes the later steps use; not every one is read yet.
 #[allow(dead_code)]
 mod rig;
+mod fit;
 
 use rig::{MOD, OTHER, PLAYER, Rig, Setup, hex};
 use tiamat_core::script::{ChatEvent, ScriptVm};
@@ -36,6 +37,7 @@ end)
 const MAGIC: &str = r##"
 for _, id in ipairs({ "herb", "elixir", "flask", "tea" }) do game.register_item{ id = id } end
 game.register_block{ id = "dreamwood" }
+game.register_block{ id = "alembic" }
 local craft = game.exports("tiamat_default_craft")
 assert(craft and craft.version == 1)
 
@@ -60,7 +62,7 @@ assert(craft.register_station{ id = "schism_magic:bad", slots = { input = 1 } } 
 assert(craft.register_station{ id = "schism_magic:bad", slots = { input = 1, output = 2, sideways = 3 } } == nil)
 assert(craft.register_station{ id = "schism_magic:bad" } == nil)
 assert(craft.register_station{ id = "hand", inventory = true } == nil)
-assert(craft.register_station{ id = "schism_magic:alembic", name = "Alembic",
+assert(craft.register_station{ id = "schism_magic:alembic", name = "Alembic", block = "schism_magic:alembic",
     slots = { input = { 1, 2 }, tool = 3, output = 4 }, heat = true } == true)
 assert(craft.register_group("#log", { "schism_magic:dreamwood" }) == true)
 assert(craft.register_group("log", { "schism_magic:dreamwood" }) == nil)
@@ -131,6 +133,8 @@ fn main() {
     creative();
     fire();
     fire_alone();
+    stations();
+    craft_tab();
     println!("craft native check: all passed");
 }
 
@@ -142,7 +146,7 @@ fn load_alone() {
     r.say("craft stick");
     assert_eq!(r.said(), "cannot make Sticks: nothing registered is #log");
     r.say("recipes");
-    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: fire_striker, stick, tinder, unlit_campfire"]);
+    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: cord, fire_striker, stick, tinder, unlit_campfire, workbench"]);
     println!("load alone: ok");
 }
 
@@ -566,4 +570,121 @@ fn fire_alone() {
     r.tick(40);
     assert!(!r.storage.dump().contains("fire:overworld@0,64,0"), "a dug fire is forgotten");
     println!("fire alone: ok");
+}
+
+/// The workshop: cord and a workbench by hand, planks with a wedge at the
+/// bench, one player at a time, a bench that gives back what is in it, a
+/// chest, and another mod's station on the same road.
+fn stations() {
+    let mut r = Rig::new(Setup {
+        world: true,
+        life: true,
+        fixtures: vec![("schism_progress".into(), PROGRESS.into()), ("schism_magic".into(), MAGIC.into())],
+        ..Setup::default()
+    });
+    r.join(PLAYER);
+    r.join(OTHER);
+    r.tick(1);
+
+    r.give(PLAYER, "tiamat_default_world:bramble", 54);
+    r.give(PLAYER, "tiamat_default_world:oak_log", 27 * 6);
+    r.say("craft cord 2");
+    assert_eq!(r.said(), "made Cord x2");
+    r.say("craft workbench");
+    assert_eq!(r.said(), "made Workbench x1");
+    assert_eq!(r.units(PLAYER, "workbench"), 27);
+
+    // Placed, it has a container, and is in the index.
+    r.place(PLAYER, 5, 64, 5, "workbench").unwrap();
+    let bench = "tiamat_default_craft:workbench:5,64,5";
+    assert!(r.boxes.exists(bench));
+    assert!(r.storage.dump().contains(&format!("station:{bench}=Text(\"workbench\")")));
+
+    // Used: the screen, and the container lent to this player alone.
+    assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
+    assert_eq!(r.last_form(), "tiamat_default_craft:station");
+    assert_eq!(r.use_at(OTHER, 5, 64, 5).as_deref(), Some("Somebody is using that."));
+    fit::check("the workbench", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+
+    // Planks: a log in the grid, a wedge in the hands, the recipe pressed.
+    // Workbench recipes are listed by id; planks are the seventh.
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.boxes.set(bench, 1, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    r.press(PLAYER, "station", "r7");
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(4 * 27), "four planks out");
+    assert_eq!(r.boxes.get(bench, 1), None);
+    let wedge = r.details(PLAYER, "wooden_wedge")[0].trim_start_matches("t=").to_owned();
+    assert!(r.storage.dump().contains(&format!("wear:{wedge}=Number(1.0)")), "the wedge wore");
+    r.press(PLAYER, "station", "r7");
+    let shown = r.dialogs.shown.lock().unwrap().last().cloned().unwrap();
+    assert!(format!("{:?}", shown.tree).contains("Cannot: missing log."), "the screen says why");
+
+    // Somebody else cannot dig it from under them; they can, and get the planks.
+    assert_eq!(r.dig_complete_at(OTHER, 5, 64, 5), Err("Somebody is using that.".into()));
+    r.put(100, 64, 100, "workbench");
+    r.boxes.slots.lock().unwrap().insert("tiamat_default_craft:workbench:100,64,100".into(), vec![None; 10]);
+    r.boxes.set("tiamat_default_craft:workbench:100,64,100", 3, Some(r.stack("tiamat_default_craft:plank", 54)));
+    let planks = r.units(PLAYER, "plank");
+    assert_eq!(r.dig(PLAYER, "workbench"), Ok(()));
+    assert_eq!(r.units(PLAYER, "plank"), planks + 54, "what was in it comes back");
+    assert!(!r.boxes.exists("tiamat_default_craft:workbench:100,64,100"));
+
+    // The chest: nine planks and two cord at the bench.
+    r.close(PLAYER, "station");
+    r.boxes.set(bench, 1, Some(r.stack("plank", 27 * 9)));
+    r.boxes.set(bench, 2, Some(r.stack("cord", 54)));
+    r.boxes.set(bench, 10, None);
+    assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
+    r.press(PLAYER, "station", "r1");
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.material), Some(r.material("chest")));
+    r.close(PLAYER, "station");
+
+    r.give(PLAYER, "chest", 27);
+    r.place(PLAYER, 7, 64, 5, "chest").unwrap();
+    let chest = "tiamat_default_craft:chest:7,64,5";
+    assert_eq!(r.use_at(PLAYER, 7, 64, 5).as_deref(), Some(""));
+    let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    assert!(tree.contains(chest), "the chest's grid");
+    fit::check("the chest", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    r.boxes.set(chest, 5, Some(r.stack("tiamat_default_world:flint", 27)));
+    r.close(PLAYER, "station");
+    r.put(100, 64, 100, "chest");
+    r.boxes.slots.lock().unwrap().insert("tiamat_default_craft:chest:100,64,100".into(), vec![None; 27]);
+    r.boxes.set("tiamat_default_craft:chest:100,64,100", 9, Some(r.stack("tiamat_default_world:flint", 27)));
+    let flint = r.units(PLAYER, "tiamat_default_world:flint");
+    assert_eq!(r.dig(PLAYER, "chest"), Ok(()));
+    assert_eq!(r.units(PLAYER, "tiamat_default_world:flint"), flint + 27);
+
+    // Another mod's station is a block, a record and recipes: the same road.
+    r.give(PLAYER, "schism_magic:alembic", 27);
+    r.place(PLAYER, 9, 64, 5, "schism_magic:alembic").unwrap();
+    assert_eq!(r.use_at(PLAYER, 9, 64, 5).as_deref(), Some(""));
+    assert!(r.boxes.exists("tiamat_default_craft:schism_magic:alembic:9,64,5"));
+    fit::check("the alembic", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    r.close(PLAYER, "station");
+
+    // By hand without the interface: the V action opens a dialog of its own.
+    r.action(PLAYER, "tiamat_default_craft:craft");
+    assert_eq!(r.last_form(), "tiamat_default_craft:hand");
+    fit::check("the hand dialog", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    r.give(PLAYER, "tiamat_default_world:oak_log", 27);
+    // Hand recipes by id: the magic fixture's four, then cord, fire_striker, stick...
+    r.press(PLAYER, "hand", "r7");
+    assert!(format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree).contains("Made Sticks x4."));
+    println!("stations: ok");
+}
+
+/// With the interface, the Craft tab is on its screen and V opens it there.
+fn craft_tab() {
+    let mut r = Rig::new(Setup { world: true, ui: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.tick(1);
+    r.action(PLAYER, "tiamat_default_craft:craft");
+    let form = r.last_form();
+    assert!(form.starts_with("tiamat_default_ui:"), "the interface's screen, not ours: {form}");
+    let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    assert!(tree.contains("By hand"), "on the Craft tab");
+    fit::check("the Craft tab", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    println!("craft tab: ok");
 }

@@ -33,7 +33,9 @@ tdc.registry = load("registry")   -- recipes, groups, stations, fuels, the gate,
 tdc.materials = load("materials") -- the items and blocks this mod registers
 tdc.tools = load("tools")         -- the hand, tools, dig classes, wear
 tdc.fire = load("fire")           -- campfires: lighting, fuel, burning out, fire-setting
-load("recipes")                   -- this mod's own recipes, into the registry
+load("recipes")                   -- this mod's own stations and recipes, into the registry
+tdc.screens = load("screens")     -- dialog trees, in Tiamat Default UI's look when present
+tdc.stations = load("stations")   -- stations and chests in the world; the Craft tab
 load("commands")                  -- chat words: listing and crafting by hand
 
 -- What other mods may call. One export per mod, built whole first.
