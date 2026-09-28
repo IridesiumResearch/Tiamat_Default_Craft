@@ -38,6 +38,7 @@ tdc.screens = load("screens")     -- dialog trees, in Tiamat Default UI's look w
 tdc.stations = load("stations")   -- stations and chests in the world; the Craft tab
 tdc.furnace = load("furnace")     -- stations that burn: heat, fuel, jobs
 tdc.cooking = load("cooking")     -- what a campfire cooks
+tdc.sluice = load("sluice")       -- tin washed out of river gravel
 load("commands")                  -- chat words: listing and crafting by hand
 
 -- What other mods may call. One export per mod, built whole first.

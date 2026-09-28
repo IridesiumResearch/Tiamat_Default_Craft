@@ -149,7 +149,8 @@ for _, class in ipairs(U.sorted_keys(C.classify)) do
 end
 -- This mod's own blocks: planks are wood; the stations come away in anything.
 class_names[game.mod_id .. ":plank"] = "wood"
-for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit", "unfired_kiln", "kiln", "kiln_lit" }) do
+for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit", "unfired_kiln", "kiln", "kiln_lit",
+        "sluice" }) do
     class_names[game.mod_id .. ":" .. short] = "loose"
 end
 

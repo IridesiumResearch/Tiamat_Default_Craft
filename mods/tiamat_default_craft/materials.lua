@@ -28,6 +28,10 @@ item("tinder", "Tinder", "Dry grass, needles and moss, rubbed to fluff. It catch
 item("cord", "Cord", "Bramble cane, stripped and twisted. It binds a haft and hangs a lid.")
 item("haft", "Haft", "A straight handle, bound. A head goes on it.")
 
+-- The sluice's.
+item("tin_grain", "Tin grain", "Black grains of tin, washed out of river gravel.")
+item("gold_flake", "Gold flake", "A fleck of gold the water left behind.")
+
 -- Cooking's: what a fire makes of meat left on it too long.
 item("charred_meat", "Charred meat", "Left on the fire. It is food, just.")
 
@@ -71,6 +75,13 @@ block("chest", {
     name = "Chest",
     description = "Planks pegged into a box. Use it to open it; dig it to take it away, contents and all.",
     hardness = 1.0,
+})
+
+-- The sluice (sluice.lua): it stands in running water.
+block("sluice", {
+    name = "Sluice",
+    description = "A plank trough with riffles. Stand it in running water and give it gravel.",
+    hardness = 0.8,
 })
 
 -- The kiln (furnace.lua): laid of wet clay and cobbles, fired once to be a

@@ -146,10 +146,23 @@ end
 
 -- Placing ----------------------------------------------------------------------
 
+local checks = {}   -- station id -> fn(pos) -> refusal or nil
+
+--- A rule a station's block must pass to be placed: `fn(pos)` answers a
+--- sentence to refuse it, or nil. A sluice wants water.
+function ST.check(id, fn)
+    checks[id] = fn
+end
+
 tdc.on_place(function(e)
     local kind = kind_of(e.material)
-    if kind and e.occupancy == game.OCCUPANCY_FULL then
-        ensure(kind, { x = e.x, y = e.y, z = e.z })
+    if not kind then return end
+    local pos = { x = e.x, y = e.y, z = e.z }
+    local check = checks[kind.id]
+    local refusal = check and check(pos)
+    if refusal then return refusal end
+    if e.occupancy == game.OCCUPANCY_FULL then
+        ensure(kind, pos)
     end
 end)
 
@@ -221,7 +234,7 @@ tdc.on_dialog(FORM, function(e)
     if e.kind == "pressed" and e.name then
         local index = tonumber(string.match(e.name, "^r(%d+)$"))
         if index and o.ids[index] and o.station.auto then
-            o.note = "It makes what is put in it, while it burns."
+            o.note = "It works on its own: put in what it takes."
         elseif index and o.ids[index] then
             local ok, why = R.perform(e.player, o.ids[index], o.container)
             o.note = ok and ("Made " .. S.recipe_text(R.recipe(o.ids[index])) .. ".") or ("Cannot: " .. why .. ".")
@@ -269,6 +282,7 @@ tdc.on_dug(function(e)
     unindex(name)
     if tdc.furnace then tdc.furnace.forget(name) end
     if tdc.cooking then tdc.cooking.forget(name) end
+    if tdc.sluice then tdc.sluice.forget(name) end
 end)
 
 -- By hand: the Craft tab, or a dialog of its own ------------------------------------------

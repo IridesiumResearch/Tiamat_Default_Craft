@@ -730,6 +730,11 @@ impl Rig {
         }
         vm.freeze().unwrap();
         assert!(vm.faulted_mods().is_empty(), "faulted at load: {:?}", vm.faulted_mods());
+        // The server hands out fluid numbers once every mod has loaded; the
+        // world's water is 1 here, the number the fake world answers with.
+        if setup.world {
+            vm.set_fluid_ids(&[("tiamat_default_world:water".to_owned(), FluidId(1))]);
+        }
 
         let materials: HashMap<String, MaterialId> = vm.registered_blocks().into_iter().collect();
         *world.names.lock().unwrap() = materials.clone();

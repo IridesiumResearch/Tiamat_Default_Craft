@@ -223,6 +223,12 @@ C.heads = {
 }
 C.mould_uses = 4                -- pours before a mould cracks
 
+-- The sluice ------------------------------------------------------------------
+
+C.wash_ticks = 10 * 20          -- a block of gravel washed every ten seconds
+C.gold_every = 9                -- and every ninth wash leaves a flake of gold
+C.sluice_dry = "A sluice needs running water."
+
 -- Cooking ----------------------------------------------------------------------
 
 C.char_ticks = 60 * 20          -- cooked meat left over a fire this long chars

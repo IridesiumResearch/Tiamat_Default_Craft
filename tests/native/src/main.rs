@@ -138,6 +138,7 @@ fn main() {
     craft_tab();
     kiln();
     cooking();
+    sluice();
     println!("craft native check: all passed");
 }
 
@@ -897,4 +898,45 @@ fn cooking() {
     let heard = r.heard(PLAYER).join(" ");
     assert!(heard.contains("bread") && heard.contains("oven_roast"), "{heard}");
     println!("cooking: ok");
+}
+
+/// One sluice washing nine blocks of gravel; answers the storage it left.
+fn sluice_run() -> (Rig, String) {
+    let mut r = Rig::new(Setup { world: true, life: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.tick(1);
+    r.give(PLAYER, "sluice", 54);
+
+    // Dry ground: refused, and nothing is left behind.
+    assert_eq!(r.place(PLAYER, 40, 64, 40, "sluice"), Err("A sluice needs running water.".into()));
+    assert!(!r.boxes.exists("tiamat_default_craft:sluice:40,64,40"));
+
+    // Water against a face: placed.
+    r.world.fluids.lock().unwrap().insert((41, 64, 40), 27);
+    r.place(PLAYER, 40, 64, 40, "sluice").unwrap();
+    let s = "tiamat_default_craft:sluice:40,64,40";
+    assert!(r.boxes.exists(s));
+
+    r.boxes.set(s, 1, Some(r.stack("tiamat_default_world:gravel", 27 * 9)));
+    r.tick(9 * 200 + 40);
+    assert_eq!(r.boxes.get(s, 1), None, "all nine washed");
+    assert_eq!(r.boxes.get(s, 2).map(|st| (st.material, st.units)), Some((r.world_material("sand"), 24 * 9)));
+    assert_eq!(r.boxes.get(s, 3).map(|st| (st.material, st.units)), Some((r.material("tin_grain"), 27 * 9)));
+    assert_eq!(r.boxes.get(s, 4).map(|st| (st.material, st.units)), Some((r.material("gold_flake"), 27)), "one flake in nine");
+    let dump = r.storage.dump();
+    (r, dump)
+}
+
+fn sluice() {
+    let (mut r, first) = sluice_run();
+    let (_, second) = sluice_run();
+    assert_eq!(first, second, "two runs wash alike");
+
+    // The water gone, washing stops.
+    let s = "tiamat_default_craft:sluice:40,64,40";
+    r.world.fluids.lock().unwrap().clear();
+    r.boxes.set(s, 1, Some(r.stack("tiamat_default_world:gravel", 27)));
+    r.tick(400);
+    assert!(r.boxes.get(s, 1).is_some(), "no water, no washing");
+    println!("sluice: ok");
 }

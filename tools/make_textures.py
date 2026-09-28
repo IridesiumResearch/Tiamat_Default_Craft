@@ -454,6 +454,21 @@ HEAD_SHAPES = {
 
 ITEMS["charcoal"] = lambda: lump((38, 34, 34), (20, 18, 18))
 ITEMS["charred_meat"] = lambda: lump((62, 40, 30), (30, 20, 16))
+ITEMS["tin_grain"] = lambda: lump((70, 72, 78), (40, 42, 46))
+ITEMS["gold_flake"] = lambda: lump((224, 186, 70), (160, 126, 40))
+
+
+def sluice():
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, PLANK)
+    for y in (3, 7, 11):
+        c.line(1, y, 14, y, PLANK_DARK)
+    c.line(0, 15, 15, 15, (80, 110, 150))
+    c.line(0, 14, 15, 14, (110, 140, 180))
+    return c.p
+
+
+ITEMS["sluice"] = sluice
 ITEMS["fired_clay"] = lambda: lump(CLAY_FIRED, CLAY_FIRED_DARK)
 ITEMS["unfired_crucible"] = lambda: pot_shape(CLAY_WET, (98, 86, 74))
 ITEMS["crucible"] = lambda: pot_shape(CLAY_FIRED, CLAY_FIRED_DARK)

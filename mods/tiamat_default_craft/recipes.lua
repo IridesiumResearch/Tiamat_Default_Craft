@@ -35,6 +35,12 @@ assert(R.register_station{
     slots = { input = { 1, 2 }, tool = 3, output = 4 },
 })
 
+-- The sluice: gravel in, sand, tin and now and then gold out (sluice.lua).
+assert(R.register_station{
+    id = "sluice", name = "Sluice", block = M.id("sluice"), auto = true,
+    slots = { input = 1, output = { 2, 3, 4 } },
+})
+
 -- Groups ---------------------------------------------------------------------
 
 for _, name in ipairs(U.sorted_keys(C.groups)) do
@@ -189,6 +195,19 @@ for _, shape in ipairs(U.sorted_keys(C.heads)) do
 end
 
 R.own{
+    id = "sluice", station = "workbench", name = "Sluice",
+    inputs = { { "#plank", count = 4 }, { M.id("cord"), count = 2 } },
+    outputs = { { M.id("sluice"), count = 1 } },
+}
+
+R.own{
+    id = "wash", station = "sluice", name = "Washed gravel", ticks = C.wash_ticks,
+    inputs = { { U.world("gravel"), units = 27 } },
+    outputs = { { U.world("sand"), units = 24 }, { M.id("tin_grain"), count = 1 } },
+    first = "wash:tin",
+}
+
+R.own{
     id = "chest", station = "workbench", name = "Chest",
     inputs = { { "#plank", count = 9 }, { M.id("cord"), count = 2 } },
     outputs = { { M.id("chest"), count = 1 } },
@@ -278,6 +297,22 @@ for _, metal in ipairs(U.sorted_keys(SMELT)) do
         first = "smelt:" .. metal,
     }
 end
+
+-- Washed metal: nine grains of tin, or nine flakes of gold, are an ingot.
+R.own{
+    id = "tin_from_grains", station = "kiln", name = "Tin ingot", heat = 2, ticks = 600,
+    inputs = { { M.id("tin_grain"), count = 9 } },
+    tools = { M.id("crucible") },
+    outputs = { { M.id("tin_ingot"), count = 1 } },
+    first = "smelt:tin",
+}
+R.own{
+    id = "gold_from_flakes", station = "kiln", name = "Gold ingot", heat = 2, ticks = 600,
+    inputs = { { M.id("gold_flake"), count = 9 } },
+    tools = { M.id("crucible") },
+    outputs = { { M.id("gold_ingot"), count = 1 } },
+    first = "smelt:gold",
+}
 
 -- Bronze: nine of copper to one of tin, which is the true ratio near enough.
 R.own{
