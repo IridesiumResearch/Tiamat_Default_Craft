@@ -146,6 +146,9 @@ function R.register_station(spec)
         slots = {},
         size = 0,
         heat = spec.heat == true,
+        -- Works on its own, as something outside the registry drives it (a
+        -- campfire is burned by fire.lua): its recipes are not pressed.
+        auto = spec.auto == true or spec.heat == true,
         inventory = spec.inventory == true,
     }
     if spec.slots ~= nil then
@@ -354,6 +357,19 @@ function R.list(station)
             out[#out + 1] = recipe
         end
     end
+    return out
+end
+
+--- A station's recipes, most particular first: most inputs and tools, then
+--- by id. A station that makes things on its own tries them in this order,
+--- so a stew (meat, fruit and a pot) is made from what would also roast.
+function R.list_particular(station)
+    local out = R.list(station)
+    local function weight(r) return #r.inputs + #r.tools end
+    table.sort(out, function(a, b)
+        if weight(a) ~= weight(b) then return weight(a) > weight(b) end
+        return a.id < b.id
+    end)
     return out
 end
 

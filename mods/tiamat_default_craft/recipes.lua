@@ -28,6 +28,13 @@ assert(R.register_station{
     slots = C.kiln_slots, heat = true,
 })
 
+-- The campfire: what is put on a fire this mod lit cooks while it burns
+-- (cooking.lua). Two on the fire, a pot, what comes off.
+assert(R.register_station{
+    id = "campfire", name = "Campfire", block = tdc.fire.LIT, auto = true,
+    slots = { input = { 1, 2 }, tool = 3, output = 4 },
+})
+
 -- Groups ---------------------------------------------------------------------
 
 for _, name in ipairs(U.sorted_keys(C.groups)) do
@@ -37,6 +44,7 @@ for _, name in ipairs(U.sorted_keys(C.groups)) do
 end
 assert(R.register_group("#plank", { M.id("plank") }))
 assert(R.register_group("#wedge", { M.id("wooden_wedge"), M.id("ironwood_wedge") }))
+assert(R.register_group("#fruit", { "tiamat_default_life:apple", "tiamat_default_life:berries" }))
 
 -- Fuels: what burns in anything that burns.
 for _, fuel in ipairs(C.fuels) do
@@ -186,7 +194,46 @@ R.own{
     outputs = { { M.id("chest"), count = 1 } },
 }
 
+-- On a campfire: Life's food, cooked; clay dried.
+
+local LIFE = "tiamat_default_life:"
+
+R.own{
+    id = "spit_roast", station = "campfire", name = "Cooked meat", ticks = 300,
+    inputs = { { LIFE .. "raw_meat", count = 1 } },
+    outputs = { { LIFE .. "cooked_meat", count = 1 } },
+    first = "cook:meat",
+}
+
+R.own{
+    id = "stew", station = "campfire", name = "Hot stew", ticks = 600,
+    inputs = { { LIFE .. "raw_meat", count = 1 }, { "#fruit", count = 1 } },
+    tools = { { M.id("copper_pot"), wear = 0 } },
+    outputs = { { LIFE .. "hot_stew", count = 1 } },
+    first = "cook:stew",
+}
+
+R.own{
+    id = "dry_clay", station = "campfire", name = "Dry clay", ticks = 200,
+    inputs = { { U.world("wet_clay"), count = 1 } },
+    outputs = { { U.world("dry_clay"), count = 1 } },
+}
+
 -- In the kiln. Heat 1 is wood's, 2 coal's and charcoal's.
+
+R.own{
+    id = "oven_roast", station = "kiln", name = "Cooked meat", heat = 1, ticks = 400,
+    inputs = { { LIFE .. "raw_meat", count = 1 } },
+    outputs = { { LIFE .. "cooked_meat", count = 1 } },
+    first = "cook:meat",
+}
+
+R.own{
+    id = "bread", station = "kiln", name = "Bread", heat = 1, ticks = 600,
+    inputs = { { LIFE .. "wheat", count = 3 } },
+    outputs = { { LIFE .. "bread", count = 1 } },
+    first = "cook:bread",
+}
 
 R.own{
     id = "charcoal", station = "kiln", name = "Charcoal", heat = 1, ticks = 1200,

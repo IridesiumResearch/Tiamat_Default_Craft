@@ -11,7 +11,7 @@
 -- and from then it burns: 27 units of fuel at a time, each lasting the
 -- fuel's ticks at the fuel's heat (config.lua, `C.fuels`), until the slot is
 -- empty and it goes out. While it burns it makes whatever its contents
--- allow: of the station's recipes, the first (by id) that its inputs, its
+-- allow: of the station's recipes, the most particular (registry.lua) that its inputs, its
 -- tool slot and its heat satisfy. A recipe takes its `ticks` of burning to
 -- make, and starts over if what is in the furnace changes under it or the
 -- heat drops below it.
@@ -133,7 +133,7 @@ end
 local function choose(station, name, s)
     local opts = { container = name, heat = s.heat, unattended = true }
     if s.job and R.check(s.by, s.job, opts) then return s.job end
-    for _, recipe in ipairs(R.list(station.id)) do
+    for _, recipe in ipairs(R.list_particular(station.id)) do
         if R.check(s.by, recipe.id, opts) then return recipe.id end
     end
     return nil

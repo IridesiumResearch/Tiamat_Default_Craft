@@ -158,6 +158,16 @@ local function is_lit(name)
     return name == F.LIT or name == OWN_LIT
 end
 
+--- Every fire this mod lit, sorted: `{ { pos, by } }`.
+function F.list()
+    local out = {}
+    for _, key in ipairs(U.sorted_keys(fires)) do
+        local fire = fires[key]
+        out[#out + 1] = { pos = pos_of(fire), by = fire.by }
+    end
+    return out
+end
+
 --- Whether there is a fire this mod lit at a block position.
 function F.burning(pos)
     return fires[key_of(pos)] ~= nil
@@ -266,9 +276,9 @@ tdc.on_use(function(e)
     local held = e.held and game.block_of(e.held.material)
 
     if name == UNLIT then
-        if held ~= STRIKER then
-            return "It wants a spark: strike it with a fire striker."
-        end
+        -- Without a striker the fire's box opens (cooking.lua), and says
+        -- the fire wants striking.
+        if held ~= STRIKER then return nil end
         if not game.set_block(pos, F.LIT) then return "It will not catch." end
         local key = key_of(pos)
         fires[key] = { x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld",

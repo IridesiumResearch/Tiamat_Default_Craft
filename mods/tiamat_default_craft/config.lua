@@ -223,6 +223,10 @@ C.heads = {
 }
 C.mould_uses = 4                -- pours before a mould cracks
 
+-- Cooking ----------------------------------------------------------------------
+
+C.char_ticks = 60 * 20          -- cooked meat left over a fire this long chars
+
 -- Fire -------------------------------------------------------------------------
 --
 -- A campfire is built unlit and struck alight with a flint striker. It burns

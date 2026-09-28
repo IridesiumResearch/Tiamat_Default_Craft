@@ -169,7 +169,12 @@ local function draw(player, first)
     if not o then return end
     local tree
     if o.station then
-        local status = o.station.heat and tdc.furnace and tdc.furnace.status(o.container) or nil
+        local status = nil
+        if o.station.heat and tdc.furnace then
+            status = tdc.furnace.status(o.container)
+        elseif o.station.id == "campfire" and tdc.cooking then
+            status = tdc.cooking.status(o.container, o.pos)
+        end
         tree, o.page = S.station(player, o.station, o.container, o.ids, o.page, o.note, status)
     else
         tree = S.chest(o.container, o.size)
@@ -199,7 +204,7 @@ tdc.on_use(function(e)
         return "Somebody is using that."
     end
     open[e.player] = {
-        container = name, station = kind.station, size = kind.size,
+        container = name, station = kind.station, size = kind.size, pos = pos,
         ids = kind.station and recipe_ids(kind.id) or {}, page = 1,
     }
     draw(e.player, true)
@@ -215,8 +220,8 @@ tdc.on_dialog(FORM, function(e)
     end
     if e.kind == "pressed" and e.name then
         local index = tonumber(string.match(e.name, "^r(%d+)$"))
-        if index and o.ids[index] and o.station.heat then
-            o.note = "It fires what is put in it, while it burns."
+        if index and o.ids[index] and o.station.auto then
+            o.note = "It makes what is put in it, while it burns."
         elseif index and o.ids[index] then
             local ok, why = R.perform(e.player, o.ids[index], o.container)
             o.note = ok and ("Made " .. S.recipe_text(R.recipe(o.ids[index])) .. ".") or ("Cannot: " .. why .. ".")
@@ -263,6 +268,7 @@ tdc.on_dug(function(e)
     end
     unindex(name)
     if tdc.furnace then tdc.furnace.forget(name) end
+    if tdc.cooking then tdc.cooking.forget(name) end
 end)
 
 -- By hand: the Craft tab, or a dialog of its own ------------------------------------------

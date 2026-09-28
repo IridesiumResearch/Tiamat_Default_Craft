@@ -398,6 +398,8 @@ end
 
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 then
+    -- Charred meat is food, barely: Life eats it as it eats its own.
+    if life.add_food then life.add_food(game.mod_id .. ":charred_meat", { food = 1 }) end
     for _, short in ipairs(U.sorted_keys(C.tools)) do
         local spec = C.tools[short]
         local id = game.mod_id .. ":" .. short

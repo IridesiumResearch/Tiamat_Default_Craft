@@ -137,6 +137,7 @@ fn main() {
     stations();
     craft_tab();
     kiln();
+    cooking();
     println!("craft native check: all passed");
 }
 
@@ -514,7 +515,9 @@ fn fire() {
     r.put(10, 64, 12, "tiamat_default_world:stone");
     r.put(12, 64, 10, "tiamat_default_world:stone");
 
-    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some("It wants a spark: strike it with a fire striker."));
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""), "no striker: the fire's box opens");
+    assert!(r.screen_says(PLAYER, "The fire is out. Strike it to cook."));
+    r.close(PLAYER, "station");
     r.hold(PLAYER, "fire_striker", Some(&striker));
     assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""));
     assert_eq!(r.block_name(10, 64, 10), "tiamat_default_life:campfire", "lit as Life's campfire");
@@ -550,10 +553,12 @@ fn fire() {
     assert_eq!(r.units(PLAYER, "tiamat_default_world:oak_log"), 27);
     assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some("The fire is roaring already."));
     assert_eq!(r.units(PLAYER, "tiamat_default_world:oak_log"), 27, "nothing taken");
-    // Anything else in hand at a fire is somebody else's business.
+    // Anything else in hand opens what is cooking on it.
     r.give(PLAYER, "tiamat_default_world:dirt", 27);
     r.hold(PLAYER, "tiamat_default_world:dirt", None);
-    assert_eq!(r.use_at(PLAYER, 10, 64, 10), None);
+    assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""));
+    assert_eq!(r.last_form(), "tiamat_default_craft:station");
+    r.close(PLAYER, "station");
 
     // A restart: the fire is read back and burns out where it left off.
     let mut r = Rig::new(Setup {
@@ -823,4 +828,73 @@ fn kiln() {
     r.tick(560);
     assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("gold_ingot"), 27)));
     println!("kiln: ok");
+}
+
+/// Cooking: a fire's box, meat roasted and left to char, a stew in a copper
+/// pot, and what is on a fire that has gone out kept.
+fn cooking() {
+    let prelude = "tdc_overrides = { fire_fuel = 6000 }";
+    let mut r = Rig::new(Setup { world: true, life: true, prelude: prelude.into(), ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let striker = r.details(PLAYER, "fire_striker")[0].clone();
+    let pot = r.details(PLAYER, "copper_pot")[0].clone();
+
+    r.put(30, 64, 30, "unlit_campfire");
+    r.hold(PLAYER, "fire_striker", Some(&striker));
+    assert_eq!(r.use_at(PLAYER, 30, 64, 30).as_deref(), Some(""));
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.use_at(PLAYER, 30, 64, 30).as_deref(), Some(""), "an empty hand opens the fire");
+    let fire = "tiamat_default_craft:campfire:30,64,30";
+    assert!(r.boxes.exists(fire));
+    fit::check("the campfire", &r.screen(PLAYER));
+    assert!(r.screen_says(PLAYER, "Burning"));
+
+    // Two raw meat on the fire: one after the other, cooked.
+    r.boxes.set(fire, 1, Some(r.stack("tiamat_default_life:raw_meat", 54)));
+    r.tick(320);
+    assert_eq!(r.boxes.get(fire, 4).map(|s| (s.material, s.units)), Some((r.material("tiamat_default_life:cooked_meat"), 27)));
+    r.tick(300);
+    assert_eq!(r.boxes.get(fire, 4).map(|s| s.units), Some(54));
+    assert!(r.storage.dump().contains(&format!("first:{}:cook:meat=", hex(PLAYER))));
+
+    // Left on the fire, it chars.
+    r.tick(1220);
+    assert_eq!(r.boxes.get(fire, 4).map(|s| (s.material, s.units)), Some((r.material("charred_meat"), 54)));
+    r.say("life heard food tiamat_default_craft:charred_meat");
+    assert_eq!(r.said(), "yes", "charred meat is food to Life");
+
+    // Meat and fruit in a copper pot: a stew, not a roast. The pot stays.
+    r.boxes.set(fire, 4, None);
+    r.boxes.set(fire, 1, Some(r.stack("tiamat_default_life:raw_meat", 27)));
+    r.boxes.set(fire, 2, Some(r.stack("tiamat_default_life:berries", 27)));
+    let pot_stack = tiamat_core::inventory::Stack { detail: Some(pot.clone()), ..r.stack("copper_pot", 27) };
+    r.boxes.set(fire, 3, Some(pot_stack.clone()));
+    r.tick(620);
+    assert_eq!(r.boxes.get(fire, 4).map(|s| (s.material, s.units)), Some((r.material("tiamat_default_life:hot_stew"), 27)));
+    assert_eq!(r.boxes.get(fire, 3), Some(pot_stack), "the pot comes back");
+    assert_eq!(r.boxes.get(fire, 1), None);
+    r.close(PLAYER, "station");
+
+    // Wet clay dries; a fire that goes out keeps what is on it, and cooks nothing.
+    r.boxes.set(fire, 4, None);
+    r.boxes.set(fire, 1, Some(r.stack("tiamat_default_world:wet_clay", 27)));
+    r.tick(220);
+    assert_eq!(r.boxes.get(fire, 4).map(|s| s.material), Some(r.world_material("dry_clay")));
+    r.boxes.set(fire, 1, Some(r.stack("tiamat_default_life:raw_meat", 27)));
+    r.boxes.set(fire, 4, None);
+    r.world.apply(tiamat_core::BlockPos { x: 30, y: 64, z: 30 }, "tiamat_default_craft:unlit_campfire");
+    r.tick(400);
+    assert_eq!(r.boxes.get(fire, 4), None, "an unlit fire cooks nothing");
+    assert_eq!(r.use_at(PLAYER, 30, 64, 30).as_deref(), Some(""), "and its box still opens");
+    assert!(r.screen_says(PLAYER, "The fire is out."));
+    r.close(PLAYER, "station");
+
+    // The kiln bakes Life's bread.
+    r.say("recipes kiln");
+    let heard = r.heard(PLAYER).join(" ");
+    assert!(heard.contains("bread") && heard.contains("oven_roast"), "{heard}");
+    println!("cooking: ok");
 }

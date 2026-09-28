@@ -620,12 +620,17 @@ pub struct Setup {
 const LIFE: &str = r##"
 local heard = {}
 local function note(kind) return function(material, value)
+    if type(value) == "table" then value = nil end
     heard[kind .. " " .. material .. (value and (" " .. tostring(value)) or "")] = true
     return true
 end end
 game.register_block{ id = "campfire", light_emit = { r = 15, g = 9, b = 2 } }
+for _, id in ipairs({ "raw_meat", "cooked_meat", "hot_stew", "apple", "berries", "wheat", "bread" }) do
+    game.register_item{ id = id }
+end
 game.export{ version = 1, add_weapon = note("weapon"), add_harvest_tool = note("harvest"),
-    add_tilling_tool = note("tills"), add_contact_fire = note("fire"), add_heat_source = note("heat") }
+    add_tilling_tool = note("tills"), add_contact_fire = note("fire"), add_heat_source = note("heat"),
+    add_food = note("food") }
 game.register_on_chat(function(e)
     local call = string.match(e.text, "^life heard (.+)$")
     if not call then return end

@@ -28,6 +28,9 @@ item("tinder", "Tinder", "Dry grass, needles and moss, rubbed to fluff. It catch
 item("cord", "Cord", "Bramble cane, stripped and twisted. It binds a haft and hangs a lid.")
 item("haft", "Haft", "A straight handle, bound. A head goes on it.")
 
+-- Cooking's: what a fire makes of meat left on it too long.
+item("charred_meat", "Charred meat", "Left on the fire. It is food, just.")
+
 -- The kiln's: fuel, ceramics, metal.
 item("charcoal", "Charcoal", "Wood burned without air. It burns hotter than the log it was.")
 item("fired_clay", "Fired clay", "Clay the kiln has made stone of.")

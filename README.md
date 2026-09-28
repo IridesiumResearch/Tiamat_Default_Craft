@@ -30,8 +30,8 @@ Built in the brief's order (§12), each step shipping on its own:
 | 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | **done** |
 | 4 | Workbench, the Craft tab, the chest | **done** |
 | 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | **done** |
-| 6 | Cooking | next |
-| 7 | The sluice | |
+| 6 | Cooking | **done** |
+| 7 | The sluice | next |
 | 8 | Bloomery, bellows, anvil: iron | |
 | 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | |
 | 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | |
@@ -48,7 +48,9 @@ and cobbles, fired by its first fire, turns logs to charcoal at red heat,
 and at orange heat (coal or charcoal) smelts ore in a crucible, alloys nine
 of copper to one of tin, and casts bronze heads into clay moulds that crack
 after four pours; a head and a haft at the workbench are a bronze tool.
-**Wood → fire → bronze is a complete loop.** Every tool of the ladder exists and works — typed, tiered and worn,
+**Wood → fire → bronze is a complete loop.** A fire opens with an empty
+hand: meat put on it roasts (and chars if left), meat and fruit in a copper
+pot become Life's hot stew, and the kiln bakes Life's bread from wheat. Every tool of the ladder exists and works — typed, tiered and worn,
 with a sentence for each refusal — though iron comes only from an operator's `toolkit` until the bloomery and
 the anvil land. Bare hands move
 earth, sand, clay and soft logs; rock wants a bronze pick, and the hard
@@ -71,6 +73,7 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   screens.lua                dialog trees, in Tiamat Default UI's look when present
   stations.lua               stations and chests in the world; the Craft tab and V
   furnace.lua                stations that burn: lighting, fuel, heat, jobs
+  cooking.lua                what a campfire cooks
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
@@ -144,6 +147,15 @@ and the change is recorded here.
 - **A burning station runs whatever its contents make**, first recipe by
   id, rather than a player choosing: pressing a recipe on its screen says
   so. Any station registered with `heat = true` burns the same way.
+- **Cooking is a box on the fire, not a use of it.** Life hears every use
+  first and eats whatever food is in the hand, which is right for eating and
+  leaves nothing to cook with. A fire opens with an empty hand; what is put
+  on it cooks while it burns. Stew is Life's hot stew, made on a fire with a
+  copper pot rather than with the pot in the off-hand.
+- **The kiln bakes Life's bread**, three wheat to a loaf: Life's kitchen ask
+  (its C1) wants a source for bread, and the kiln is the oven.
+- **A station that works on its own tries its most particular recipe
+  first**, so a stew is made from what would also roast.
 - **Every head has a mould**, the sickle and hoe included, and the pot's
   mould casts the copper pot.
 - **Fire-setting reaches one block further through open air**, so a face

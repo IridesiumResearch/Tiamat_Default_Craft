@@ -453,6 +453,7 @@ HEAD_SHAPES = {
 }
 
 ITEMS["charcoal"] = lambda: lump((38, 34, 34), (20, 18, 18))
+ITEMS["charred_meat"] = lambda: lump((62, 40, 30), (30, 20, 16))
 ITEMS["fired_clay"] = lambda: lump(CLAY_FIRED, CLAY_FIRED_DARK)
 ITEMS["unfired_crucible"] = lambda: pot_shape(CLAY_WET, (98, 86, 74))
 ITEMS["crucible"] = lambda: pot_shape(CLAY_FIRED, CLAY_FIRED_DARK)

@@ -17,12 +17,19 @@ its animals drop hide, bone and sinew. Its own asks of this mod (its
 `docs/sibling-asks.md`, C1 the kitchen and C2 leather, cord and cloth) are
 this mod's to build.
 
-### L3. Who cooks (2026-09-26): SETTLED
+### L3. Who cooks (2026-09-26): SETTLED, built 2026-09-28
 
 Life's roadmap once said "X while looking at a campfire cooks what you
 hold". Cooking is this mod's (brief §6.2): the campfire, the kiln as an
 oven, the pot and the stew, all handing out Life's own food items so its X
 key eats them. Life's C1 says the same from its side.
+
+Built as a box on the fire rather than a use of it: Life's use handler
+eats any food in the hand at any block, and loads first, so meat in hand at
+a fire is eaten before this mod hears of it. That is right and nothing is
+asked of Life; a fire opens with an empty hand instead. Life's C1 is
+answered for bread (the kiln, from wheat) and hot stew (a fire and a
+copper pot); cured meat waits on a salt recipe.
 
 ### L1, L2, L4, L5: LANDED
 
