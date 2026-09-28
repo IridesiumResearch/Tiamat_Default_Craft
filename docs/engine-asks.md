@@ -17,18 +17,21 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 | Item | State | In this mod |
 |---|---|---|
-| 9 reading and taking one slot of a player's view | Open. | the anvil takes its work from its own container, struck with a hammer, not from the off-hand (step 8). |
+| 9 reading one slot of a player's view | Open (the take and give halves landed with 4). | the anvil takes its work from its own container, struck with a hammer, not from the off-hand (step 8). |
 | 8 a use at a block reaching the block's handler first | Open. | a fire is opened with an empty hand and food is put in its box, not held over it (step 6). |
-| 7 a drop of another mod's material | Open. | a cracked block drops nothing, and the digger is given the rock (step 3). |
-| 6 a material's tags and hardness | Open. | the dig classes are a table beside the world's blocks (step 2). |
-| 5 enumerating containers | Open. | stations keep an index of where they are in storage (step 4). |
-| 4 a give into one slot of a player's view | Open. | a tool's wear lives in storage, keyed on its serial, not in its `detail` (step 2). |
-| 3 a drop that depends on the tool | Open. | nothing drops by tool; a cracked block drops the ore it was (step 3). |
-| 2 a tool's speed per material | Open. | a tool digs everything it may dig at one speed (step 2). |
+| 7 a drop of another mod's material | Landed, engine c83fbc9. | not yet adopted: a cracked block still drops nothing and hands the rock over. |
+| 6 a material's tags and hardness | Landed, engine c83fbc9. | not yet adopted: the dig classes are still a table. |
+| 5 enumerating containers | Landed, engine c83fbc9. | not yet adopted: stations still keep their own index. |
+| 4 a give into one slot of a player's view | Landed, engine c83fbc9. | not yet adopted: wear still lives in storage. |
+| 3 a drop that depends on the tool | Landed, engine c83fbc9. | nothing needs it yet. |
+| 2 a tool's speed per material | Landed, engine c83fbc9. | not yet adopted: a tool digs at one speed. |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 9. Reading and taking one slot of a player's view (2026-09-28): OPEN
+## 9. Reading one slot of a player's view (2026-09-28): OPEN
+
+Copied to the engine's sheet 2026-09-28. Ask 4 landed `slot` on
+`game.take` and `game.give`; what is left is the read.
 
 **Wanted.** The stack in one slot of a player's view, and a take from that
 slot alone: `game.slot(player, "player:main", 28)` answering `{ material,
@@ -54,6 +57,8 @@ where the brief wanted a gesture.
 reads the off-hand, takes the bloom from it, and gives the bar back into it.
 
 ## 8. A use at a block reaching the block's handler first (2026-09-28): OPEN
+
+Copied to the engine's sheet 2026-09-28.
 
 **Wanted.** A player holding raw meat right-clicks a burning campfire and
 the meat goes over the fire — the gesture the brief designed cooking
@@ -87,7 +92,11 @@ food is put on it through the screen, and it cooks while it burns
 The first needs no mod to know about any other, and is what a door, a
 lever or a cooking surface all want.
 
-## 7. A drop of another mod's material (2026-09-28): OPEN
+## 7. A drop of another mod's material (2026-09-28): LANDED 2026-09-28 (engine c83fbc9)
+
+A `drops` key may name any qualified id, resolved once every mod has
+registered; and `drops` is now applied at all (it never was). The history
+follows.
 
 **Wanted.** `register_block{ drops = { ["tiamat_default_world:stone"] = 27 } }`
 on this mod's `cracked_stone`: fire-cracked rock yields the rock it was.
@@ -104,7 +113,10 @@ drops will not see it.
 **Smallest change.** Let a `drops` key name any qualified id, resolved when
 every mod has registered, as `absorbs.becomes` already is.
 
-## 6. A material's tags and hardness, read back (2026-09-26): OPEN
+## 6. A material's tags and hardness, read back (2026-09-26): LANDED 2026-09-28 (engine c83fbc9)
+
+`game.hardness(material)` and `game.tags(material)`; `tags` on
+`register_block` is kept. The history follows.
 
 **Wanted.** `game.tags(material)` and `game.hardness(material)`, answering
 what the block's registration said.
@@ -120,7 +132,9 @@ into the table through `classify`.
 world tagging its blocks (`docs/sibling-asks.md` W2) the table could become a
 rule.
 
-## 5. Enumerating containers (2026-09-26): OPEN
+## 5. Enumerating containers (2026-09-26): LANDED 2026-09-28 (engine c83fbc9)
+
+`game.containers(prefix)`. The history follows.
 
 **Wanted.** `game.containers(prefix)`: the names of the containers that
 exist, starting with a prefix.
@@ -134,7 +148,10 @@ time the two disagree (a kiln placed by a stamped plan, say).
 
 **Smallest change.** A listing by prefix; the engine already keys them by name.
 
-## 4. A give into one slot of a player's view (2026-09-26): OPEN
+## 4. A give into one slot of a player's view (2026-09-26): LANDED 2026-09-28 (engine c83fbc9)
+
+`slot` on `game.give` and `game.take`, one-based; into a named slot the
+stack goes whole or not at all. The history follows.
 
 **Wanted.** `game.give(player, { ..., slot = n })`, or a way to replace the
 stack in one slot.
@@ -150,7 +167,10 @@ per tool ever made.
 **Smallest change.** A `slot` on `game.give` (and on `game.take`), as the
 container calls already have.
 
-## 3. A drop that depends on the tool (2026-09-26): OPEN
+## 3. A drop that depends on the tool (2026-09-26): LANDED 2026-09-28 (engine c83fbc9)
+
+`on_dig_complete` may answer `{ drops = { ["mod:id"] = units } }` for that
+dig alone. The history follows.
 
 **Wanted.** A way for `on_dig_complete` to say what a dig yields — rubble by
 hand, ore by pick.
@@ -162,7 +182,9 @@ refused to the wrong tool rather than yielding less.
 **Smallest change.** A `drops` table in the hook's answer, in units,
 checked for conservation like any other.
 
-## 2. A tool's speed per material (2026-09-26): OPEN
+## 2. A tool's speed per material (2026-09-26): LANDED 2026-09-28 (engine c83fbc9)
+
+`register_tool{ speeds = { ["mod:block"] = n } }`. The history follows.
 
 **Wanted.** `register_tool{ speeds = { ["mod:block"] = 2.5 } }`, or a speed
 callback.

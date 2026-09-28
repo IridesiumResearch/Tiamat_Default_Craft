@@ -53,6 +53,17 @@ item("unfired_mould_tuyere", "Unfired tuyere mould", "Clay pressed round a patte
 item("bronze_tuyere", "Bronze tuyere", "The nozzle a bloomery's air comes in by.")
 item("copper_nozzle", "Copper nozzle", "The spout of a pair of bellows.")
 
+-- After the loop (step 10): the parts the progress mod's Keystone and both
+-- trees are built from, and the first building materials.
+item("iron_plate", "Iron plate", "A bar beaten flat.")
+item("iron_nails", "Iron nails", "A bar's worth of nails.")
+item("iron_chain", "Iron chain", "A bar's worth of links.")
+item("iron_hinge", "Iron hinge", "Two leaves and a pin.")
+item("iron_frame", "Iron frame", "Plates nailed square. What a keystone is set in.")
+item("bronze_gear", "Bronze gear", "Cast. It turns another.")
+item("unfired_mould_gear", "Unfired gear mould", "Clay pressed round a pattern. Fire it in the kiln.")
+item("ash", "Ash", "What a fire leaves. With sand, it is glass.")
+
 -- Iron: a bloom out of the bloomery, a bar off the anvil, heads forged from bars.
 item("iron_bloom", "Iron bloom", "Spongy iron and slag. Beat it on an anvil.")
 item("iron_bar", "Wrought iron bar", "Iron beaten clean. Forge it into a head.")
@@ -104,6 +115,31 @@ block("spent_torch", {
     cutout = true,
     passable = true,
     drops = { stick = 27 },
+})
+
+-- Building: mudbrick dries by itself; fired, it is brick; sand and ash are glass.
+block("mudbrick", {
+    name = "Mudbrick",
+    description = "Clay and straw, pressed and dried.",
+    hardness = 0.9,
+})
+block("brick", {
+    name = "Brick",
+    description = "Mudbrick the kiln has fired.",
+    hardness = 1.8,
+})
+block("glass", {
+    name = "Glass",
+    description = "Sand and ash, melted. You can see through it; you cannot walk through it.",
+    hardness = 0.3,
+    transparent = true,
+})
+block("iron_lantern", {
+    name = "Iron lantern",
+    description = "A torch behind glass in an iron case. It does not burn out.",
+    hardness = 0.5,
+    cutout = true,
+    light_emit = { r = 14, g = 11, b = 6 },
 })
 
 -- The sluice (sluice.lua): it stands in running water.

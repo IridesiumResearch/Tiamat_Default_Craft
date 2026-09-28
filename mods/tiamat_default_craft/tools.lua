@@ -102,6 +102,7 @@ for _, head in ipairs(U.sorted_keys(C.heads)) do
 end
 C.tools.mould_pot = { name = "Pot mould", type = "mould", tier = 1, uses = C.mould_uses }
 C.tools.mould_tuyere = { name = "Tuyere mould", type = "mould", tier = 1, uses = C.mould_uses }
+C.tools.mould_gear = { name = "Gear mould", type = "mould", tier = 1, uses = C.mould_uses }
 
 -- This mod's own tools: an item each, and an engine tool for the ones that dig.
 for _, short in ipairs(U.sorted_keys(C.tools)) do
@@ -150,8 +151,11 @@ for _, class in ipairs(U.sorted_keys(C.classify)) do
 end
 -- This mod's own blocks: planks are wood; the stations come away in anything.
 class_names[game.mod_id .. ":plank"] = "wood"
+-- Fired brick is masonry: it wants a pick, as the stone it stands for does.
+class_names[game.mod_id .. ":brick"] = "rock"
 for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit", "unfired_kiln", "kiln", "kiln_lit",
-        "sluice", "bloomery", "bloomery_lit", "stone_anvil", "torch", "spent_torch" }) do
+        "sluice", "bloomery", "bloomery_lit", "stone_anvil", "torch", "spent_torch", "mudbrick", "glass",
+        "iron_lantern" }) do
     class_names[game.mod_id .. ":" .. short] = "loose"
 end
 

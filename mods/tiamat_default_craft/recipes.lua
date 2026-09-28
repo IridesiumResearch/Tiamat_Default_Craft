@@ -65,6 +65,7 @@ assert(R.register_group("#plank", { M.id("plank") }))
 assert(R.register_group("#wedge", { M.id("wooden_wedge"), M.id("ironwood_wedge") }))
 assert(R.register_group("#hammer", { M.id("bronze_hammer"), M.id("iron_hammer") }))
 assert(R.register_group("#chisel", { M.id("bronze_chisel"), M.id("iron_chisel") }))
+assert(R.register_group("#ash", { M.id("ash"), U.world("volcanic_ash") }))
 assert(R.register_group("#fruit", { "tiamat_default_life:apple", "tiamat_default_life:berries" }))
 
 -- Fuels: what burns in anything that burns.
@@ -449,6 +450,73 @@ R.own{
     tools = { M.id("mould_pot") },
     outputs = { { M.id("copper_pot"), count = 1 } },
     first = "cast:copper_pot",
+}
+
+-- After the loop (step 10) ---------------------------------------------------
+--
+-- Parts: a bar is beaten into one of each, an iron hammer's five blows, and
+-- each is held to taking and giving the same units. What the Fork's
+-- Keystone and both trees are built from.
+
+local PARTS = { iron_plate = 5, iron_nails = 3, iron_chain = 6, iron_hinge = 4 }
+for _, part in ipairs(U.sorted_keys(PARTS)) do
+    R.own{
+        id = part, station = "anvil", name = U.title(part), strikes = PARTS[part], conserve = true,
+        inputs = { { M.id("iron_bar"), count = 1 } },
+        tools = { M.id("iron_hammer") },
+        outputs = { { M.id(part), count = 1 } },
+        first = "forge:" .. part,
+    }
+end
+
+R.own{
+    id = "iron_frame", station = "workbench", name = "Iron frame",
+    inputs = { { M.id("iron_plate"), count = 4 }, { M.id("iron_nails"), count = 1 } },
+    tools = { "#hammer" },
+    outputs = { { M.id("iron_frame"), count = 1 } },
+    first = "craft:iron_frame",
+}
+
+-- Gears are bronze, cast: there is no zinc in the world for brass.
+R.own{
+    id = "unfired_mould_gear", station = "workbench", name = "Gear mould (unfired)",
+    inputs = { { U.world("wet_clay"), count = 2 } },
+    outputs = { { M.id("unfired_mould_gear"), count = 1 } },
+}
+R.own{
+    id = "mould_gear", station = "kiln", name = "Gear mould", heat = 1, ticks = 600,
+    inputs = { { M.id("unfired_mould_gear"), count = 1 } },
+    outputs = { { M.id("mould_gear"), count = 1 } },
+}
+R.own{
+    id = "bronze_gear", station = "kiln", name = "Bronze gear", heat = 2, ticks = 600, conserve = true,
+    inputs = { { M.id("bronze_ingot"), count = 1 } },
+    tools = { M.id("mould_gear") },
+    outputs = { { M.id("bronze_gear"), count = 1 } },
+    first = "cast:bronze_gear",
+}
+
+-- Building.
+R.own{
+    id = "mudbrick", station = "workbench", name = "Mudbrick",
+    inputs = { { U.world("wet_clay"), count = 1 }, { M.id("tinder"), count = 1 } },
+    outputs = { { M.id("mudbrick"), count = 1 } },
+}
+R.own{
+    id = "brick", station = "kiln", name = "Brick", heat = 2, ticks = 400, conserve = true,
+    inputs = { { M.id("mudbrick"), count = 1 } },
+    outputs = { { M.id("brick"), count = 1 } },
+}
+R.own{
+    id = "glass", station = "kiln", name = "Glass", heat = 2, ticks = 600,
+    inputs = { { U.world("white_sand"), count = 1 }, { "#ash", units = 9 } },
+    outputs = { { M.id("glass"), count = 1 } },
+    first = "smelt:glass",
+}
+R.own{
+    id = "iron_lantern", station = "workbench", name = "Iron lantern",
+    inputs = { { M.id("iron_plate"), count = 1 }, { M.id("glass"), count = 1 }, { M.id("torch"), count = 1 } },
+    outputs = { { M.id("iron_lantern"), count = 1 } },
 }
 
 return {}

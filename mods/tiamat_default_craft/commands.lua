@@ -18,6 +18,20 @@ local function recipe_id(word)
     return nil
 end
 
+--- Says a list, as many lines as it takes: a chat line is at most 512 bytes.
+local function say_list(player, head, items)
+    local line = head
+    for i, item in ipairs(items) do
+        local piece = item .. (i < #items and ", " or "")
+        if #line + #piece > 480 then
+            game.chat_to(player, line)
+            line = "  "
+        end
+        line = line .. piece
+    end
+    game.chat_to(player, line)
+end
+
 tdc.on_chat("recipes", function(player, rest)
     local station = rest ~= "" and rest or "hand"
     if not R.station(station) then return false end
@@ -30,9 +44,9 @@ tdc.on_chat("recipes", function(player, rest)
             lacking[#lacking + 1] = short
         end
     end
-    game.chat_to(player, "ready: " .. (#ready > 0 and table.concat(ready, ", ") or "nothing"))
+    say_list(player, "ready: ", #ready > 0 and ready or { "nothing" })
     if #lacking > 0 then
-        game.chat_to(player, "lacking something: " .. table.concat(lacking, ", "))
+        say_list(player, "lacking something: ", lacking)
     end
 end)
 

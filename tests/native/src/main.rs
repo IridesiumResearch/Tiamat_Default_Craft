@@ -140,6 +140,7 @@ fn main() {
     sluice();
     iron();
     torch_and_hud();
+    after_the_loop();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -1128,4 +1129,119 @@ fn torch_and_hud() {
         assert_eq!(commands, want, "draw commands for {name}");
     }
     println!("torch and hud: ok");
+}
+
+/// After the loop: parts forged from bars (each conserving units), the iron
+/// frame, a bronze gear, brick, ash from a burned-out fire, glass, and a
+/// lantern that does not burn out.
+const PARTS_CHECK: &str = r##"
+local craft = game.exports("tiamat_default_craft")
+local parts = { iron_plate = true, iron_nails = true, iron_chain = true, iron_hinge = true,
+    bronze_gear = true, brick = true }
+local seen = 0
+for _, recipe in ipairs(craft.recipes()) do
+    local short = string.match(recipe.id, "^tiamat_default_craft:(.+)$")
+    if short and parts[short] then
+        local into, out = 0, 0
+        for _, e in ipairs(recipe.inputs) do into = into + e.units end
+        for _, e in ipairs(recipe.outputs) do out = out + e.units end
+        assert(into == out, recipe.id .. " takes " .. into .. " and gives " .. out)
+        seen = seen + 1
+    end
+end
+assert(seen == 6, "six parts, saw " .. seen)
+"##;
+
+fn after_the_loop() {
+    let prelude = "tdc_overrides = { fire_fuel = 200 }";
+    let mut r = Rig::new(Setup {
+        world: true,
+        life: true,
+        prelude: prelude.into(),
+        fixtures: vec![("parts_check".into(), PARTS_CHECK.into())],
+        ..Setup::default()
+    });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let d = |r: &Rig, id: &str| r.details(PLAYER, id)[0].clone();
+    let tool = |r: &Rig, id: &str| tiamat_core::inventory::Stack { detail: Some(d(r, id)), ..r.stack(id, 27) };
+
+    // Every part conserves, as the registry holds a `conserve` recipe to:
+    // the fixture asserts it through the exports, at its load.
+    // Parts on the anvil with an iron hammer.
+    r.give(PLAYER, "stone_anvil", 27);
+    r.place(PLAYER, 70, 64, 70, "stone_anvil").unwrap();
+    let a = "tiamat_default_craft:anvil:70,64,70";
+    let hammer = d(&r, "iron_hammer");
+    for (part, blows) in [("Iron plate", 5), ("Iron nails", 3)] {
+        r.boxes.set(a, 1, Some(r.stack("iron_bar", 27)));
+        r.boxes.set(a, 2, None);
+        r.hold_nothing(PLAYER);
+        r.use_at(PLAYER, 70, 64, 70);
+        r.press_labelled(PLAYER, "station", part);
+        r.close(PLAYER, "station");
+        r.hold(PLAYER, "iron_hammer", Some(&hammer));
+        for _ in 0..blows {
+            assert_eq!(r.use_at(PLAYER, 70, 64, 70).as_deref(), Some(""));
+        }
+        let made = r.boxes.get(a, 2).expect(part);
+        assert_eq!(made.units, 27, "{part}: a bar's units, whole");
+    }
+
+    // The iron frame: four plates and nails, a hammer at hand.
+    r.give(PLAYER, "workbench", 27);
+    r.place(PLAYER, 72, 64, 70, "workbench").unwrap();
+    let b = "tiamat_default_craft:workbench:72,64,70";
+    r.boxes.set(b, 1, Some(r.stack("iron_plate", 27 * 4)));
+    r.boxes.set(b, 2, Some(r.stack("iron_nails", 27)));
+    r.hold_nothing(PLAYER);
+    r.use_at(PLAYER, 72, 64, 70);
+    r.press_labelled(PLAYER, "station", "Iron frame");
+    assert_eq!(r.boxes.get(b, 10).map(|s| s.material), Some(r.material("iron_frame")));
+    // A lantern: a plate, glass and a torch.
+    r.boxes.set(b, 10, None);
+    r.boxes.set(b, 1, Some(r.stack("iron_plate", 27)));
+    r.boxes.set(b, 2, Some(r.stack("glass", 27)));
+    r.boxes.set(b, 3, Some(r.stack("torch", 27)));
+    r.press_labelled(PLAYER, "station", "Iron lantern");
+    assert_eq!(r.boxes.get(b, 10).map(|s| s.material), Some(r.material("iron_lantern")));
+    r.close(PLAYER, "station");
+
+    // A fire burned out leaves ash on it.
+    r.put(74, 64, 70, "unlit_campfire");
+    r.hold(PLAYER, "fire_striker", Some(&d(&r, "fire_striker")));
+    assert_eq!(r.use_at(PLAYER, 74, 64, 70).as_deref(), Some(""));
+    r.tick(260);
+    assert_eq!(r.block_name(74, 64, 70), "tiamat_default_craft:unlit_campfire");
+    let fire = "tiamat_default_craft:campfire:74,64,70";
+    assert_eq!(r.boxes.get(fire, 4).map(|s| s.material), Some(r.material("ash")), "ash on the dead fire");
+
+    // In a kiln at orange heat: glass from white sand and ash (the world's
+    // volcanic ash does as well), brick from mudbrick, a gear from bronze.
+    r.give(PLAYER, "kiln", 27);
+    r.place(PLAYER, 76, 64, 70, "kiln").unwrap();
+    let k = "tiamat_default_craft:kiln:76,64,70";
+    r.boxes.set(k, 1, Some(r.stack("tiamat_default_world:coal", 27 * 9)));
+    r.hold(PLAYER, "fire_striker", Some(&d(&r, "fire_striker")));
+    assert_eq!(r.use_at(PLAYER, 76, 64, 70).as_deref(), Some(""));
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:white_sand", 27)));
+    r.boxes.set(k, 3, Some(r.stack("tiamat_default_world:volcanic_ash", 9)));
+    r.tick(640);
+    assert_eq!(r.boxes.get(k, 5).map(|s| s.material), Some(r.material("glass")));
+    r.boxes.set(k, 5, None);
+    r.boxes.set(k, 2, Some(r.stack("mudbrick", 27)));
+    r.tick(440);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("brick"), 27)));
+    r.boxes.set(k, 5, None);
+    r.boxes.set(k, 2, Some(r.stack("bronze_ingot", 27)));
+    r.boxes.set(k, 4, Some(tool(&r, "mould_gear")));
+    r.tick(640);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("bronze_gear"), 27)));
+
+    // Brick is masonry: a pick's, not a hand's.
+    r.hold_nothing(PLAYER);
+    assert!(r.dig_start(PLAYER, "brick").is_err());
+    println!("after the loop: ok");
 }

@@ -241,6 +241,12 @@ local function tend(key, fire, step)
     if fire.fuel <= 0 then
         game.set_block(pos, UNLIT)
         forget(key)
+        -- A fire that burned out leaves ash on it, in its box (cooking.lua).
+        local box = tdc.stations and tdc.stations.ensure("campfire", pos)
+        if box then
+            local out = R.station("campfire").slots.output[1]
+            game.container_give(box, { material = game.mod_id .. ":ash", count = 1, slot = out })
+        end
         return
     end
     save(key)

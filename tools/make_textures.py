@@ -495,6 +495,113 @@ def bark():
     return c.p
 
 
+def masonry(colour, mortar):
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, colour)
+    for y in (3, 7, 11, 15):
+        c.line(0, y, SIZE - 1, y, mortar)
+    for row, y0 in enumerate((0, 4, 8, 12)):
+        for x in ((5, 13) if row % 2 == 0 else (1, 9)):
+            c.line(x, y0, x, y0 + 2, mortar)
+    return c.p
+
+
+def glass_block():
+    c = Canvas()
+    edge = (200, 220, 226)
+    for y in range(SIZE):
+        for x in range(SIZE):
+            c.p[y][x] = (190, 214, 222, 60)
+    for i in range(SIZE):
+        for x, y in ((i, 0), (i, 15), (0, i), (15, i)):
+            c.p[y][x] = edge + (200,)
+    c.line(3, 6, 6, 3, (240, 248, 250))
+    return c.p
+
+
+def lantern():
+    c = Canvas()
+    iron, dark = IRON, IRON_DARK
+    c.rect(4, 3, 11, 14, dark)
+    c.rect(5, 5, 10, 12, (250, 190, 80))
+    c.rect(7, 7, 8, 11, (255, 236, 150))
+    c.line(4, 2, 11, 2, iron)
+    c.line(7, 0, 8, 0, iron)
+    c.line(4, 15, 11, 15, iron)
+    return c.p
+
+
+def gear(colour, dark):
+    c = Canvas()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            dx, dy = x - 7.5, y - 7.5
+            r2 = dx * dx + dy * dy
+            if 9 < r2 < 30:
+                c.p[y][x] = colour + (255,)
+    for x, y in ((7, 1), (8, 1), (7, 14), (8, 14), (1, 7), (1, 8), (14, 7), (14, 8),
+                 (3, 3), (12, 3), (3, 12), (12, 12)):
+        c.dot(x, y, dark)
+    return c.p
+
+
+def plate():
+    c = Canvas()
+    c.rect(2, 5, 13, 11, IRON)
+    c.line(2, 11, 13, 11, IRON_DARK)
+    return c.p
+
+
+def nails():
+    c = Canvas()
+    for x in (4, 7, 10):
+        c.line(x, 4, x, 12, IRON)
+        c.line(x - 1, 4, x + 1, 4, IRON_DARK)
+    return c.p
+
+
+def chain():
+    c = Canvas()
+    for i, (x, y) in enumerate(((2, 11), (5, 8), (8, 5), (11, 2))):
+        c.rect(x, y, x + 3, y + 3, IRON if i % 2 == 0 else IRON_DARK)
+        c.p[y + 1][x + 1] = (0, 0, 0, 0)
+        c.p[y + 2][x + 2] = (0, 0, 0, 0)
+    return c.p
+
+
+def hinge():
+    c = Canvas()
+    c.rect(2, 4, 7, 12, IRON)
+    c.rect(8, 4, 13, 12, IRON_DARK)
+    c.line(7, 3, 7, 13, (60, 64, 72))
+    return c.p
+
+
+def frame():
+    c = Canvas()
+    c.rect(1, 1, 14, 14, IRON)
+    c.rect(4, 4, 11, 11, (0, 0, 0))
+    for y in range(4, 12):
+        for x in range(4, 12):
+            c.p[y][x] = (0, 0, 0, 0)
+    for x, y in ((2, 2), (13, 2), (2, 13), (13, 13)):
+        c.dot(x, y, IRON_DARK)
+    return c.p
+
+
+ITEMS["mudbrick"] = lambda: masonry((150, 120, 88), (112, 88, 62))
+ITEMS["brick"] = lambda: masonry((160, 78, 58), (196, 182, 164))
+ITEMS["glass"] = glass_block
+ITEMS["iron_lantern"] = lantern
+ITEMS["bronze_gear"] = lambda: gear(BRONZE, BRONZE_DARK)
+ITEMS["iron_plate"] = plate
+ITEMS["iron_nails"] = nails
+ITEMS["iron_chain"] = chain
+ITEMS["iron_hinge"] = hinge
+ITEMS["iron_frame"] = frame
+ITEMS["ash"] = lambda: lump((150, 148, 144), (110, 108, 104))
+ITEMS["unfired_mould_gear"] = lambda: mould(lambda: gear(BRONZE, BRONZE_DARK), CLAY_WET, (98, 86, 74))
+ITEMS["mould_gear"] = lambda: mould(lambda: gear(BRONZE, BRONZE_DARK), CLAY_FIRED, CLAY_FIRED_DARK)
 ITEMS["torch"] = lambda: torch(True)
 ITEMS["spent_torch"] = lambda: torch(False)
 ITEMS["bark_strip"] = bark

@@ -34,9 +34,13 @@ Built in the brief's order (§12), each step shipping on its own:
 | 7 | The sluice | **done** |
 | 8 | Bloomery, bellows, anvil: iron | **done** |
 | 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | **done** |
-| 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | next |
+| 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | **done** |
 
-**The loop is complete (0.2.0).** [`docs/progression.md`](docs/progression.md)
+**The loop is complete (0.2.0), and after it (0.3.0) the parts the Fork's
+Keystone and both trees are built from: iron plate, nails, chain, hinge and
+frame on the anvil and bench, a bronze gear cast in a mould, and the first
+building — mudbrick, fired brick, glass from sand and ash, and an iron
+lantern that does not burn out.** [`docs/progression.md`](docs/progression.md)
 is the ladder as a player climbs it. A player can start from nothing: break flint out by hand, rub
 tinder from dry grass, split sticks from a log, lay a campfire and strike it
 alight (`craft fire_striker`, `craft tinder`, `craft stick`, `craft
@@ -185,6 +189,12 @@ and the change is recorded here.
   sprite: a whole block of sprites would be nine of them.
 - **The HUD warns with a bar under the crosshair**, the "red target line"
   of the brief, since a HUD cannot draw on the world.
+- **Ash comes from a dead fire**, left in its box, and the world's volcanic
+  ash does as well: glass wants ash, and the brief left ash for later.
+- **Parts are one bar each**, so each can be held to conserving units;
+  the iron frame is assembled from them and is not.
+- **No bucket.** Life already has one, and the brief waits on `set_fluid`'s
+  runtime behaviour being settled.
 - **Every head has a mould**, the sickle and hoe included, and the pot's
   mould casts the copper pot.
 - **Fire-setting reaches one block further through open air**, so a face

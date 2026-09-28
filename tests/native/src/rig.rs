@@ -660,7 +660,7 @@ pub const WORLD_BLOCKS: &[&str] = &[
     "cherry_log", "mangrove_log", "acacia_log", "redwood_log", "ironwood_log", "stone", "granite", "dirt",
     "grass", "sand", "gravel", "wet_clay", "dry_clay", "cobbles", "bramble", "flint", "copper_ore",
     "iron_ore", "tin_ore", "coal", "obsidian", "water", "gold_ore", "silver_ore", "lead_ore", "slate", "calcite", "dark_basalt", "tall_grass",
-    "moss",
+    "moss", "white_sand", "volcanic_ash",
 ];
 
 impl Rig {

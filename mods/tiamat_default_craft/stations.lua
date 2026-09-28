@@ -102,7 +102,17 @@ local function load_index()
 end
 
 --- Makes a station's container if it has none, and keeps it in the index.
-local function ensure(kind, pos)
+local ensure
+
+--- The same, by station id: for a mod file that has to put something into a
+--- station nobody has opened yet (a fire's ash).
+function ST.ensure(id, pos)
+    local station = R.station(id)
+    if not station then return nil end
+    return ensure({ id = id, size = station.size, station = station }, pos)
+end
+
+function ensure(kind, pos)
     local name = ST.name(kind.id, pos)
     game.make_container(name, kind.size)
     local idx = load_index()
