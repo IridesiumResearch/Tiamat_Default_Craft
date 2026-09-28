@@ -19,6 +19,7 @@ local U = tdc.util
 local S = {}
 
 S.PAGE = 8
+S.HAND_PAGE = 6   -- the Craft tab is a tab's body, smaller than a sheet
 
 local ui = game.exports("tiamat_default_ui")
 if not (ui and ui.version == 1) then ui = nil end
@@ -83,11 +84,12 @@ end
 --- The recipe buttons of one page, `r<n>` by index into `ids`, and the page
 --- buttons. Recipes that cannot be made now are drawn dim, and say why when
 --- pressed.
-function S.recipe_list(player, ids, page, container)
-    local pages = math.max(1, (#ids + S.PAGE - 1) // S.PAGE)
+function S.recipe_list(player, ids, page, container, per)
+    per = per or S.PAGE
+    local pages = math.max(1, (#ids + per - 1) // per)
     page = math.max(1, math.min(page or 1, pages))
     local children = {}
-    for i = (page - 1) * S.PAGE + 1, math.min(#ids, page * S.PAGE) do
+    for i = (page - 1) * per + 1, math.min(#ids, page * per) do
         local recipe = R.recipe(ids[i])
         local ok = R.check(player, ids[i], container)
         children[#children + 1] = S.button("r" .. i, S.recipe_text(recipe), not ok)
@@ -158,7 +160,7 @@ end
 --- The hand's recipes, as a tab body or a dialog.
 function S.hand(player, ids, page, note)
     local list
-    list, page = S.recipe_list(player, ids, page, nil)
+    list, page = S.recipe_list(player, ids, page, nil, S.HAND_PAGE)
     return S.box("column", {
         S.label("By hand", true),
         S.hint("From what you carry. A dim one is missing something."),

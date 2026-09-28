@@ -241,6 +241,13 @@ C.wash_ticks = 10 * 20          -- a block of gravel washed every ten seconds
 C.gold_every = 9                -- and every ninth wash leaves a flake of gold
 C.sluice_dry = "A sluice needs running water."
 
+-- The torch: a light a player carries underground, which burns out (a
+-- random tick, about twenty minutes a block) and leaves a spent torch.
+C.torch_light = { r = 14, g = 10, b = 4 }
+
+-- The HUD is told what is in the hand and what it points at this often.
+C.hud_ticks = 5
+
 -- Cooking ----------------------------------------------------------------------
 
 C.char_ticks = 60 * 20          -- cooked meat left over a fire this long chars

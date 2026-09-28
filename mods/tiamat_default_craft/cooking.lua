@@ -108,7 +108,9 @@ local function cook(station, fire, step)
         s.progress = s.progress + step
         if s.progress >= R.recipe(job).ticks then
             s.progress = 0
-            R.perform(fire.by, job, opts)
+            if R.perform(fire.by, job, opts) then
+                tdc.sounds.at("sizzle", fire.pos)
+            end
         end
     end
     char(station, name, s, step)

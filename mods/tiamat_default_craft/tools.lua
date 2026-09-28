@@ -151,7 +151,7 @@ end
 -- This mod's own blocks: planks are wood; the stations come away in anything.
 class_names[game.mod_id .. ":plank"] = "wood"
 for _, short in ipairs({ "workbench", "chest", "unlit_campfire", "campfire_lit", "unfired_kiln", "kiln", "kiln_lit",
-        "sluice", "bloomery", "bloomery_lit", "stone_anvil" }) do
+        "sluice", "bloomery", "bloomery_lit", "stone_anvil", "torch", "spent_torch" }) do
     class_names[game.mod_id .. ":" .. short] = "loose"
 end
 
@@ -261,6 +261,7 @@ function T.charge(uuid, found, amount)
     game.storage.set(key, nil)
     if uuid then
         game.chat_to(uuid, string.format(C.worn_out, lower(tool.name)))
+        tdc.sounds.at_player("tool_break", uuid)
     end
     R.tool_broken(uuid, tool.id)
     return true
@@ -317,6 +318,45 @@ local function wanted(uuid)
     if tool and tool.digs and not unusable[tool.id] then return tool.id end
     return T.HAND
 end
+
+-- The HUD: what is left of the tool in hand, and whether it can break what
+-- it points at. Sent only when it changes.
+local last_hud = {}   -- uuid -> the values last sent, as one string
+local hud_clock = 0
+
+local function hud_values(uuid)
+    local tool, held = T.held(uuid)
+    local wear = -1
+    if tool and tool.uses > 0 and not creative then
+        local left = tool.uses - T.worn(tool, held.detail, uuid)
+        wear = math.max(0, (left * 1000) // tool.uses)
+    end
+    local warn = false
+    if not creative then
+        local at = game.looking_at(uuid)
+        local class = at and at.material and T.class(at.material)
+        warn = class ~= nil and T.refusal(class, tool) ~= nil
+    end
+    return wear, warn
+end
+
+tdc.on_tick(function(dt)
+    hud_clock = hud_clock + dt
+    if hud_clock < C.hud_ticks then return end
+    hud_clock = 0
+    for _, uuid in ipairs(online) do
+        local wear, warn = hud_values(uuid)
+        local key = wear .. (warn and "!" or "")
+        if last_hud[uuid] ~= key then
+            last_hud[uuid] = key
+            game.set_hud(uuid, { wear = wear, warn = warn })
+        end
+    end
+end)
+
+tdc.on_leave(function(e)
+    last_hud[e.player] = nil
+end)
 
 tdc.on_tick(function()
     for _, uuid in ipairs(online) do

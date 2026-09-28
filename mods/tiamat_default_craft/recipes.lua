@@ -112,6 +112,18 @@ R.own{
 }
 
 R.own{
+    id = "bark_strip", station = "hand", name = "Bark strips",
+    inputs = { { "#log", count = 1 } },
+    outputs = { { M.id("bark_strip"), count = 4 } },
+}
+
+R.own{
+    id = "torch", station = "hand", name = "Torches",
+    inputs = { { M.id("stick"), count = 1 }, { M.id("bark_strip"), count = 1 }, { M.id("tinder"), count = 1 } },
+    outputs = { { M.id("torch"), count = 2 } },
+}
+
+R.own{
     id = "unlit_campfire", station = "hand", name = "Campfire",
     inputs = { { M.id("stick"), count = 3 }, { "#log", count = 2 }, { M.id("tinder"), count = 1 } },
     outputs = { { M.id("unlit_campfire"), count = 1 } },

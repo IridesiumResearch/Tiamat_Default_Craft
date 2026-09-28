@@ -33,10 +33,11 @@ Built in the brief's order (§12), each step shipping on its own:
 | 6 | Cooking | **done** |
 | 7 | The sluice | **done** |
 | 8 | Bloomery, bellows, anvil: iron | **done** |
-| 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | next |
-| 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | |
+| 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | **done** |
+| 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | next |
 
-Today a player can start from nothing: break flint out by hand, rub
+**The loop is complete (0.2.0).** [`docs/progression.md`](docs/progression.md)
+is the ladder as a player climbs it. A player can start from nothing: break flint out by hand, rub
 tinder from dry grass, split sticks from a log, lay a campfire and strike it
 alight (`craft fire_striker`, `craft tinder`, `craft stick`, `craft
 unlit_campfire`). A burning fire cracks the rock around it in thirty
@@ -85,10 +86,15 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
+  sounds.lua                 four sounds, each bound to a cue of its name
+  hud.lua                    the client-side HUD: wear pips and the refusal warning
   textures/*.png             placeholders from tools/make_textures.py
+  sounds/*.wav               placeholders from tools/make_sounds.py
 tests/native/                the mod run through the engine's real script VM
 tools/make_textures.py       the placeholder pictures (stdlib Python only)
+tools/make_sounds.py         the placeholder sounds (stdlib Python only)
 docs/brief.md                the design
+docs/progression.md          the ladder, player-facing, one page
 docs/exports.md              what this mod exports: the licence boundary
 docs/engine-asks.md          what this mod needed from the engine and could not get
 docs/sibling-asks.md         what it needs from World, Life and the interface
@@ -173,12 +179,18 @@ and the change is recorded here.
   off-hand by.
 - **The tuyere and the bellows' copper nozzle are cast** in one tuyere mould,
   from bronze and copper.
+- **Torches are made by hand** (a stick, a bark strip, a tinder), with bark
+  strips peeled from a log by hand: the loop happens underground, and the
+  brief's knife is bronze. A torch is a cutout block you walk through, not a
+  sprite: a whole block of sprites would be nine of them.
+- **The HUD warns with a bar under the crosshair**, the "red target line"
+  of the brief, since a HUD cannot draw on the world.
 - **Every head has a mould**, the sickle and hoe included, and the pot's
   mould casts the copper pot.
 - **Fire-setting reaches one block further through open air**, so a face
   dug back keeps cracking. Quenching with water is not built.
 
-## Pictures, and replacing them
+## Pictures and sounds, and replacing them
 
 Every texture is a placeholder: a flat colour, and for an item one shape on
 a clear ground, drawn by `tools/make_textures.py` in the world's muted
@@ -186,7 +198,8 @@ palette. To use your own, drop a PNG of the same name into
 `mods/tiamat_default_craft/textures/`; the engine serves textures itself, so
 there is nothing to hash. Running the generator again overwrites the
 placeholders, so keep yours out of its list (`ITEMS` in the script) or do
-not run it.
+not run it. Sounds are the same, in `sounds/` from `tools/make_sounds.py`;
+or leave the files and bind your own sounds to the cues from a sound pack.
 
 ## For other mods
 

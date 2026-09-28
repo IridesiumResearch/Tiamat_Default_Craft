@@ -166,7 +166,7 @@ works, and wears per player and kind.
 
 All are namespaced `tiamat_default_craft:` by the engine.
 
-- **Items:** `stick`, `tinder`, `cord`, `haft`, `tin_grain`, `gold_flake`,
+- **Items:** `stick`, `tinder`, `cord`, `haft`, `bark_strip`, `tin_grain`, `gold_flake`,
   `iron_bloom`, `iron_bar`, `iron_<tool>_head` (as the bronze heads),
   `bronze_tuyere`, `copper_nozzle`, `unfired_mould_tuyere`, `charred_meat`, `charcoal`, `fired_clay`,
   `unfired_crucible`, the ingots (`copper_ingot`, `tin_ingot`,
@@ -183,14 +183,16 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Engine tools:** `hand` (the default), and every tool above that digs:
   the digging sticks, spades, mauls, axes, picks and chisels (the chisels
   with the sub-node brush).
-- **Blocks:** `plank`, `workbench`, `chest`, `sluice`, `bloomery`,
+- **Blocks:** `torch`, `spent_torch` (a torch burned out by a random tick;
+  it drops its stick), `plank`, `workbench`, `chest`, `sluice`, `bloomery`,
   `bloomery_lit`, `stone_anvil`, `unfired_kiln`, `kiln`,
   `kiln_lit`, `unlit_campfire`, `campfire_lit` (the lit fire in a world
   without Life; with Life, a lit fire is Life's `campfire`), and the cracked
   rocks `cracked_stone`, `cracked_slate`, `cracked_calcite`,
   `cracked_dark_basalt`, `cracked_copper_ore`, `cracked_iron_ore`,
   `cracked_coal` (each only when the world's rock exists).
-- **Recipes:** by hand, `stick` (any `#log` → four sticks), `tinder` (a
+- **Recipes:** by hand, `bark_strip` (a log → four), `torch` (a stick, a
+  bark strip, a tinder → two), `stick` (any `#log` → four sticks), `tinder` (a
   third of a block of `#tinder`), `fire_striker` (two flint),
   `unlit_campfire` (three sticks, two logs, a tinder), `cord` (a bramble →
   two), `workbench` (four logs, four cord). At the workbench: `plank` (a log
@@ -234,6 +236,12 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Containers:** `tiamat_default_craft:<station>:x,y,z` for every station
   block placed, this mod's or another's, and `tiamat_default_craft:chest:x,y,z`
   (27 slots) for a chest; `<domain>@` before the position off the overworld.
+- **Sounds and cues:** `tool_break`, `anvil_ring`, `sizzle`, `craft`, each
+  a sound bound to the cue of its name (`craft` to Tiamat Default UI's own
+  craft sound when that mod is here). Bind your own sounds to these cues to
+  re-skin them.
+- **HUD script:** `hud.lua`, with no reserve: five wear pips past the
+  hotbar's right end and a red bar under the crosshair.
 - **Dialogs:** `station` (a station's or a chest's screen) and `hand`.
 - **Actions:** `craft` (default key V): the Craft tab on the interface's
   screen, or a dialog of its own without it.
@@ -252,7 +260,9 @@ one of them is chat. For operators, and everyone in a Creative world:
 
 ## Data it stores or sends
 
-None for other mods. `game.storage` is private to this mod: it keeps each
+To its own HUD script only: `wear` (per mille of the held tool left, or -1)
+and `warn` (whether it can break what the crosshair is on). `game.storage`
+is private to this mod: it keeps each
 player's firsts (`first:<uuid>:<event>`), the tool serial counter
 (`serial`), each tool's wear (`wear:<serial>`), each fire it lit
 (`fire:<domain>@x,y,z`), each furnace's fire and work

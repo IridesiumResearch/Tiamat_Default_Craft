@@ -249,6 +249,7 @@ tdc.on_dialog(FORM, function(e)
             o.note = "It works on its own: put in what it takes."
         elseif index and o.ids[index] then
             local ok, why = R.perform(e.player, o.ids[index], o.container)
+            if ok then tdc.sounds.at_player("craft", e.player) end
             o.note = ok and ("Made " .. S.recipe_text(R.recipe(o.ids[index])) .. ".") or ("Cannot: " .. why .. ".")
         elseif e.name == "prev" then
             o.page = o.page - 1
@@ -315,6 +316,7 @@ local function press_hand(player, name)
     local index = tonumber(string.match(name or "", "^r(%d+)$"))
     if index and ids[index] then
         local ok, why = R.perform(player, ids[index], nil)
+        if ok then tdc.sounds.at_player("craft", player) end
         h.note = ok and ("Made " .. S.recipe_text(R.recipe(ids[index])) .. ".") or ("Cannot: " .. why .. ".")
     elseif name == "prev" then
         h.page = h.page - 1

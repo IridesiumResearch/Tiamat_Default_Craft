@@ -258,6 +258,15 @@ tdc.on_tick(function(dt)
     end
 end)
 
+-- Torches burn out: a random tick, about twenty minutes a block, turns one
+-- into a spent torch, whose stick comes back when it is dug.
+local TORCH = M.blocks.torch
+if TORCH then
+    game.register_random_tick(TORCH, function(e)
+        game.set_block({ x = e.x, y = e.y, z = e.z }, game.mod_id .. ":spent_torch")
+    end)
+end
+
 -- Lighting and feeding ----------------------------------------------------------------
 
 --- Ticks of fire in 27 units of a material, by name, or nil.

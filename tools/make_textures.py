@@ -471,6 +471,35 @@ def sluice():
 ITEMS["sluice"] = sluice
 
 
+def torch(lit):
+    """A stick standing in the middle of a clear block, a flame on it or a
+    charred head: the block is cutout, so the clear part is not drawn."""
+    c = Canvas()
+    c.rect(7, 6, 8, 15, WOOD)
+    c.line(7, 15, 8, 15, WOOD_DARK)
+    c.rect(6, 5, 9, 6, (150, 120, 80))
+    if lit:
+        c.rect(7, 2, 8, 4, (250, 160, 30))
+        c.rect(7, 1, 8, 2, (255, 236, 150))
+        c.dot(6, 3, (236, 88, 20))
+        c.dot(9, 3, (236, 88, 20))
+    else:
+        c.rect(6, 4, 9, 5, (40, 34, 30))
+    return c.p
+
+
+def bark():
+    c = Canvas()
+    c.line(3, 12, 12, 3, (96, 72, 50), 3)
+    c.line(4, 12, 12, 4, (70, 52, 36))
+    return c.p
+
+
+ITEMS["torch"] = lambda: torch(True)
+ITEMS["spent_torch"] = lambda: torch(False)
+ITEMS["bark_strip"] = bark
+
+
 def tuyere(colour, dark):
     c = Canvas()
     for row in range(5, 11):

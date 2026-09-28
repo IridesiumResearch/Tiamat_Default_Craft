@@ -136,10 +136,14 @@ fn main() {
     fire_alone();
     stations();
     craft_tab();
-    kiln();
     cooking();
     sluice();
     iron();
+    torch_and_hud();
+    // The same world, played the same way twice, is the same world.
+    let (a, b) = (kiln(), kiln());
+    assert_eq!(a, b, "two runs of the kiln leave the same storage");
+    println!("determinism: ok");
     println!("craft native check: all passed");
 }
 
@@ -151,7 +155,7 @@ fn load_alone() {
     r.say("craft stick");
     assert_eq!(r.said(), "cannot make Sticks: nothing registered is #log");
     r.say("recipes");
-    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: cord, fire_striker, stick, tinder, unlit_campfire, workbench"]);
+    assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: bark_strip, cord, fire_striker, stick, tinder, torch, unlit_campfire, workbench"]);
     // Every thing this mod registers has its picture: the world's rocks are
     // absent here, so do the check where they are too (registry()).
     textures_present(&r);
@@ -717,7 +721,7 @@ fn craft_tab() {
 /// The kiln: fired from clay, lit with a striker, charcoal at red heat,
 /// copper and bronze at orange with a crucible, heads cast until the mould
 /// cracks, iron refused, going out, and a head hafted into a pick.
-fn kiln() {
+fn kiln() -> String {
     let mut r = Rig::new(Setup { world: true, life: true, ..Setup::default() });
     r.join(PLAYER);
     r.huds.operators.lock().unwrap().push(PLAYER);
@@ -830,6 +834,7 @@ fn kiln() {
     r.tick(560);
     assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("gold_ingot"), 27)));
     println!("kiln: ok");
+    r.storage.dump()
 }
 
 /// Cooking: a fire's box, meat roasted and left to char, a stew in a copper
@@ -1053,4 +1058,74 @@ fn iron() {
     assert_eq!(r.boxes.get(a, 1), None, "the three bars left went into it");
     assert!(r.storage.dump().contains(&format!("first:{}:forge:iron_pick=", hex(PLAYER))));
     println!("iron: ok");
+}
+
+/// The torch burns out; the HUD says how worn the tool is and warns before
+/// a refused dig; and the HUD script draws every state it can be sent.
+fn torch_and_hud() {
+    let mut r = Rig::new(Setup { world: true, life: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.tick(1);
+
+    // Torches by hand, and one burning out on a random tick.
+    r.give(PLAYER, "tiamat_default_world:oak_log", 54);
+    r.give(PLAYER, "tiamat_default_world:tall_grass", 9);
+    for recipe in ["stick", "bark_strip", "tinder", "torch"] {
+        r.say(&format!("craft {recipe}"));
+        assert!(r.said().starts_with("made"), "{recipe}");
+    }
+    assert_eq!(r.units(PLAYER, "torch"), 54);
+    r.put(60, 64, 60, "torch");
+    let out = r.vm.random_tick(&tiamat_core::script::RandomTickEvent {
+        pos: tiamat_core::BlockPos { x: 60, y: 64, z: 60 },
+        material: r.material("torch"),
+    });
+    assert!(out.faults.is_empty(), "{:?}", out.faults);
+    assert_eq!(r.block_name(60, 64, 60), "tiamat_default_craft:spent_torch");
+
+    // The HUD: a bronze pick in hand is whole; worn, it says so.
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    let pick = r.details(PLAYER, "bronze_pick")[0].clone();
+    r.hold(PLAYER, "bronze_pick", Some(&pick));
+    r.tick(10);
+    let hud = |r: &Rig, key: &str| r.huds.values.lock().unwrap().get(&PLAYER).and_then(|v| v.get(key).cloned());
+    use tiamat_core::hud::Value;
+    assert_eq!(hud(&r, "wear"), Some(Value::Number(1000.0)));
+    assert_eq!(hud(&r, "warn"), Some(Value::Flag(false)));
+    for _ in 0..85 {
+        r.dig(PLAYER, "tiamat_default_world:stone").unwrap();
+    }
+    r.tick(10);
+    assert_eq!(hud(&r, "wear"), Some(Value::Number(150.0)));
+
+    // Pointing a bare hand at stone: the warning, before any click.
+    r.hold_nothing(PLAYER);
+    r.put(61, 64, 60, "tiamat_default_world:stone");
+    *r.world.aimed.lock().unwrap() = Some((61, 64, 60));
+    r.tick(10);
+    assert_eq!(hud(&r, "warn"), Some(Value::Flag(true)));
+    assert_eq!(hud(&r, "wear"), Some(Value::Number(-1.0)));
+    *r.world.aimed.lock().unwrap() = None;
+
+    // The HUD script, drawn as a client draws it, in every state.
+    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods").join(MOD);
+    let source = std::fs::read_to_string(dir.join("hud.lua")).unwrap();
+    let states: Vec<(&str, Vec<(&str, Value)>, usize)> = vec![
+        ("nothing sent", vec![], 0),
+        ("a whole tool", vec![("wear", Value::Number(1000.0)), ("warn", Value::Flag(false))], 5),
+        ("nearly gone, and warned", vec![("wear", Value::Number(150.0)), ("warn", Value::Flag(true))], 6),
+        ("a hand", vec![("wear", Value::Number(-1.0)), ("warn", Value::Flag(false))], 0),
+    ];
+    for (name, values, want) in states {
+        let mut vm = tiamat_core::script::HudVm::new(tiamat_core::script::HudLimits::default()).unwrap();
+        vm.load(MOD, &source).expect("hud.lua loads");
+        let mut state = tiamat_core::hud::State::default();
+        state.values.insert(MOD.into(), values.into_iter().map(|(k, v)| (k.to_owned(), v)).collect());
+        let faults = vm.draw(&state);
+        assert!(faults.is_empty(), "hud faults on {name}: {faults:?}");
+        let commands = vm.with_frame(|f| f.commands().len()).unwrap();
+        assert_eq!(commands, want, "draw commands for {name}");
+    }
+    println!("torch and hud: ok");
 }

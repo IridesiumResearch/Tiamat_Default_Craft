@@ -98,6 +98,7 @@ function A.strike(e, station, name)
     local work = work_of(name, station)
     if work ~= s.work then s.work, s.strikes = work, 0 end
     s.strikes = s.strikes + 1
+    tdc.sounds.at("anvil_ring", { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
     local done = s.strikes >= recipe.strikes
     if done then
         s.strikes, s.work = 0, nil

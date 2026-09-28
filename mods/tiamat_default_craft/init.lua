@@ -29,6 +29,7 @@ end
 tdc.config = load("config")
 tdc.util = load("util")
 load("hooks")                     -- one engine registration per hook, many subscribers
+tdc.sounds = load("sounds")       -- four sounds, each bound to a cue of its name
 tdc.registry = load("registry")   -- recipes, groups, stations, fuels, the gate, perform
 tdc.materials = load("materials") -- the items and blocks this mod registers
 tdc.tools = load("tools")         -- the hand, tools, dig classes, wear
@@ -41,6 +42,11 @@ tdc.cooking = load("cooking")     -- what a campfire cooks
 tdc.sluice = load("sluice")       -- tin washed out of river gravel
 tdc.anvil = load("anvil")         -- iron worked by blows
 load("commands")                  -- chat words: listing and crafting by hand
+
+-- The HUD: wear pips beside the hotbar and a red bar under the crosshair
+-- when the tool in hand cannot break what it points at. The pips sit
+-- inside the interface's own reserve, so this asks for none of its own.
+game.register_hud_script{ file = "hud.lua", reserve = 0 }
 
 -- What other mods may call. One export per mod, built whole first.
 game.export(load("exports"))

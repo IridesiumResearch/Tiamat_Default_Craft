@@ -27,6 +27,7 @@ item("stick", "Stick", "Split from a log. Hafts, kindling, a digging stick's sha
 item("tinder", "Tinder", "Dry grass, needles and moss, rubbed to fluff. It catches a spark.")
 item("cord", "Cord", "Bramble cane, stripped and twisted. It binds a haft and hangs a lid.")
 item("haft", "Haft", "A straight handle, bound. A head goes on it.")
+item("bark_strip", "Bark strip", "Peeled from a log. It binds a torch's head.")
 
 -- The sluice's.
 item("tin_grain", "Tin grain", "Black grains of tin, washed out of river gravel.")
@@ -85,6 +86,24 @@ block("chest", {
     name = "Chest",
     description = "Planks pegged into a box. Use it to open it; dig it to take it away, contents and all.",
     hardness = 1.0,
+})
+
+-- The torch (fire.lua): a light that burns out.
+block("torch", {
+    name = "Torch",
+    description = "Tinder bound to a stick with bark. It burns out, in time.",
+    hardness = 0.1,
+    cutout = true,
+    passable = true,
+    light_emit = tdc.config.torch_light,
+})
+block("spent_torch", {
+    name = "Spent torch",
+    description = "Burned out. The stick is still good.",
+    hardness = 0.1,
+    cutout = true,
+    passable = true,
+    drops = { stick = 27 },
 })
 
 -- The sluice (sluice.lua): it stands in running water.
