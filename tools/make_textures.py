@@ -367,6 +367,107 @@ for rock, colour in ROCKS.items():
     ITEMS["cracked_" + rock] = (lambda col: lambda: cracked(col))(colour)
 
 
+# The kiln's things -----------------------------------------------------------
+
+CLAY_WET = (132, 118, 104)
+CLAY_FIRED = (178, 104, 70)
+CLAY_FIRED_DARK = (128, 70, 46)
+INGOTS = {
+    "copper": COPPER, "tin": (196, 200, 204), "bronze": BRONZE,
+    "silver": (214, 218, 224), "gold": (224, 186, 70), "lead": (96, 100, 112),
+}
+
+
+def ingot(colour):
+    c = Canvas()
+    dark = tuple(v * 70 // 100 for v in colour)
+    light = tuple(min(255, v + 40) for v in colour)
+    for row in range(6, 12):
+        inset = 1 if row == 6 else 0
+        c.line(2 + inset, row, 13 - inset, row, colour)
+    c.line(3, 6, 12, 6, light)
+    c.line(2, 12, 13, 12, dark)
+    return c.p
+
+
+def lump(colour, edge):
+    c = Canvas()
+    for row, (x0, x1) in enumerate([(6, 9), (4, 11), (3, 12), (3, 12), (4, 11), (5, 10)]):
+        c.line(x0, row + 5, x1, row + 5, colour)
+    c.line(5, 11, 10, 11, edge)
+    return c.p
+
+
+def pot_shape(colour, edge):
+    c = Canvas()
+    for row in range(5, 13):
+        inset = abs(row - 8) // 2
+        c.line(4 + inset, row, 11 - inset, row, colour)
+    c.line(5, 4, 10, 4, edge)
+    return c.p
+
+
+def head_of(draw):
+    """A tool's picture without its wooden haft: the cast head alone."""
+    pixels = draw()
+    wood = {WOOD + (255,), WOOD_DARK + (255,)}
+    return [[(0, 0, 0, 0) if px in wood else px for px in row] for row in pixels]
+
+
+def mould(shape_draw, clay, edge):
+    """A slab of clay with the head's shape pressed into it."""
+    c = Canvas()
+    c.rect(1, 2, 14, 13, clay)
+    c.line(1, 13, 14, 13, edge)
+    head = head_of(shape_draw)
+    for y in range(SIZE):
+        for x in range(SIZE):
+            if head[y][x][3] and 2 <= y <= 12 and 1 <= x <= 14:
+                c.p[y][x] = edge + (255,)
+    return c.p
+
+
+def kiln_block(lit):
+    c = Canvas()
+    c.rect(0, 0, SIZE - 1, SIZE - 1, CLAY_FIRED if lit is not None else CLAY_WET)
+    edge = CLAY_FIRED_DARK if lit is not None else (98, 86, 74)
+    for y in (4, 9, 14):
+        c.line(0, y, SIZE - 1, y, edge)
+    c.rect(5, 9, 10, 13, (40, 30, 26))
+    if lit:
+        c.rect(6, 11, 9, 13, (250, 160, 30))
+        c.line(7, 10, 8, 10, (255, 236, 150))
+    return c.p
+
+
+HEAD_SHAPES = {
+    "pick": lambda: pick(METALS["bronze"]),
+    "axe": lambda: axe(METALS["bronze"]),
+    "spade": lambda: spade(METALS["bronze"]),
+    "chisel": lambda: chisel(METALS["bronze"]),
+    "hammer": lambda: hammer(METALS["bronze"]),
+    "knife": lambda: knife(METALS["bronze"]),
+    "sickle": lambda: sickle(METALS["bronze"]),
+    "hoe": lambda: hoe(METALS["bronze"]),
+    "pot": lambda: pot(METALS["copper"]),
+}
+
+ITEMS["charcoal"] = lambda: lump((38, 34, 34), (20, 18, 18))
+ITEMS["fired_clay"] = lambda: lump(CLAY_FIRED, CLAY_FIRED_DARK)
+ITEMS["unfired_crucible"] = lambda: pot_shape(CLAY_WET, (98, 86, 74))
+ITEMS["crucible"] = lambda: pot_shape(CLAY_FIRED, CLAY_FIRED_DARK)
+ITEMS["unfired_kiln"] = lambda: kiln_block(None)
+ITEMS["kiln"] = lambda: kiln_block(False)
+ITEMS["kiln_lit"] = lambda: kiln_block(True)
+for metal, colour in INGOTS.items():
+    ITEMS[metal + "_ingot"] = (lambda col: lambda: ingot(col))(colour)
+for shape, draw in HEAD_SHAPES.items():
+    ITEMS["unfired_mould_" + shape] = (lambda d: lambda: mould(d, CLAY_WET, (98, 86, 74)))(draw)
+    ITEMS["mould_" + shape] = (lambda d: lambda: mould(d, CLAY_FIRED, CLAY_FIRED_DARK))(draw)
+    if shape != "pot":
+        ITEMS["bronze_" + shape + "_head"] = (lambda d: lambda: head_of(d))(draw)
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for name, draw in sorted(ITEMS.items()):

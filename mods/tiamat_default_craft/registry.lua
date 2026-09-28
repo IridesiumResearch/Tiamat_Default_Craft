@@ -162,8 +162,13 @@ function R.register_station(spec)
         if not (record.slots.input and record.slots.output) then
             return nil, "a station with slots has input and output slots"
         end
+        if record.heat and not record.slots.fuel then
+            return nil, "a station with heat has a fuel slot"
+        end
     elseif not record.inventory then
         return nil, "a station has slots, or says inventory = true"
+    elseif record.heat then
+        return nil, "a station with heat has a fuel slot"
     end
     for _, key in ipairs({ "block", "lit_block" }) do
         if spec[key] ~= nil then
@@ -551,7 +556,7 @@ end
 --- player? }` each, or nil and the first one missing. A tool is looked for in
 --- the station's tool slots, then its input slots, then the player's own
 --- inventory. Any `detail` will do — a tool's detail is its serial.
-local function find_tools(resolved, source, uuid)
+local function find_tools(resolved, source, uuid, unattended)
     local found = {}
     local places = {}
     if source.container then
@@ -566,7 +571,7 @@ local function find_tools(resolved, source, uuid)
             end
         end
     end
-    if uuid ~= nil then
+    if uuid ~= nil and not unattended then
         for _, stack in ipairs(game.inventory(uuid)) do
             places[#places + 1] = { stack = stack, player = uuid }
         end
@@ -688,10 +693,13 @@ local function take_back(source, given)
 end
 
 --- Options for `check` and `perform`: a container name, or a table
---- `{ container?, heat? }`.
+--- `{ container?, heat?, unattended? }`. `unattended` is a station working
+--- on its own on the tick: the player named is whom it answers to (the gate,
+--- the firsts), and none of their own things are used — a kiln's crucible is
+--- in the kiln.
 local function options(opts)
-    if type(opts) == "table" then return opts.container, opts.heat end
-    return opts, nil
+    if type(opts) == "table" then return opts.container, opts.heat, opts.unattended end
+    return opts, nil, nil
 end
 
 --- Whether `uuid` could make recipe `id` now, without making it. Answers
@@ -699,7 +707,7 @@ end
 function R.check(uuid, id, opts)
     local recipe = recipes[id]
     if not recipe then return nil, "no such recipe" end
-    local container, heat = options(opts)
+    local container, heat, unattended = options(opts)
     local station = stations[recipe.station]
     local source, why = source_for(uuid, station, container)
     if not source then return nil, why end
@@ -715,7 +723,7 @@ function R.check(uuid, id, opts)
     takes, why = plan(resolved, source)
     if not takes then return nil, why end
     local tools
-    tools, why = find_tools(resolved, source, uuid)
+    tools, why = find_tools(resolved, source, uuid, unattended)
     if not tools then return nil, why end
     return true, { recipe = recipe, source = source, resolved = resolved, takes = takes, tools = tools }
 end

@@ -22,6 +22,12 @@ assert(R.register_station{
     slots = { input = { from = 1, to = 9 }, output = 10 },
 })
 
+-- The kiln: fuel, two inputs, the crucible or mould, the output.
+assert(R.register_station{
+    id = "kiln", name = "Kiln", block = M.id("kiln"), lit_block = M.id("kiln_lit"),
+    slots = C.kiln_slots, heat = true,
+})
+
 -- Groups ---------------------------------------------------------------------
 
 for _, name in ipairs(U.sorted_keys(C.groups)) do
@@ -31,6 +37,17 @@ for _, name in ipairs(U.sorted_keys(C.groups)) do
 end
 assert(R.register_group("#plank", { M.id("plank") }))
 assert(R.register_group("#wedge", { M.id("wooden_wedge"), M.id("ironwood_wedge") }))
+
+-- Fuels: what burns in anything that burns.
+for _, fuel in ipairs(C.fuels) do
+    local name = fuel[1]
+    if string.match(name, "^world:") then
+        name = U.world(string.sub(name, 7))
+    elseif not U.group(name) then
+        name = M.id(name)
+    end
+    assert(R.register_fuel(name, fuel[2], fuel[3]))
+end
 
 -- Recipes --------------------------------------------------------------------
 
@@ -124,10 +141,123 @@ R.own{
     outputs = { { M.id("ironwood_maul"), count = 1 } },
 }
 
+-- Clay, at the workbench: the kiln itself, a crucible, and the moulds.
+
+R.own{
+    id = "unfired_kiln", station = "workbench", name = "Kiln",
+    inputs = { { U.world("wet_clay"), count = 9 }, { U.world("cobbles"), count = 9 } },
+    outputs = { { M.id("unfired_kiln"), count = 1 } },
+}
+
+R.own{
+    id = "unfired_crucible", station = "workbench", name = "Crucible (unfired)",
+    inputs = { { U.world("wet_clay"), count = 3 } },
+    outputs = { { M.id("unfired_crucible"), count = 1 } },
+}
+
+for _, shape in ipairs(U.sorted_keys(C.heads)) do
+    R.own{
+        id = "unfired_mould_" .. shape, station = "workbench", name = U.title(shape) .. " mould (unfired)",
+        inputs = { { U.world("wet_clay"), count = 2 } },
+        outputs = { { M.id("unfired_mould_" .. shape), count = 1 } },
+    }
+end
+R.own{
+    id = "unfired_mould_pot", station = "workbench", name = "Pot mould (unfired)",
+    inputs = { { U.world("wet_clay"), count = 2 } },
+    outputs = { { M.id("unfired_mould_pot"), count = 1 } },
+}
+
+-- Hafting, at the workbench: a cast head and a haft are a tool. The small
+-- ones take a stick.
+for _, shape in ipairs(U.sorted_keys(C.heads)) do
+    local handle = (shape == "chisel" or shape == "knife") and M.id("stick") or M.id("haft")
+    R.own{
+        id = "bronze_" .. shape, station = "workbench", name = "Bronze " .. shape,
+        inputs = { { M.id("bronze_" .. shape .. "_head"), count = 1 }, { handle, count = 1 } },
+        outputs = { { M.id("bronze_" .. shape), count = 1 } },
+        first = "haft:bronze_" .. shape,
+    }
+end
+
 R.own{
     id = "chest", station = "workbench", name = "Chest",
     inputs = { { "#plank", count = 9 }, { M.id("cord"), count = 2 } },
     outputs = { { M.id("chest"), count = 1 } },
+}
+
+-- In the kiln. Heat 1 is wood's, 2 coal's and charcoal's.
+
+R.own{
+    id = "charcoal", station = "kiln", name = "Charcoal", heat = 1, ticks = 1200,
+    inputs = { { "#log", count = 1 } },
+    outputs = { { M.id("charcoal"), count = 1 } },
+    first = "fire:charcoal",
+}
+
+R.own{
+    id = "fired_clay", station = "kiln", name = "Fired clay", heat = 1, ticks = 200,
+    inputs = { { U.world("wet_clay"), count = 1 } },
+    outputs = { { M.id("fired_clay"), count = 1 } },
+}
+
+R.own{
+    id = "crucible", station = "kiln", name = "Crucible", heat = 1, ticks = 600,
+    inputs = { { M.id("unfired_crucible"), count = 1 } },
+    outputs = { { M.id("crucible"), count = 1 } },
+}
+
+for _, shape in ipairs(U.sorted_keys(C.heads)) do
+    R.own{
+        id = "mould_" .. shape, station = "kiln", name = U.title(shape) .. " mould", heat = 1, ticks = 600,
+        inputs = { { M.id("unfired_mould_" .. shape), count = 1 } },
+        outputs = { { M.id("mould_" .. shape), count = 1 } },
+    }
+end
+R.own{
+    id = "mould_pot", station = "kiln", name = "Pot mould", heat = 1, ticks = 600,
+    inputs = { { M.id("unfired_mould_pot"), count = 1 } },
+    outputs = { { M.id("mould_pot"), count = 1 } },
+}
+
+-- Smelting: 27 units of ore in a crucible is an ingot.
+local SMELT = { copper = 900, tin = 600, silver = 900, gold = 900, lead = 900 }
+for _, metal in ipairs(U.sorted_keys(SMELT)) do
+    R.own{
+        id = metal .. "_ingot", station = "kiln", name = U.title(metal) .. " ingot", heat = 2, ticks = SMELT[metal],
+        inputs = { { U.world(metal .. "_ore"), units = 27 } },
+        tools = { M.id("crucible") },
+        outputs = { { M.id(metal .. "_ingot"), count = 1 } },
+        first = "smelt:" .. metal,
+    }
+end
+
+-- Bronze: nine of copper to one of tin, which is the true ratio near enough.
+R.own{
+    id = "bronze_ingot", station = "kiln", name = "Bronze", heat = 2, ticks = 900,
+    inputs = { { M.id("copper_ingot"), count = 9 }, { M.id("tin_ingot"), count = 1 } },
+    tools = { M.id("crucible") },
+    outputs = { { M.id("bronze_ingot"), count = 10 } },
+    first = "smelt:bronze",
+}
+
+-- Casting: bronze poured into a mould; a copper pot.
+for _, shape in ipairs(U.sorted_keys(C.heads)) do
+    R.own{
+        id = "bronze_" .. shape .. "_head", station = "kiln", name = "Bronze " .. shape .. " head",
+        heat = 2, ticks = 600,
+        inputs = { { M.id("bronze_ingot"), count = C.heads[shape] } },
+        tools = { M.id("mould_" .. shape) },
+        outputs = { { M.id("bronze_" .. shape .. "_head"), count = 1 } },
+        first = "cast:bronze_" .. shape,
+    }
+end
+R.own{
+    id = "copper_pot", station = "kiln", name = "Copper pot", heat = 2, ticks = 600,
+    inputs = { { M.id("copper_ingot"), count = 3 } },
+    tools = { M.id("mould_pot") },
+    outputs = { { M.id("copper_pot"), count = 1 } },
+    first = "cast:copper_pot",
 }
 
 return {}

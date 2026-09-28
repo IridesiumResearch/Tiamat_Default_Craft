@@ -29,8 +29,8 @@ Built in the brief's order (§12), each step shipping on its own:
 | 2 | Tools: the hand, held → tool sync, dig classes, wear | **done** |
 | 3 | Fire: the unlit campfire, the striker, fuel, fire-setting | **done** |
 | 4 | Workbench, the Craft tab, the chest | **done** |
-| 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | next |
-| 6 | Cooking | |
+| 5 | The kiln: heat, ceramics, charcoal, copper, tin, bronze, casting | **done** |
+| 6 | Cooking | next |
 | 7 | The sluice | |
 | 8 | Bloomery, bellows, anvil: iron | |
 | 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | |
@@ -43,9 +43,14 @@ unlit_campfire`). A burning fire cracks the rock around it in thirty
 seconds, and cracked rock and ore come away by hand, whole. Feed it logs
 or it goes out. Cord from brambles and a workbench of logs, by hand; at
 the bench, planks split with a wedge, hafts, digging sticks, mauls, and a
-chest. V opens the Craft tab (the interface's, when it is here). Every tool of the ladder exists and works — typed, tiered and worn,
-with a sentence for each refusal — though the metal ones come only from an operator's `toolkit` until the
-kiln and the anvil land. Bare hands move
+chest. V opens the Craft tab (the interface's, when it is here). A kiln of wet clay
+and cobbles, fired by its first fire, turns logs to charcoal at red heat,
+and at orange heat (coal or charcoal) smelts ore in a crucible, alloys nine
+of copper to one of tin, and casts bronze heads into clay moulds that crack
+after four pours; a head and a haft at the workbench are a bronze tool.
+**Wood → fire → bronze is a complete loop.** Every tool of the ladder exists and works — typed, tiered and worn,
+with a sentence for each refusal — though iron comes only from an operator's `toolkit` until the bloomery and
+the anvil land. Bare hands move
 earth, sand, clay and soft logs; rock wants a bronze pick, and the hard
 rocks iron. Another mod can register stations, recipes, tools and dig
 classes, and make them.
@@ -65,6 +70,7 @@ mods/tiamat_default_craft/   the mod (this is what the engine loads)
   fire.lua                   campfires: lighting, fuel, burning out, fire-setting
   screens.lua                dialog trees, in Tiamat Default UI's look when present
   stations.lua               stations and chests in the world; the Craft tab and V
+  furnace.lua                stations that burn: lighting, fuel, heat, jobs
   recipes.lua                this mod's own stations and recipes, as data
   commands.lua               chat words: `recipes`, `craft`
   exports.lua                what other mods may call (docs/exports.md)
@@ -129,6 +135,17 @@ and the change is recorded here.
 - **Station screens are the engine's widgets with the interface's fonts
   and colours**, not its builders: what those answer is a read-only view
   that cannot be sent inside another mod's tree.
+- **The kiln has two input slots** (copper and tin go in together): fuel 1,
+  in 2–3, tool 4, out 5.
+- **One log is one charcoal and one wet clay one fired clay.** The brief's
+  "27 log units → 9 charcoal" reads as either; one for one keeps charcoal
+  worth making (it burns hotter, not longer) and nothing in the loop
+  cheaper than it should be.
+- **A burning station runs whatever its contents make**, first recipe by
+  id, rather than a player choosing: pressing a recipe on its screen says
+  so. Any station registered with `heat = true` burns the same way.
+- **Every head has a mould**, the sickle and hoe included, and the pot's
+  mould casts the copper pot.
 - **Fire-setting reaches one block further through open air**, so a face
   dug back keeps cracking. Quenching with water is not built.
 

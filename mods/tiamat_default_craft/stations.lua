@@ -42,6 +42,14 @@ local CHEST = game.mod_id .. ":chest"
 --- mod has registered its stations.
 local kinds = nil
 
+--- More blocks that are a station: an unfired kiln is the kiln's.
+local aliases = {}
+
+--- Another block that opens as station `id`.
+function ST.alias(block, id)
+    aliases[block] = id
+end
+
 local function all_kinds()
     if kinds then return kinds end
     kinds = { [CHEST] = { id = "chest", size = C.chest_slots } }
@@ -51,14 +59,20 @@ local function all_kinds()
             if block then kinds[block] = { id = id, size = station.size, station = station } end
         end
     end
+    for _, block in ipairs(U.sorted_keys(aliases)) do
+        local station = R.station(aliases[block])
+        if station then kinds[block] = { id = station.id, size = station.size, station = station } end
+    end
     return kinds
 end
 
 --- The kind of block a material is, or nil.
-local function kind_of(material)
+function ST.kind(material)
     local name = material and game.block_of(material)
     return name and all_kinds()[name]
 end
+
+local kind_of = ST.kind
 
 --- A station's container name at a block.
 function ST.name(kind_id, pos)
@@ -67,22 +81,62 @@ function ST.name(kind_id, pos)
     return game.mod_id .. ":" .. kind_id .. ":" .. where
 end
 
+-- The index: every station container placed, with where it is, kept in
+-- storage (`station:<name>` = "kind=...;x=...;y=...;z=...;domain=...") and
+-- in memory, read from storage once.
+local index = nil   -- name -> { kind, x, y, z, domain }
+
+local function load_index()
+    if index then return index end
+    index = {}
+    for _, key in ipairs(game.storage.keys()) do
+        local name = string.match(key, "^station:(.+)$")
+        if name then
+            local record = U.decode(game.storage.get(key))
+            if type(record.kind) == "string" and math.type(record.x) == "integer" then
+                index[name] = record
+            end
+        end
+    end
+    return index
+end
+
 --- Makes a station's container if it has none, and keeps it in the index.
 local function ensure(kind, pos)
     local name = ST.name(kind.id, pos)
     game.make_container(name, kind.size)
-    game.storage.set("station:" .. name, kind.id)
+    local idx = load_index()
+    if not idx[name] then
+        local record = { kind = kind.id, x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld" }
+        idx[name] = record
+        game.storage.set("station:" .. name, U.encode(record))
+    end
     return name
 end
 
---- Every indexed container of a station, sorted.
+--- The station a container belongs to, by id, or nil.
+function ST.kind_id(name)
+    local record = load_index()[name]
+    return record and record.kind
+end
+
+local function unindex(name)
+    load_index()[name] = nil
+    game.storage.set("station:" .. name, nil)
+end
+
+--- Every indexed container of a station, sorted, with where it is:
+--- `{ { name, pos } }`.
 function ST.indexed(kind_id)
     local out = {}
-    for _, key in ipairs(game.storage.keys()) do
-        local name = string.match(key, "^station:(.+)$")
-        if name and game.storage.get(key) == kind_id then out[#out + 1] = name end
+    local idx = load_index()
+    for _, name in ipairs(U.sorted_keys(idx)) do
+        local r = idx[name]
+        if r.kind == kind_id then
+            out[#out + 1] = { name = name, pos = { x = r.x, y = r.y, z = r.z,
+                domain = r.domain ~= "overworld" and r.domain or nil } }
+        end
     end
-    table.sort(out)
     return out
 end
 
@@ -115,7 +169,8 @@ local function draw(player, first)
     if not o then return end
     local tree
     if o.station then
-        tree, o.page = S.station(player, o.station, o.container, o.ids, o.page, o.note)
+        local status = o.station.heat and tdc.furnace and tdc.furnace.status(o.container) or nil
+        tree, o.page = S.station(player, o.station, o.container, o.ids, o.page, o.note, status)
     else
         tree = S.chest(o.container, o.size)
     end
@@ -123,11 +178,23 @@ local function draw(player, first)
     if first then game.show_dialog(spec) else game.update_dialog(spec) end
 end
 
+--- Redraws the screen of whoever has a container open.
+function ST.redraw(container)
+    for _, player in ipairs(U.sorted_keys(open)) do
+        if open[player].container == container then draw(player, false) end
+    end
+end
+
 tdc.on_use(function(e)
     local kind = kind_of(e.material)
     if not kind then return nil end
     local pos = pos_of_use(e)
     local name = ensure(kind, pos)
+    -- A station that burns is lit with a striker, not opened.
+    if kind.station and kind.station.heat and tdc.furnace then
+        local lit = tdc.furnace.light(e, kind.station, name, pos)
+        if lit ~= nil then return lit end
+    end
     if not game.open_container(name, e.player) then
         return "Somebody is using that."
     end
@@ -148,7 +215,9 @@ tdc.on_dialog(FORM, function(e)
     end
     if e.kind == "pressed" and e.name then
         local index = tonumber(string.match(e.name, "^r(%d+)$"))
-        if index and o.ids[index] then
+        if index and o.ids[index] and o.station.heat then
+            o.note = "It fires what is put in it, while it burns."
+        elseif index and o.ids[index] then
             local ok, why = R.perform(e.player, o.ids[index], o.container)
             o.note = ok and ("Made " .. S.recipe_text(R.recipe(o.ids[index])) .. ".") or ("Cannot: " .. why .. ".")
         elseif e.name == "prev" then
@@ -192,7 +261,8 @@ tdc.on_dug(function(e)
         game.give(e.player, { material = stack.material, units = stack.units, shape = stack.shape,
             detail = stack.detail })
     end
-    game.storage.set("station:" .. name, nil)
+    unindex(name)
+    if tdc.furnace then tdc.furnace.forget(name) end
 end)
 
 -- By hand: the Craft tab, or a dialog of its own ------------------------------------------

@@ -99,6 +99,9 @@ C.tools = {
     iron_knife             = { name = "Iron knife", type = "knife", tier = 2, uses = 300, weapon = 6 },
     copper_pot             = { name = "Copper pot", type = "pot", tier = 1, uses = 0 },
     fire_striker           = { name = "Fire striker", type = "striker", tier = 0, uses = 20 },
+    -- Kiln tools, found in its tool slot: a crucible holds a melt and comes
+    -- back; a mould is cast into four times and cracks.
+    crucible               = { name = "Crucible", type = "crucible", tier = 1, uses = 0 },
 
     -- Farm tools, which Life's exports make work: a sickle reaps more of a
     -- ripe crop, a hoe tills.
@@ -182,6 +185,43 @@ C.worn_out = "Your %s has worn to nothing."
 -- Stations ---------------------------------------------------------------------
 
 C.chest_slots = 27
+
+-- Furnaces ---------------------------------------------------------------------
+--
+-- A station that burns (the kiln; the bloomery; another mod's alembic) is
+-- lit with a striker once fuel is in it, burns its fuel 27 units at a time,
+-- and while it burns makes whatever its contents and its heat allow. HEAT is
+-- a tier: 1 is red (wood), 2 orange (coal, charcoal), 3 white (charcoal
+-- blown with bellows, step 8).
+
+C.furnace_step = 20             -- furnaces are tended once a second
+
+-- The kiln's container: fuel, two inputs (copper and tin go in together),
+-- the crucible or mould, the output.
+C.kiln_slots = { fuel = 1, input = { 2, 3 }, tool = 4, output = 5 }
+
+-- What burns, how hot, and for how many ticks per 27 units. Names are
+-- this mod's, the world's (`world:`) or groups.
+C.fuels = {
+    { "#log", 1, 800 },
+    { "#plank", 1, 800 },
+    { "stick", 1, 800 },
+    { "world:coal", 2, 1800 },
+    { "charcoal", 2, 1200 },
+}
+
+-- What a kiln says of something it will not fire.
+C.kiln_refusals = {
+    iron_ore = "The ore glows and does nothing. Iron wants a bloomery.",
+    chromium_ore = "Nothing you have burns hot enough.",
+}
+C.kiln_idle = "Nothing to be made of that here."
+
+-- Casting: bronze ingots a head takes, and the tools a head makes.
+C.heads = {
+    pick = 3, axe = 3, spade = 3, hammer = 2, sickle = 2, hoe = 2, chisel = 1, knife = 1,
+}
+C.mould_uses = 4                -- pours before a mould cracks
 
 -- Fire -------------------------------------------------------------------------
 --

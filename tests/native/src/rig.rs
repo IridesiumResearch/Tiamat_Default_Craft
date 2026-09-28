@@ -654,7 +654,7 @@ pub const WORLD_BLOCKS: &[&str] = &[
     "oak_log", "birch_log", "dead_log", "fir_log", "willow_log", "kapok_log", "juniper_log", "apple_log",
     "cherry_log", "mangrove_log", "acacia_log", "redwood_log", "ironwood_log", "stone", "granite", "dirt",
     "grass", "sand", "gravel", "wet_clay", "dry_clay", "cobbles", "bramble", "flint", "copper_ore",
-    "iron_ore", "tin_ore", "coal", "obsidian", "water", "slate", "calcite", "dark_basalt", "tall_grass",
+    "iron_ore", "tin_ore", "coal", "obsidian", "water", "gold_ore", "silver_ore", "lead_ore", "slate", "calcite", "dark_basalt", "tall_grass",
     "moss",
 ];
 
@@ -960,6 +960,33 @@ impl Rig {
             let _ = self.vm.action(&tiamat_core::script::ActionEvent { player, id: id.into(), pressed });
         }
         self.assert_healthy(id);
+    }
+
+    /// The last tree shown to a player.
+    pub fn screen(&self, player: [u8; 32]) -> tiamat_core::ui::Tree {
+        let who = hex(player);
+        self.dialogs.shown.lock().unwrap().iter().rev().find(|d| d.player == who).expect("a screen").tree.clone()
+    }
+
+    /// Presses the button labelled `text` on the player's screen, turning the
+    /// page until it shows. Panics if no page has it.
+    pub fn press_labelled(&mut self, player: [u8; 32], form: &str, text: &str) {
+        for _ in 0..20 {
+            let tree = self.screen(player);
+            let hit = tree.nodes.iter().find(|n| matches!(&n.widget, tiamat_core::ui::Widget::Button { text: t } if t == text));
+            if let Some(node) = hit {
+                let name = node.name.clone();
+                self.press(player, form, &name);
+                return;
+            }
+            self.press(player, form, "next");
+        }
+        panic!("no button {text:?} on any page");
+    }
+
+    /// Whether the player's screen says something.
+    pub fn screen_says(&self, player: [u8; 32], text: &str) -> bool {
+        format!("{:?}", self.screen(player)).contains(text)
     }
 
     /// The form of the last dialog shown to anybody.

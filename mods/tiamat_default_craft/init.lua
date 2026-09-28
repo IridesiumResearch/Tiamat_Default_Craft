@@ -36,6 +36,7 @@ tdc.fire = load("fire")           -- campfires: lighting, fuel, burning out, fir
 load("recipes")                   -- this mod's own stations and recipes, into the registry
 tdc.screens = load("screens")     -- dialog trees, in Tiamat Default UI's look when present
 tdc.stations = load("stations")   -- stations and chests in the world; the Craft tab
+tdc.furnace = load("furnace")     -- stations that burn: heat, fuel, jobs
 load("commands")                  -- chat words: listing and crafting by hand
 
 -- What other mods may call. One export per mod, built whole first.

@@ -61,9 +61,10 @@ assert(craft.register("nonsense") == nil)
 assert(craft.register_station{ id = "schism_magic:bad", slots = { input = 1 } } == nil)
 assert(craft.register_station{ id = "schism_magic:bad", slots = { input = 1, output = 2, sideways = 3 } } == nil)
 assert(craft.register_station{ id = "schism_magic:bad" } == nil)
+assert(craft.register_station{ id = "schism_magic:bad", heat = true, slots = { input = 1, output = 2 } } == nil)
 assert(craft.register_station{ id = "hand", inventory = true } == nil)
 assert(craft.register_station{ id = "schism_magic:alembic", name = "Alembic", block = "schism_magic:alembic",
-    slots = { input = { 1, 2 }, tool = 3, output = 4 }, heat = true } == true)
+    slots = { input = { 1, 2 }, tool = 3, output = 4, fuel = 5 }, heat = true } == true)
 assert(craft.register_group("#log", { "schism_magic:dreamwood" }) == true)
 assert(craft.register_group("log", { "schism_magic:dreamwood" }) == nil)
 assert(craft.register_group("#log", { "dreamwood" }) == nil)
@@ -112,7 +113,7 @@ game.register_on_chat(function(e)
             game.chat_to(e.player, "no: " .. tostring(out))
         end
     elseif word == "box" then
-        game.make_container("magic:alembic", 4)
+        game.make_container("magic:alembic", 5)
         game.chat_to(e.player, "box")
     elseif word == "late" then
         local ok, why = craft.register{ id = "schism_magic:late", station = "hand", inputs = herb, outputs = tea }
@@ -135,6 +136,7 @@ fn main() {
     fire_alone();
     stations();
     craft_tab();
+    kiln();
     println!("craft native check: all passed");
 }
 
@@ -147,7 +149,24 @@ fn load_alone() {
     assert_eq!(r.said(), "cannot make Sticks: nothing registered is #log");
     r.say("recipes");
     assert_eq!(r.heard(PLAYER), vec!["ready: nothing", "lacking something: cord, fire_striker, stick, tinder, unlit_campfire, workbench"]);
+    // Every thing this mod registers has its picture: the world's rocks are
+    // absent here, so do the check where they are too (registry()).
+    textures_present(&r);
     println!("load alone: ok");
+}
+
+/// Every block and item this mod registered has `textures/<id>.png`.
+fn textures_present(r: &Rig) {
+    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods").join(MOD).join("textures");
+    let mut missing: Vec<String> = r
+        .materials
+        .keys()
+        .filter_map(|id| id.strip_prefix(&format!("{MOD}:")))
+        .filter(|short| !dir.join(format!("{short}.png")).exists())
+        .map(str::to_owned)
+        .collect();
+    missing.sort();
+    assert!(missing.is_empty(), "no texture for {missing:?}");
 }
 
 fn registry() {
@@ -158,6 +177,7 @@ fn registry() {
     });
     r.join(PLAYER);
     r.tick(1);
+    textures_present(&r);
 
     // A hand recipe from the world's logs, through the chat word.
     r.give(PLAYER, "tiamat_default_world:oak_log", 27);
@@ -598,7 +618,7 @@ fn stations() {
     r.place(PLAYER, 5, 64, 5, "workbench").unwrap();
     let bench = "tiamat_default_craft:workbench:5,64,5";
     assert!(r.boxes.exists(bench));
-    assert!(r.storage.dump().contains(&format!("station:{bench}=Text(\"workbench\")")));
+    assert!(r.storage.dump().contains(&format!("station:{bench}=Text(\"domain=overworld;kind=workbench;x=5;y=64;z=5\")")), "{}", r.storage.dump());
 
     // Used: the screen, and the container lent to this player alone.
     assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
@@ -611,14 +631,13 @@ fn stations() {
     r.huds.operators.lock().unwrap().push(PLAYER);
     r.say("toolkit");
     r.boxes.set(bench, 1, Some(r.stack("tiamat_default_world:oak_log", 27)));
-    r.press(PLAYER, "station", "r7");
+    r.press_labelled(PLAYER, "station", "Planks x4");
     assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(4 * 27), "four planks out");
     assert_eq!(r.boxes.get(bench, 1), None);
     let wedge = r.details(PLAYER, "wooden_wedge")[0].trim_start_matches("t=").to_owned();
     assert!(r.storage.dump().contains(&format!("wear:{wedge}=Number(1.0)")), "the wedge wore");
-    r.press(PLAYER, "station", "r7");
-    let shown = r.dialogs.shown.lock().unwrap().last().cloned().unwrap();
-    assert!(format!("{:?}", shown.tree).contains("Cannot: missing log."), "the screen says why");
+    r.press_labelled(PLAYER, "station", "Planks x4");
+    assert!(r.screen_says(PLAYER, "Cannot: missing log."), "the screen says why");
 
     // Somebody else cannot dig it from under them; they can, and get the planks.
     assert_eq!(r.dig_complete_at(OTHER, 5, 64, 5), Err("Somebody is using that.".into()));
@@ -636,7 +655,7 @@ fn stations() {
     r.boxes.set(bench, 2, Some(r.stack("cord", 54)));
     r.boxes.set(bench, 10, None);
     assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
-    r.press(PLAYER, "station", "r1");
+    r.press_labelled(PLAYER, "station", "Chest");
     assert_eq!(r.boxes.get(bench, 10).map(|s| s.material), Some(r.material("chest")));
     r.close(PLAYER, "station");
 
@@ -669,9 +688,8 @@ fn stations() {
     assert_eq!(r.last_form(), "tiamat_default_craft:hand");
     fit::check("the hand dialog", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
     r.give(PLAYER, "tiamat_default_world:oak_log", 27);
-    // Hand recipes by id: the magic fixture's four, then cord, fire_striker, stick...
-    r.press(PLAYER, "hand", "r7");
-    assert!(format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree).contains("Made Sticks x4."));
+    r.press_labelled(PLAYER, "hand", "Sticks x4");
+    assert!(r.screen_says(PLAYER, "Made Sticks x4."));
     println!("stations: ok");
 }
 
@@ -687,4 +705,122 @@ fn craft_tab() {
     assert!(tree.contains("By hand"), "on the Craft tab");
     fit::check("the Craft tab", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
     println!("craft tab: ok");
+}
+
+/// The kiln: fired from clay, lit with a striker, charcoal at red heat,
+/// copper and bronze at orange with a crucible, heads cast until the mould
+/// cracks, iron refused, going out, and a head hafted into a pick.
+fn kiln() {
+    let mut r = Rig::new(Setup { world: true, life: true, ..Setup::default() });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    r.tick(1);
+    let striker = r.details(PLAYER, "fire_striker")[0].clone();
+    let crucible = r.details(PLAYER, "crucible")[0].clone();
+    let mould = r.details(PLAYER, "mould_pick")[0].clone();
+    let tool = |r: &Rig, id: &str, detail: &str| tiamat_core::inventory::Stack {
+        detail: Some(detail.into()),
+        ..r.stack(id, 27)
+    };
+
+    // Laid of clay, placed, and struck: no fuel, no fire.
+    r.give(PLAYER, "unfired_kiln", 27);
+    r.place(PLAYER, 20, 64, 20, "unfired_kiln").unwrap();
+    let k = "tiamat_default_craft:kiln:20,64,20";
+    assert!(r.boxes.exists(k));
+    r.hold(PLAYER, "fire_striker", Some(&striker));
+    assert_eq!(r.use_at(PLAYER, 20, 64, 20).as_deref(), Some("It wants fuel first."));
+
+    // Logs in the bottom: it lights, and the first fire makes it a kiln.
+    r.boxes.set(k, 1, Some(r.stack("tiamat_default_world:oak_log", 27 * 4)));
+    assert_eq!(r.use_at(PLAYER, 20, 64, 20).as_deref(), Some(""));
+    assert_eq!(r.block_name(20, 64, 20), "tiamat_default_craft:kiln_lit");
+    assert!(r.storage.dump().contains(&format!("first:{}:fire:kiln=", hex(PLAYER))));
+    assert_eq!(r.use_at(PLAYER, 20, 64, 20).as_deref(), Some("It is burning already."));
+
+    // A log in the work slot at red heat is charcoal in a minute.
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    r.tick(1180);
+    assert_eq!(r.boxes.get(k, 5), None, "not yet");
+    r.tick(60);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("charcoal"), 27)));
+
+    // Ore at red heat does nothing: copper wants orange.
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:copper_ore", 27)));
+    r.boxes.set(k, 4, Some(tool(&r, "crucible", &crucible)));
+    r.boxes.set(k, 5, None);
+    r.tick(1000);
+    assert_eq!(r.boxes.get(k, 5), None, "red heat does not melt copper");
+
+    // It goes out when the fuel is gone, and shows it.
+    r.tick(3200);
+    assert_eq!(r.block_name(20, 64, 20), "tiamat_default_craft:kiln", "out");
+
+    // Coal is orange heat: copper in a crucible is an ingot; the crucible stays.
+    r.boxes.set(k, 1, Some(r.stack("tiamat_default_world:coal", 27 * 9)));
+    assert_eq!(r.use_at(PLAYER, 20, 64, 20).as_deref(), Some(""));
+    r.tick(940);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("copper_ingot"), 27)));
+    assert_eq!(r.boxes.get(k, 4), Some(tool(&r, "crucible", &crucible)), "the crucible comes back");
+    assert!(r.storage.dump().contains(&format!("first:{}:smelt:copper=", hex(PLAYER))));
+
+    // Bronze: nine of copper, one of tin, ten out.
+    r.boxes.set(k, 2, Some(r.stack("copper_ingot", 27 * 9)));
+    r.boxes.set(k, 3, Some(r.stack("tin_ingot", 27)));
+    r.boxes.set(k, 5, None);
+    r.tick(940);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("bronze_ingot"), 270)));
+    assert_eq!(r.boxes.get(k, 2), None);
+    assert_eq!(r.boxes.get(k, 3), None);
+
+    // Casting: three ingots and a pick mould are a head; four pours crack it.
+    r.boxes.set(k, 2, Some(r.stack("bronze_ingot", 27 * 12)));
+    r.boxes.set(k, 4, Some(tool(&r, "mould_pick", &mould)));
+    r.boxes.set(k, 5, None);
+    r.tick(640);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("bronze_pick_head"), 27)));
+    assert!(r.boxes.get(k, 4).is_some(), "a mould survives a pour");
+    r.tick(640 * 3);
+    assert_eq!(r.boxes.get(k, 5).map(|s| s.units), Some(4 * 27), "four heads");
+    assert_eq!(r.boxes.get(k, 4), None, "and the mould has cracked");
+
+    // Iron ore: the kiln says what it wants.
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:iron_ore", 27)));
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.use_at(PLAYER, 20, 64, 20).as_deref(), Some(""));
+    fit::check("the kiln", &r.screen(PLAYER));
+    r.tick(40);
+    assert!(r.screen_says(PLAYER, "The ore glows and does nothing. Iron wants a bloomery."));
+    assert!(r.screen_says(PLAYER, "Orange heat"));
+    r.close(PLAYER, "station");
+
+    // Hafted at the workbench: the head and a haft are a bronze pick, with its serial.
+    let heads = r.boxes.get(k, 5).unwrap();
+    r.give(PLAYER, "workbench", 27);
+    r.place(PLAYER, 22, 64, 20, "workbench").unwrap();
+    let b = "tiamat_default_craft:workbench:22,64,20";
+    r.boxes.set(b, 1, Some(heads));
+    r.boxes.set(b, 2, Some(r.stack("haft", 27)));
+    assert_eq!(r.use_at(PLAYER, 22, 64, 20).as_deref(), Some(""));
+    r.press_labelled(PLAYER, "station", "Bronze pick");
+    let made = r.boxes.get(b, 10).expect("a pick");
+    assert_eq!(made.material, r.material("bronze_pick"));
+    assert!(made.detail.as_deref().is_some_and(|d| d.starts_with("t=")), "minted with a serial");
+    r.close(PLAYER, "station");
+
+    // Life hears the kiln is a heat source.
+    r.say("life heard heat tiamat_default_craft:kiln_lit 0.6");
+    assert_eq!(r.said(), "yes");
+
+    // A restart in the middle of a job: it carries on.
+    r.boxes.set(k, 2, Some(r.stack("tiamat_default_world:gold_ore", 27)));
+    r.boxes.set(k, 4, Some(tool(&r, "crucible", &crucible)));
+    r.boxes.set(k, 5, None);
+    r.tick(400);
+    let mut r = Rig::new(Setup { world: true, life: true, restart: Some(r.saved()), ..Setup::default() });
+    r.join(PLAYER);
+    r.tick(560);
+    assert_eq!(r.boxes.get(k, 5).map(|s| (s.material, s.units)), Some((r.material("gold_ingot"), 27)));
+    println!("kiln: ok");
 }

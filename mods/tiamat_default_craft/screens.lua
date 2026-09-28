@@ -107,7 +107,12 @@ end
 
 --- A crafting station's screen: its input grid, its output, its recipes,
 --- and the player's own inventory below.
-function S.station(player, station, container, ids, page, note)
+--- A bar, `permille` full, labelled.
+function S.bar(text, permille)
+    return S.box("row", { S.hint(text), { type = "progress", permille = math.max(0, math.min(1000, permille)) } }, 6)
+end
+
+function S.station(player, station, container, ids, page, note, status)
     local list
     list, page = S.recipe_list(player, ids, page, container)
     local input = station.slots.input
@@ -122,6 +127,11 @@ function S.station(player, station, container, ids, page, note)
     if station.slots.fuel then
         middle[#middle + 1] = S.label("Fuel")
         middle[#middle + 1] = S.grid(container, station.slots.fuel[1], #station.slots.fuel, 1)
+    end
+    if status then
+        middle[#middle + 1] = S.bar(status.heat_text, status.burn)
+        middle[#middle + 1] = S.bar(status.job_text, status.progress)
+        note = note or status.note
     end
     local tree = S.box("column", {
         S.box("row", { S.box("column", left), S.box("column", middle), list }, 16),

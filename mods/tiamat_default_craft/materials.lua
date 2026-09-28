@@ -28,6 +28,20 @@ item("tinder", "Tinder", "Dry grass, needles and moss, rubbed to fluff. It catch
 item("cord", "Cord", "Bramble cane, stripped and twisted. It binds a haft and hangs a lid.")
 item("haft", "Haft", "A straight handle, bound. A head goes on it.")
 
+-- The kiln's: fuel, ceramics, metal.
+item("charcoal", "Charcoal", "Wood burned without air. It burns hotter than the log it was.")
+item("fired_clay", "Fired clay", "Clay the kiln has made stone of.")
+item("unfired_crucible", "Unfired crucible", "A clay pot, shaped. Fire it in the kiln.")
+for _, metal in ipairs({ "copper", "tin", "bronze", "silver", "gold", "lead" }) do
+    local name = string.upper(string.sub(metal, 1, 1)) .. string.sub(metal, 2)
+    item(metal .. "_ingot", name .. " ingot", nil)
+end
+for _, head in ipairs(tdc.util.sorted_keys(tdc.config.heads)) do
+    item("unfired_mould_" .. head, "Unfired " .. head .. " mould", "Clay pressed round a pattern. Fire it in the kiln.")
+    item("bronze_" .. head .. "_head", "Bronze " .. head .. " head", "Cast. It wants a haft at the workbench.")
+end
+item("unfired_mould_pot", "Unfired pot mould", "Clay pressed round a pattern. Fire it in the kiln.")
+
 --- Every block this mod registered, by short id: its numeric material.
 M.blocks = {}
 
@@ -54,6 +68,25 @@ block("chest", {
     name = "Chest",
     description = "Planks pegged into a box. Use it to open it; dig it to take it away, contents and all.",
     hardness = 1.0,
+})
+
+-- The kiln (furnace.lua): laid of wet clay and cobbles, fired once to be a
+-- kiln, lit with a striker to burn.
+block("unfired_kiln", {
+    name = "Unfired kiln",
+    description = "Clay and cobbles, laid. Put fuel in it and strike it: the first fire makes it a kiln.",
+    hardness = 0.8,
+})
+block("kiln", {
+    name = "Kiln",
+    description = "Fuel in the bottom, work in the middle. Strike it to light it.",
+    hardness = 1.5,
+})
+block("kiln_lit", {
+    name = "Kiln (burning)",
+    description = "Burning.",
+    hardness = 1.5,
+    light_emit = { r = 12, g = 6, b = 1 },
 })
 
 -- Fire (fire.lua). The lit fire is Life's campfire when Life is here, so
