@@ -147,6 +147,15 @@ each.
 
 ## Tiamat Default UI
 
+### The interface's C1 and C2, its asks of this mod: BUILT 2026-09-29
+
+- **C1, a recipe for the shape crafter:** at the workbench, four planks and
+  four cobbles, both within reach of the wood tier. The output is the id the
+  interface exports as `shape_crafter`, so the recipe is only there when the
+  interface is (`recipes.lua`).
+- **C2, the hand tab beside Inventory:** the Craft tab is `order = 20`, the
+  place the interface's own Crafting tab had (`stations.lua`).
+
 ### U3. The carved mask from the shape crafter (2026-09-26): WITHDRAWN 2026-09-28
 
 The glyph registry (`register_glyph`, `glyph_of`) is built without it: a

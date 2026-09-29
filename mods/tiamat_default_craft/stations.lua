@@ -360,7 +360,8 @@ if S.ui then
     tab = S.ui.add_tab{
         id = HAND_TAB,
         label = "Craft",
-        order = 25,
+        -- Beside Inventory, where the interface's own Crafting tab was (its ask C2).
+        order = 20,
         build = function(player) return hand_tree(player) end,
         on_event = function(player, event)
             if event.kind == "pressed" then

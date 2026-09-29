@@ -267,6 +267,18 @@ R.own{
     outputs = { { M.id("chest"), count = 1 } },
 }
 
+-- The interface's shape crafter (its ask C1): the building table, so early,
+-- from what the wood tier already has. The interface cannot register it
+-- itself, since this mod lists it as a dependency and not the other way.
+local UI = game.exports("tiamat_default_ui")
+if UI and type(UI.shape_crafter) == "string" then
+    R.own{
+        id = "shape_crafter", station = "workbench", name = "Shape crafter",
+        inputs = { { "#plank", count = 4 }, { U.world("cobbles"), count = 4 } },
+        outputs = { { UI.shape_crafter, count = 1 } },
+    }
+end
+
 -- On a campfire: Life's food, cooked; clay dried.
 
 local LIFE = "tiamat_default_life:"

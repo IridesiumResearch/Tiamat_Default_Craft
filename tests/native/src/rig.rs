@@ -1072,7 +1072,7 @@ impl Rig {
     }
 
     pub fn press(&mut self, player: [u8; 32], form: &str, name: &str) {
-        self.dialog(player, form, tiamat_core::proto::DialogEvent::Pressed { name: name.into() });
+        self.dialog(player, form, tiamat_core::proto::DialogEvent::Pressed { name: name.into(), click: Default::default() });
     }
 
     /// A dialog closed, and the container it lent put back, as the engine does.
