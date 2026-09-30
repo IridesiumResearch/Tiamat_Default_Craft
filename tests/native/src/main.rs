@@ -129,6 +129,8 @@ const PROGRESS_STANDIN: &str = include_str!("../fixtures/progress.lua");
 
 /// A stand-in for the tech mod (fixtures/tech.lua).
 const TECH: &str = include_str!("../fixtures/tech.lua");
+/// Science's and magic's asks of Craft, as they use them (fixtures/frames.lua).
+const FRAMES: &str = include_str!("../fixtures/frames.lua");
 
 fn main() {
     load_alone();
@@ -148,6 +150,7 @@ fn main() {
     wear_on_the_tool();
     anvil_offhand();
     life_goods_and_iron_anvil();
+    sibling_asks();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -1521,4 +1524,130 @@ fn life_goods_and_iron_anvil() {
     }
     assert_eq!(r.boxes.get(ia, 2).map(|s| s.material), Some(r.material("iron_bar")), "two blows on iron");
     println!("life's goods and the iron anvil: ok");
+}
+
+/// What science and magic asked of Craft: a frame run by power, a boost that
+/// needs it, unattended perform, glyphs as ingredients and tools, a fire lit
+/// without a striker, progress added from outside, a long station catching
+/// up on the time it was unloaded, and the container on_crafted hears.
+fn sibling_asks() {
+    let mut r = Rig::new(Setup {
+        world: true,
+        fixtures: vec![("schism_frames".into(), FRAMES.into())],
+        ..Setup::default()
+    });
+    r.join(PLAYER);
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.tick(1);
+    let ask = |r: &mut Rig, text: &str| {
+        r.say(text);
+        r.said()
+    };
+
+    // C-S1: a frame works while its mod says it is running, at that speed.
+    r.give(PLAYER, "schism_frames:frame", 27);
+    r.place(PLAYER, 30, 64, 30, "schism_frames:frame").unwrap();
+    let f = "tiamat_default_craft:schism_frames:frame:30,64,30";
+    r.boxes.set(f, 1, Some(r.stack("stick", 27 * 3)));
+    r.boxes.set(f, 2, Some(r.stack("schism_frames:saw", 27)));
+    r.tick(400);
+    assert_eq!(r.boxes.get(f, 3), None, "unpowered, it stands");
+    ask(&mut r, "f power 100");
+    r.tick(220);
+    assert_eq!(r.boxes.get(f, 3).map(|s| s.units), Some(27), "two hundred ticks at full speed");
+    ask(&mut r, "f power 200");
+    r.tick(120);
+    assert_eq!(r.boxes.get(f, 3).map(|s| s.units), Some(54), "and half that at double");
+    r.hold_nothing(PLAYER);
+    assert_eq!(r.use_at(PLAYER, 30, 64, 30).as_deref(), Some(""));
+    r.tick(20);
+    assert!(r.screen_says(PLAYER, "Running at 200%"));
+    r.close(PLAYER, "station");
+
+    // C-S7: unattended, the frame's tools are its own; attended, the pack's.
+    ask(&mut r, "f power 0");
+    r.boxes.set(f, 2, None);
+    r.give(PLAYER, "schism_frames:saw", 27);
+    let refused = ask(&mut r, &format!("f perform schism_frames:gear {f} alone"));
+    assert!(refused.starts_with("nil needs"), "{refused}");
+    assert_eq!(ask(&mut r, &format!("f perform schism_frames:gear {f}")), "true ");
+    assert_eq!(r.boxes.get(f, 3).map(|s| s.units), Some(81));
+    r.boxes.set(f, 1, Some(r.stack("stick", 27)));
+    ask(&mut r, "f power 100");
+    r.tick(400);
+    assert_eq!(r.boxes.get(f, 3).map(|s| s.units), Some(81), "a running frame does not reach into a pack");
+    ask(&mut r, "f power 0");
+
+    // C-M9: on_crafted hears where a thing was made.
+    assert!(ask(&mut r, "f crafted").contains(&format!("schism_frames:gear@{f}")));
+
+    // C-S3 / C-M1: carved to the glyph, and only so, it is an ingredient.
+    let carved = |r: &Rig, units: u32| tiamat_core::inventory::Stack {
+        shape: tiamat_core::inventory::Shape::new(0x7),
+        ..r.stack("schism_frames:plain", units)
+    };
+    r.inventory.put(PLAYER, carved(&r, 3));
+    r.give(PLAYER, "schism_frames:plain", 27);
+    let one = ask(&mut r, "f make schism_frames:relic");
+    assert!(one.starts_with("nil missing"), "one carving of two, and loose stone: {one}");
+    r.inventory.put(PLAYER, carved(&r, 3));
+    assert_eq!(ask(&mut r, "f make schism_frames:relic"), "true ");
+    assert_eq!(r.units(PLAYER, "schism_frames:relic"), 27);
+    let plain = r.material("schism_frames:plain");
+    assert!(r.inventory.stacks(PLAYER).iter().all(|s| s.shape.is_none() || s.material != plain), "both carvings spent");
+    assert_eq!(r.units(PLAYER, "schism_frames:plain"), 27, "the loose stone left alone");
+    // ...and a tool, found and kept.
+    r.give(PLAYER, "stick", 27);
+    let none = ask(&mut r, "f make schism_frames:blessed_gear");
+    assert!(none.starts_with("nil needs"), "{none}");
+    r.inventory.put(PLAYER, carved(&r, 3));
+    assert_eq!(ask(&mut r, "f make schism_frames:blessed_gear"), "true ");
+    assert!(r.inventory.stacks(PLAYER).iter().any(|s| s.shape.is_some()), "the carving is a tool, not spent");
+
+    // C-S6: a fire lit without a striker.
+    r.put(50, 64, 50, "unlit_campfire");
+    assert_eq!(ask(&mut r, "f ignite 50 64 50"), "true nil");
+    assert!(r.block_name(50, 64, 50).ends_with("campfire_lit"), "{}", r.block_name(50, 64, 50));
+    assert_eq!(ask(&mut r, "f ignite 50 64 50"), "nil It is burning already.");
+    assert!(ask(&mut r, "f ignite 51 64 50").starts_with("nil "));
+    r.give(PLAYER, "schism_frames:athanor", 27);
+    r.place(PLAYER, 40, 64, 40, "schism_frames:athanor").unwrap();
+    let a = "tiamat_default_craft:schism_frames:athanor:40,64,40";
+    assert_eq!(ask(&mut r, "f ignite 40 64 40"), "nil It wants fuel first.");
+    r.boxes.set(a, 1, Some(r.stack("tiamat_default_world:oak_log", 27 * 20)));
+    r.boxes.set(a, 2, Some(r.stack("schism_frames:gear", 27 * 2)));
+    assert_eq!(ask(&mut r, "f ignite 40 64 40"), "true nil");
+    assert_eq!(r.block_name(40, 64, 40), "schism_frames:athanor_lit");
+
+    // C-M6: progress added from outside.
+    assert_eq!(ask(&mut r, "f addp nonsense 100"), "false");
+    r.tick(40);
+    assert_eq!(ask(&mut r, &format!("f addp {a} 4000")), "true");
+    r.tick(40);
+    assert_eq!(r.boxes.get(a, 3).map(|s| s.units), Some(27), "a sigil's speed-up");
+
+    // C-M5: a long station unloaded works the time it missed when it is back.
+    r.tick(40);
+    r.world.absent.lock().unwrap().insert((40, 64, 40));
+    r.tick(4200);
+    assert_eq!(r.boxes.get(a, 3).map(|s| s.units), Some(27), "nothing while it is away");
+    r.world.absent.lock().unwrap().clear();
+    r.tick(40);
+    assert_eq!(r.boxes.get(a, 3).map(|s| s.units), Some(54), "the missed time, worked on its return");
+
+    // C-S2: the blower boosts only while powered.
+    r.give(PLAYER, "schism_frames:engine_furnace", 27);
+    r.place(PLAYER, 44, 64, 40, "schism_frames:engine_furnace").unwrap();
+    let e = "tiamat_default_craft:schism_frames:engine:44,64,40";
+    r.boxes.set(e, 1, Some(r.stack("tiamat_default_world:oak_log", 27 * 4)));
+    r.boxes.set(e, 2, Some(r.stack("schism_frames:gear", 27)));
+    r.boxes.set(e, 3, Some(r.stack("schism_frames:blower", 27)));
+    assert_eq!(ask(&mut r, "f ignite 44 64 40"), "true nil");
+    r.tick(300);
+    assert_eq!(r.boxes.get(e, 4), None, "a blower with no power is a thing in a slot");
+    ask(&mut r, "f blow on");
+    r.tick(160);
+    assert_eq!(r.boxes.get(e, 4).map(|s| s.units), Some(27), "powered, it blasts");
+    r.assert_healthy("sibling asks");
+    println!("sibling asks: ok");
 }

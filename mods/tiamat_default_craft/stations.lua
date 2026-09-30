@@ -209,6 +209,8 @@ local function draw(player, first)
             status = tdc.furnace.status(o.container)
         elseif o.station.id == "campfire" and tdc.cooking then
             status = tdc.cooking.status(o.container, o.pos)
+        elseif o.station.runs and tdc.runs then
+            status = tdc.runs.status(o.container)
         elseif o.station.forge and tdc.anvil then
             status = tdc.anvil.status(o.container)
         end

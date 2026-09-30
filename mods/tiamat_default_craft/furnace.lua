@@ -26,7 +26,11 @@
 -- # State
 --
 -- One storage string per furnace, `furnace:<container>`, rewritten once a
--- second while it burns. A furnace in a chunk that is not loaded is paused.
+-- second while it burns. A furnace in a chunk that is not loaded is paused —
+-- unless its station is `long` (an athanor, whose work is weeks), which is
+-- given the time it missed when it is next loaded, as far as its fuel goes.
+-- That time is this mod's own clock, `clock` in storage: the ticks the world
+-- has run, which the engine does not keep.
 
 local C = tdc.config
 local U = tdc.util
@@ -60,6 +64,7 @@ local function state(name)
     s.heat = math.type(s.heat) == "integer" and s.heat or 0
     s.fuel_heat = math.type(s.fuel_heat) == "integer" and s.fuel_heat or nil
     s.progress = math.type(s.progress) == "integer" and s.progress or 0
+    s.at = math.type(s.at) == "integer" and s.at or nil
     if type(s.job) ~= "string" or s.job == "" then s.job = nil end
     if type(s.by) ~= "string" or s.by == "" then s.by = nil end
     states[name] = s
@@ -71,7 +76,7 @@ local function save(name)
     if not s then return end
     game.storage.set("furnace:" .. name, U.encode{
         lit = s.lit, burn = s.burn, full = s.full, heat = s.heat, fuel_heat = s.fuel_heat or 0, progress = s.progress,
-        job = s.job or "", by = s.by or "",
+        job = s.job or "", by = s.by or "", at = s.at or 0,
     })
 end
 
@@ -120,7 +125,14 @@ local function boosted(station, name)
     for _, slot in ipairs(station.slots.tool) do
         local stack = in_slot(name, slot)
         local id = stack and game.block_of(stack.material)
-        if id and (id == station.boost.tool or R.in_group(station.boost.tool, id)) then return true end
+        if id and (id == station.boost.tool or R.in_group(station.boost.tool, id)) then
+            -- The boost's own say, when it has one: a callback of the mod
+            -- that registered the station, so only `true` is a yes (a
+            -- faulted one answers nil).
+            if station.boost.when == nil then return true end
+            local ok, yes = pcall(station.boost.when, name)
+            return ok and yes == true
+        end
     end
     return false
 end
@@ -131,6 +143,13 @@ local function heat_of(station, name, fuel_heat)
     return fuel_heat
 end
 
+--- How long 27 units of a fuel burn at a station for the player who lit
+--- it: the fuel's ticks, lengthened by their `craft.fuel_percent` (a thrifty
+--- fire, at every station a player lit: Magic's C-M8).
+local function burn_ticks(station, s, ticks)
+    return math.max(1, ticks * (100 + R.effect(s.by, "craft.fuel_percent")) // 100)
+end
+
 --- Burns the next 27 units of fuel. Answers whether there was any.
 local function stoke(station, name, s)
     local fuel = next_fuel(station, name)
@@ -138,12 +157,8 @@ local function stoke(station, name, s)
     if game.container_take(name, { material = fuel.material, units = U.UNITS, slot = fuel.slot }) < U.UNITS then
         return false
     end
-    local ticks = fuel.ticks
-    if station.id == "kiln" then
-        ticks = ticks * (100 + R.effect(s.by, "craft.fuel_percent")) // 100
-    end
-    ticks = math.max(1, ticks)
-    s.burn, s.full, s.fuel_heat = ticks, ticks, fuel.heat
+    s.burn = burn_ticks(station, s, fuel.ticks)
+    s.full, s.fuel_heat = s.burn, fuel.heat
     s.heat = heat_of(station, name, fuel.heat)
     return true
 end
@@ -166,19 +181,68 @@ local function choose(station, name, s)
     return nil
 end
 
+-- This mod's clock: ticks the world has run, kept in storage so a long
+-- station knows how long it was away.
+local clock = nil
+local function now()
+    if clock == nil then clock = U.stored_int("clock") end
+    return clock
+end
+
+--- Goes out: no fuel left.
+local function go_out(station, name, pos, s)
+    s.lit, s.burn, s.full, s.heat, s.job, s.progress = 0, 0, 0, 0, nil, 0
+    swap(station, pos, false)
+    save(name)
+    ST.redraw(name)
+end
+
+--- The time a long station missed while it was not loaded, `span` ticks,
+--- worked through in pieces: each as long as the fuel burning now or the
+--- job's remaining ticks, whichever ends first. Stops when the fuel does.
+--- Answers false if it went out.
+local function catch_up(station, name, pos, s, span)
+    local guard = 0
+    while span > 0 and guard < C.catch_up_pieces do
+        guard = guard + 1
+        if s.burn <= 0 and not stoke(station, name, s) then
+            go_out(station, name, pos, s)
+            return false
+        end
+        local piece = math.min(span, s.burn)
+        local job = choose(station, name, s)
+        if job ~= s.job then s.job, s.progress = job, 0 end
+        if job then
+            local total = R.ticks(s.by, R.recipe(job))
+            piece = math.min(piece, math.max(1, total - s.progress))
+            s.progress = s.progress + piece
+            if s.progress >= total then
+                s.progress = 0
+                R.perform(s.by, job, { container = name, heat = s.heat, unattended = true })
+            end
+        end
+        s.burn = s.burn - piece
+        span = span - piece
+    end
+    return true
+end
+
 --- One step of a furnace's life.
 local function tend(station, name, pos, step)
     local s = state(name)
     if s.lit ~= 1 then return end
     if game.get_block(pos) == nil then return end   -- not loaded: paused
+    if station.long then
+        local t = now()
+        local missed = s.at and (t - s.at - step) or 0
+        s.at = t
+        if missed > 0 and not catch_up(station, name, pos, s, missed) then return end
+    end
     s.burn = s.burn - step
     -- Bellows put in or taken out change the heat at once.
     if s.burn > 0 and s.fuel_heat then s.heat = heat_of(station, name, s.fuel_heat) end
     if s.burn <= 0 and not stoke(station, name, s) then
-        s.lit, s.burn, s.full, s.heat, s.job, s.progress = 0, 0, 0, 0, nil, 0
-        swap(station, pos, false)
-        save(name)
-        ST.redraw(name)
+        go_out(station, name, pos, s)
         return
     end
     local job = choose(station, name, s)
@@ -205,6 +269,8 @@ tdc.on_tick(function(dt)
     if elapsed < C.furnace_step then return end
     local step = elapsed
     elapsed = 0
+    clock = now() + step
+    game.storage.set("clock", clock)
     if not heat_stations then
         heat_stations = {}
         for _, id in ipairs(R.station_ids()) do
@@ -219,34 +285,52 @@ tdc.on_tick(function(dt)
     end
 end)
 
+--- Lights a furnace for `uuid`: `true`, or nil and why. What a striker
+--- does, and what another mod's fire-lighter does through `ignite` (a
+--- burning glass: Science's C-S6).
+function FU.ignite(station, name, pos, uuid)
+    local s = state(name)
+    if s.lit == 1 then return nil, "It is burning already." end
+    if not next_fuel(station, name) then
+        for _, slot in ipairs(station.slots.fuel) do
+            if in_slot(name, slot) and station.refuse_fuel then return nil, station.refuse_fuel end
+        end
+        return nil, "It wants fuel first."
+    end
+    local at = game.get_block(pos)
+    local was = at and at.material and game.block_of(at.material)
+    -- `by` first: the first fuel's ticks are the lighter's.
+    s.by = uuid
+    if not stoke(station, name, s) then return nil, "It wants fuel first." end
+    s.lit, s.job, s.progress, s.at = 1, nil, 0, now()
+    swap(station, pos, true)
+    save(name)
+    if uuid and was == game.mod_id .. ":unfired_kiln" then
+        R.first(uuid, "fire:kiln")
+    end
+    return true
+end
+
 --- The place control on a furnace: a striker lights it. Answers nil when
 --- the player is not holding one, so the screen opens instead.
 function FU.light(e, station, name, pos)
     local held = e.held and game.block_of(e.held.material)
     if held ~= STRIKER then return nil end
-    local s = state(name)
-    if s.lit == 1 then return "It is burning already." end
-    if not next_fuel(station, name) then
-        for _, slot in ipairs(station.slots.fuel) do
-            if in_slot(name, slot) and station.refuse_fuel then return station.refuse_fuel end
-        end
-        return "It wants fuel first."
-    end
-    local was = game.block_of(e.material)
-    if not stoke(station, name, s) then return "It wants fuel first." end
-    s.lit, s.by, s.job, s.progress = 1, e.player, nil, 0
-    -- Stoked before `by` was known: the first fuel's ticks again, for them.
-    if station.id == "kiln" then
-        s.burn = math.max(1, s.burn * (100 + R.effect(s.by, "craft.fuel_percent")) // 100)
-        s.full = s.burn
-    end
-    swap(station, pos, true)
-    save(name)
+    local ok, why = FU.ignite(station, name, pos, e.player)
+    if not ok then return why end
     tdc.tools.wear_held(e.player, 1)
-    if was == game.mod_id .. ":unfired_kiln" then
-        R.first(e.player, "fire:kiln")
-    end
     return ""
+end
+
+--- Adds `ticks` to the job a furnace is working: `true`, or false when it
+--- is not lit or has nothing in hand. The next step makes it if that is
+--- enough (Magic's C-M6, a sigil's speed-up).
+function FU.add_progress(name, ticks)
+    local s = states[name] or (game.storage.get("furnace:" .. name) and state(name))
+    if not (s and s.lit == 1 and s.job) then return false end
+    s.progress = s.progress + ticks
+    save(name)
+    return true
 end
 
 --- What a furnace's screen shows: two bars and a line.

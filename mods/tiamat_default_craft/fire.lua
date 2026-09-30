@@ -254,6 +254,24 @@ local function fuel_ticks(name)
     return nil
 end
 
+--- Lights the laid campfire at `pos` for `uuid`: `true`, or nil and why.
+--- What a striker does, and what another mod's fire-lighter does through
+--- `ignite` (Science's C-S6, a burning glass).
+function F.ignite(pos, uuid)
+    local at = game.get_block(pos)
+    local name = at and at.material and game.block_of(at.material)
+    if name == nil then return nil, "There is nothing there." end
+    if is_lit(name) then return nil, "It is burning already." end
+    if name ~= UNLIT then return nil, "There is no fire laid there." end
+    if not game.set_block(pos, F.LIT) then return nil, "It will not catch." end
+    local key = key_of(pos)
+    fires[key] = { x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld",
+        fuel = C.fire_fuel, heat = 0, by = uuid }
+    save(key)
+    if uuid then R.first(uuid, "fire:lit") end
+    return true
+end
+
 tdc.on_use(function(e)
     local name = game.block_of(e.material)
     local pos = { x = e.x // 3, y = e.y // 3, z = e.z // 3,
@@ -264,13 +282,9 @@ tdc.on_use(function(e)
         -- Without a striker the fire's box opens (cooking.lua), and says
         -- the fire wants striking.
         if held ~= STRIKER then return nil end
-        if not game.set_block(pos, F.LIT) then return "It will not catch." end
-        local key = key_of(pos)
-        fires[key] = { x = pos.x, y = pos.y, z = pos.z, domain = pos.domain or "overworld",
-            fuel = C.fire_fuel, heat = 0, by = e.player }
-        save(key)
+        local ok, why = F.ignite(pos, e.player)
+        if not ok then return why end
         T.wear_held(e.player, 1)
-        R.first(e.player, "fire:lit")
         return ""
     end
 

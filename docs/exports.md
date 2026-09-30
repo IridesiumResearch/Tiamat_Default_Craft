@@ -29,12 +29,13 @@ keep.
 | `version` | integer, `1` | Bumped only when a change would break a reader. |
 | `register(spec)` | `{ id, station, inputs, tools?, heat?, ticks?, outputs, requires?, name?, first?, conserve? }` | Registers a recipe. Answers `true`. |
 | `register_group(name, members)` | `"#log"`, `{ "mod:thing", ... }` | Adds to a group, making it if new. Additive: nobody can take a member out. |
-| `register_station(spec)` | `{ id, name?, slots?, heat?, fuels?, block?, lit_block?, inventory? }` | Registers a station: where recipes are made. |
+| `register_station(spec)` | `{ id, name?, slots?, heat?, fuels?, block?, lit_block?, inventory?, auto?, forge?, boost?, refuse_fuel?, runs?, long? }` | Registers a station: where recipes are made. |
 | `register_fuel(material, heat, ticks)` | a qualified id or a `#group`; a tier 1..9; ticks per 27 units | What burns, how hot and for how long. |
 | `recipes(station?)` | a station id, or nothing for all | Every recipe (or a station's), sorted by id, as `{ id, name, station, inputs = { { name, units } }, tools = { { name, wear } }, heat, ticks, outputs = { { name, units } }, requires }`. |
 | `can(uuid, recipe_id, container?)` | a UUID in hex; a recipe id; a container name | Whether that player could make it now: `true`, or `nil` and why. |
-| `perform(uuid, recipe_id, container?)` | the same | Makes it: `true` and `{ { material, units } }`, or `nil` and why, with everything taken put back. |
-| `register_glyph(mask, id)` | a 27-bit mask (`x + 3*y + 9*z`), not empty; a qualified id | A glyph: a carved shape that means something to both trees (Schism §7.1). One meaning a mask; while mods load. |
+| `perform(uuid, recipe_id, container?, opts?)` | the same; `{ unattended = true }` | Makes it: `true` and `{ { material, units } }`, or `nil` and why, with everything taken put back. Unattended, a container's tools must be in it (below). |
+| `add_progress(container, ticks)` | a container name; 1..72000 | Adds ticks to the job a lit heat station or a running station has in hand; the next step makes it if that is enough. Answers whether there was a job. |
+| `register_glyph(mask, id)` | a 27-bit mask (`x + 3*y + 9*z`), not empty; a qualified id | A glyph: a carved shape that means something to both trees (Schism §7.1). One meaning a mask, and the same mask with the same id again is `true`, so two mods that know a glyph may both say so; while mods load. |
 | `glyph_of(x)` | a stack (its `shape`) or a mask | The glyph it is carved to, or nil. A carved block is a stack with a shape, so nothing but the stack is needed. |
 | `in_group(group, name)` | `"#log"`, `"mod:thing"` | Whether a group holds a name. |
 
@@ -60,7 +61,15 @@ keep.
 - `tools` are present and not consumed: `"mod:thing"`, a `"#group"`, or
   `{ "mod:thing", wear = n }` (default 1). A tool is looked for in the
   station's tool slots, then its input slots, then the player's own
-  inventory, and any `detail` will do — a tool's detail is its serial.
+  inventory, and any `detail` will do — a tool's detail is its serial. A
+  station working unattended (one that burns or runs, or a `perform` with
+  `unattended = true`) never looks in anybody's inventory: its tools are
+  its own.
+- **A glyph, as an input or a tool:** `{ glyph = "mod:sun", material =
+  "mod:stone" or "#group", count = n }` is n items carved to that glyph
+  (its registered mask), in any of those materials; counted in items,
+  because a carving's units are its cells. As a tool it is found and kept,
+  with no wear unless it says `wear`. An output is never carved.
 - `heat` is the tier a station must be burning at, 0 (the default) to 9,
   and only at a station registered with `heat = true`.
 - `ticks` is how long a station takes, 20 to a second; 0 is at once.
@@ -70,9 +79,11 @@ keep.
 - `conserve = true` holds the recipe to taking and giving the same number
   of units, and refuses it otherwise.
 
-**A stack with a shape or a `detail` is never an ingredient.** A carved
-block or a named thing is somebody's particular thing, and a recipe must not
-melt it down (the engine's own rule for `game.take`).
+**A stack with a shape or a `detail` is never an ingredient** — unless a
+recipe names the glyph it is carved to, above. A carved block or a named
+thing is somebody's particular thing, and a recipe must not melt it down
+(the engine's own rule for `game.take`); naming the glyph is the opt-in,
+because then the carving IS the ingredient.
 
 **A station's fields.** `slots` names a container's roles as one-based slot
 numbers — `{ input = { from = 1, to = 9 }, output = 10 }`, or `{ input = 2,
@@ -90,7 +101,8 @@ hands its contents to whoever digs it. An alembic is a station record, a
 block and some recipes; register them and it works.
 
 **A station with `heat = true` burns**, and must have a `fuel` slot. It is
-lit with this mod's fire striker once there is fuel in it; from then it
+lit with this mod's fire striker once there is fuel in it, or by another
+mod through `ignite`; from then it
 burns its fuel 27 units at a time (each fuel's heat and ticks from
 `register_fuel`) until the fuel slot is empty, and while it burns it makes,
 on its own, the first of its recipes (by id) that its input slots, its tool
@@ -100,9 +112,11 @@ uses only what is in it: a crucible or a mould belongs in its tool slot.
 The kiln is one; an alembic registered with `heat = true`, a fuel slot and
 a block is another, with nothing more to write.
 
-**A station with `boost = { tool, heat }`** burns at `heat` while that
-tool (or a member of that group) is in its tool slot: the bloomery's
-bellows. **`refuse_fuel`** is the sentence a strike says when its fuel
+**A station with `boost = { tool, heat, when? }`** burns at `heat` while
+that tool (or a member of that group) is in its tool slot: the bloomery's
+bellows. `when`, if given, is your `fn(container)`, asked every second
+while the tool is there, and only `true` boosts: a blowing engine that
+blasts only while it has power. **`refuse_fuel`** is the sentence a strike says when its fuel
 slot holds something it will not burn.
 
 **A station with `forge = true` is worked by blows.** Its recipes carry
@@ -113,6 +127,22 @@ that hammer in hand is a blow; from the off-hand, the product goes back
 into it when it fits, else into the pack. The recipe is made on the last blow, the held
 hammer taking the wear. Changing the work or the choice starts the count
 over. The anvil is one.
+
+**A station with `runs = fn(container)`** is worked by something outside
+this mod that says how fast: your function answers a speed in per cent —
+100 is the recipe's own `ticks`, 200 twice as fast, at most 1,000 — and 0,
+nothing or a fault is stopped. It is asked once a second for each such
+station that is placed and loaded, and while it answers more than 0 this
+mod keeps the job, counts the ticks and makes the recipe, as it does for a
+fire, as whoever placed the station, unattended. It must have slots and
+must not burn. Its screen shows the speed and the job. A frame turned by a
+water wheel is one: the mod that knows the wheel turns writes no job loop.
+
+**A station with `long = true`** burns (it must have `heat`) and is not
+paused while its chunk is unloaded: when it is next loaded it works the
+ticks it missed — this mod counts the world's ticks itself, which the
+engine does not keep — for as long as its fuel lasts, then carries on. An
+athanor holding a low fire for weeks is one.
 
 **A station with `auto = true`** makes things on its own, driven by
 something other than fuel in a slot (the campfire, which fire.lua burns);
@@ -163,6 +193,7 @@ time it wears.
 |---|---|---|
 | `is_burning(pos)` | `{ x, y, z, domain? }`, whole blocks | Whether a fire this mod lit burns there. |
 | `add_fuel_at(pos, ticks)` | the same; 1..72000 | Adds fuel to a fire this mod lit, up to an hour. Answers whether there was one. |
+| `ignite(pos, uuid)` | the same; a UUID in hex | Lights the laid campfire, or the unlit heat station with fuel in it, there, for that player, as a striker would but without one: a burning glass. `true`, or `nil` and why ("It is burning already.", "It wants fuel first."). |
 | `register_cracked(material, twin)` | two qualified block ids | `material` cracks into `twin` beside a burning fire, as the world's rock does. Register the twin yourself — breakable by hand, and dropping what it should: this mod gives the world's rock back for its own twins only. |
 
 ### Progression
@@ -172,7 +203,7 @@ time it wears.
 | `set_requires(recipe_id, node)` | a recipe id; a node id | Puts a requirement on a recipe that has none, while mods load: how a world option elsewhere gates this mod's recipes. Answers `true`, or `nil` and why (no such recipe; it already requires one). |
 | `set_effects(fn)` | `fn(uuid, prefix) -> { ["craft.<name>"] = delta }` | The numbers progression nodes change, read where each is used (below). One owner: the first to set it keeps it. A function answering nothing reads as no effects. |
 | `set_gate(fn)` | `fn(uuid, node) -> boolean` | The gate every `requires` is asked through. One owner: the first to set it keeps it. With none, everything is open; a gate that answers nothing (its mod faulted) is read as open, so a broken progress mod never stops the world making anything. |
-| `on_crafted(fn)` | `fn(uuid, recipe_id, outputs)` | Hears every recipe made. |
+| `on_crafted(fn)` | `fn(uuid, recipe_id, outputs, container)` | Hears every recipe made; `container` is the station's it was made in, nil for one made from a player's own things (a flame powder thrown on a fire). |
 | `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"forge:iron_anvil"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`, `"cook:cured"`, `"craft:leather"`, `"craft:cloth"`, `"sew:warm_coat"`, `"sew:cool_cloak"`, `"bloom:iron"`, `"wash:gold"` — the list below, frozen. |
 | `on_tool_broken(fn)` | `fn(uuid, tool_id)` | Hears a tool wear out in somebody's hands (step 2). |
 
@@ -185,7 +216,7 @@ used and never stored.
 |---|---|
 | `craft.fireset_ticks` | Ticks of burning before a fire the player lit cracks the rock round it (600). |
 | `craft.charcoal_yield` | Charcoal from a log in the kiln: three units a point, so 3 is a third more. |
-| `craft.fuel_percent` | How long each fuel lasts in a kiln the player lit, per cent. |
+| `craft.fuel_percent` | How long each fuel lasts in any heat station the player lit (a kiln, a bloomery, yours), per cent. |
 | `craft.sluice_gold_period` | Washes to a gold flake in a sluice the player placed (9). |
 | `craft.mould_pours` | Pours before a mould cracks (4). |
 | `craft.uses_percent.wood`, `.bronze`, `.iron` | Uses a tool of that tier lasts, per cent. |
@@ -344,7 +375,8 @@ is private to this mod: it keeps each
 player's firsts (`first:<uuid>:<event>`), the tool serial counter
 (`serial`), who placed each station (`placer:<container>`), each fire it lit
 (`fire:<domain>@x,y,z`), each furnace's fire and work
-(`furnace:<container>`), each fire's cooking (`cook:<container>`), each sluice's washing
+(`furnace:<container>`), each running station's work (`run:<container>`),
+the ticks the world has run (`clock`, for a long station's missed time), each fire's cooking (`cook:<container>`), each sluice's washing
 (`sluice:<container>`) and each anvil's choice and blows
 (`anvil:<container>`). Stations themselves are found by the engine's
 container listing, and a tool's wear rides on the tool.

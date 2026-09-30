@@ -58,6 +58,43 @@ from the animals (L5). This mod will register its bronze and iron tools as
 weapons, its charred meat and cured food as food, and its farm tools
 through `add_tilling_tool` and `add_harvest_tool`, as the steps land.
 
+## Tiamat Default Science and Tiamat Default Magic
+
+Their asks of this mod (each one's `docs/sibling-asks.md`, C-S1 to C-S7 and
+C-M1 to C-M10; where the two asked the same thing it was answered once).
+Everything is in `docs/exports.md`, and `tests/native/fixtures/frames.lua`
+uses each the way they will.
+
+### C-S1 to C-S7, C-M1 and C-M5 to C-M9: ANSWERED 2026-09-30
+
+- **C-S1, a station run by a predicate:** `register_station{ runs =
+  fn(container) }`, a speed in per cent; this mod keeps the job and makes
+  the recipe. Science's frames need no job loop of their own.
+- **C-S2, a boost that needs power:** `boost = { tool, heat, when =
+  fn(container) }`; only `true` boosts.
+- **C-S3 / C-M1, a glyph as an ingredient or a tool:** `{ glyph, material,
+  count }` in `inputs` or `tools`. Carved stacks are still never
+  ingredients unless a recipe names their glyph.
+- **C-S5 / C-M7, idempotent glyphs:** the same mask with the same id again
+  is `true`.
+- **C-S6, lighting a fire:** `ignite(pos, uuid)`, for a laid campfire or an
+  unlit heat station with fuel in it.
+- **C-S7, unattended perform:** `perform(uuid, id, container, { unattended
+  = true })`.
+- **C-M5, time while unloaded** (as narrowed 2026-09-30): `long = true` on
+  a heat station; the missed ticks are worked when it is next loaded, fuel
+  permitting. The longer `max_ticks` of the original ask was not built,
+  since the narrowing withdrew it.
+- **C-M6:** `add_progress(container, ticks)`, at a heat station or a
+  running one.
+- **C-M8:** `craft.fuel_percent` is read at every heat station a player
+  lit, not only the kiln. Progress's kiln node text will want to say so.
+- **C-M9:** option (b), `on_crafted` passes the container as a fourth
+  argument.
+
+**C-M10, a slow fire,** was withdrawn before it was built, and C-S4 before
+that; nothing was done for either.
+
 ## Tiamat Default Progress
 
 Its asks of this mod (its `docs/sibling-asks.md`, C1 to C5), answered

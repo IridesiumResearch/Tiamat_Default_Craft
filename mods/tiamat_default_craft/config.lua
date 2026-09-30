@@ -220,6 +220,8 @@ C.chest_slots = 27
 -- blown with bellows, step 8).
 
 C.furnace_step = 20             -- furnaces are tended once a second
+C.max_run_percent = 1000        -- a station run by another mod: ten times speed at most
+C.catch_up_pieces = 4096        -- a long station's missed time, worked in at most this many pieces
 
 -- The kiln's container: fuel, two inputs (copper and tin go in together),
 -- the crucible or mould, the output.

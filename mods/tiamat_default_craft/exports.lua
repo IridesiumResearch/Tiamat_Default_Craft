@@ -78,7 +78,8 @@ return {
     --- Adds qualified ids to a `"#group"`; additive.
     register_group = safe("register_group", function(name, members) return R.register_group(name, members) end),
 
-    --- `{ id, name?, slots?, heat?, fuels?, block?, lit_block?, inventory? }`.
+    --- `{ id, name?, slots?, heat?, fuels?, block?, lit_block?, inventory?,
+    --- boost?, runs?, long? }`: docs/exports.md says what each does.
     register_station = safe("register_station", function(spec) return R.register_station(spec) end),
 
     --- `material` (or a `"#group"`) burns at `heat` for `ticks` per 27 units.
@@ -105,12 +106,30 @@ return {
 
     --- Makes a recipe: from `container` if the recipe's station has slots,
     --- else from the player's own inventory. `true` and the outputs, or
-    --- `nil` and why, with everything put back.
-    perform = safe("perform", function(uuid, id, container)
+    --- `nil` and why, with everything put back. `opts.unattended`: the
+    --- station works alone, so its tools come out of its own slots and never
+    --- its owner's pack (Science's C-S7).
+    perform = safe("perform", function(uuid, id, container, opts)
         if not player(uuid) then return nil, "a player is a UUID in hex" end
         if type(id) ~= "string" then return nil, "a recipe is named by its id" end
         if container ~= nil and type(container) ~= "string" then return nil, "a container is named" end
-        return R.perform(uuid, id, container)
+        if opts ~= nil and type(opts) ~= "table" then return nil, "opts is a table" end
+        local unattended = opts ~= nil and opts.unattended == true
+        if unattended and container == nil then return nil, "only a station works unattended" end
+        return R.perform(uuid, id, { container = container, unattended = unattended or nil })
+    end),
+
+    --- Adds `ticks` to the job a lit furnace or a running station has in
+    --- hand: `true`, or `false` when it has none (Magic's C-M6).
+    add_progress = safe("add_progress", function(container, ticks)
+        local t = U.whole(ticks, 1, 72000)
+        if not (type(container) == "string" and t) then return false end
+        local id = tdc.stations.kind_id(container)
+        local station = id and R.station(id)
+        if not station then return false end
+        if station.heat then return tdc.furnace.add_progress(container, t) end
+        if station.runs then return tdc.runs.add_progress(container, t) end
+        return false
     end),
 
     -- Tools and dig classes -------------------------------------------------
@@ -155,6 +174,22 @@ return {
         local t = U.whole(ticks, 1, 72000)
         if not (block_pos(pos) and t) then return false end
         return tdc.fire.add_fuel(pos, t)
+    end),
+
+    --- Lights the laid campfire or the unlit furnace at `{ x, y, z, domain? }`
+    --- (blocks) for `uuid`, as a striker would: `true`, or `nil` and why. A
+    --- furnace needs fuel in it first (Science's C-S6, a burning glass).
+    ignite = safe("ignite", function(pos, uuid)
+        if not block_pos(pos) then return nil, "a position is whole blocks" end
+        if not player(uuid) then return nil, "a player is a UUID in hex" end
+        local at = game.get_block(pos)
+        if at == nil or at.material == nil then return nil, "There is nothing there." end
+        if game.block_of(at.material) == game.mod_id .. ":unlit_campfire" or tdc.fire.burning(pos) then
+            return tdc.fire.ignite(pos, uuid)
+        end
+        local kind = tdc.stations.kind(at.material)
+        if not (kind and kind.station and kind.station.heat) then return nil, "There is nothing there to light." end
+        return tdc.furnace.ignite(kind.station, tdc.stations.name(kind.id, pos), pos, uuid)
     end),
 
     --- `material` cracks into `twin` beside a fire, as the world's rock does.

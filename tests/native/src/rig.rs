@@ -13,7 +13,7 @@
 // registered is refused.
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -525,6 +525,8 @@ pub struct World {
     pub edits: Mutex<Vec<(BlockPos, String)>>,
     pub aimed: Mutex<Option<(i32, i32, i32)>>,
     pub names: Mutex<HashMap<String, MaterialId>>,
+    /// Blocks whose chunk is not loaded: read as absent.
+    pub absent: Mutex<HashSet<(i32, i32, i32)>>,
 }
 
 impl World {
@@ -572,6 +574,9 @@ impl sight::Access for World {
         None
     }
     fn block_at(&self, _: &str, pos: BlockPos) -> Reading {
+        if self.absent.lock().unwrap().contains(&(pos.x, pos.y, pos.z)) {
+            return Reading::Absent;
+        }
         match self.blocks.lock().unwrap().get(&(pos.x, pos.y, pos.z)) {
             Some((material, occupancy)) => Reading::Single { material: *material, occupancy: *occupancy },
             None => Reading::Single { material: MaterialId(0), occupancy: 0 },

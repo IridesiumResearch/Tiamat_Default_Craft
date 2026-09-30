@@ -184,13 +184,34 @@ function R.register_station(spec)
         end
     end
     if spec.boost ~= nil then
-        -- A tool in its tool slot that makes it burn hotter: bellows.
+        -- A tool in its tool slot that makes it burn hotter: bellows. `when`,
+        -- the caller's, says whether the tool is working now (a blowing
+        -- engine with no power is a tool in a slot): `fn(container)`, and
+        -- only `true` boosts.
         local b = spec.boost
-        if type(b) ~= "table" or not (U.qualified(b.tool) or U.group(b.tool)) or not U.whole(b.heat, 1, C.max_heat) then
-            return nil, "boost is { tool, heat }"
+        if type(b) ~= "table" or not (U.qualified(b.tool) or U.group(b.tool)) or not U.whole(b.heat, 1, C.max_heat)
+            or (b.when ~= nil and type(b.when) ~= "function") then
+            return nil, "boost is { tool, heat, when? }"
         end
         if not (record.heat and record.slots.tool) then return nil, "a boost needs heat and a tool slot" end
-        record.boost = { tool = b.tool, heat = U.whole(b.heat, 1, C.max_heat) }
+        record.boost = { tool = b.tool, heat = U.whole(b.heat, 1, C.max_heat), when = b.when }
+    end
+    if spec.runs ~= nil then
+        -- Worked by something outside the registry that says how fast:
+        -- `fn(container)` answers a speed in per cent, 0 (or nothing) for
+        -- stopped. This mod keeps the job and makes the recipe (runs.lua).
+        if type(spec.runs) ~= "function" then return nil, "runs is a function of the container" end
+        if not record.slots.input then return nil, "a station that runs has slots" end
+        if record.heat then return nil, "a station that burns is run by its fire, not by runs" end
+        record.runs = spec.runs
+        record.auto = true
+    end
+    if spec.long ~= nil then
+        -- Work that is weeks long: the time that passed while its chunk was
+        -- not loaded is worked when it is next loaded (Magic's C-M5).
+        if spec.long ~= true then return nil, "long is true or left out" end
+        if not record.heat then return nil, "a long station burns" end
+        record.long = true
     end
     if spec.refuse_fuel ~= nil then
         if type(spec.refuse_fuel) ~= "string" then return nil, "refuse_fuel is a sentence" end
@@ -250,12 +271,22 @@ end
 -- Recipes --------------------------------------------------------------------
 
 --- One quantity entry, `{ name, count = n }` or `{ name, units = n }`, as
---- `{ name, units }`, or nil and why.
+--- `{ name, units }`, or nil and why. `{ glyph = id, material = name, count
+--- = n }` is n carved stacks' items carved to that glyph: `{ name, glyph,
+--- count }`, counted in items because a carving's units are its cells.
 local function entry(value, groups_ok)
     if type(value) ~= "table" then return nil, "an entry is a table" end
     local name = value[1] or value.material
     if not (U.qualified(name) or (groups_ok and U.group(name))) then
         return nil, "an entry names a qualified id" .. (groups_ok and " or a #group" or "") .. ": " .. tostring(name)
+    end
+    if value.glyph ~= nil then
+        if not groups_ok then return nil, "an output is not carved to a glyph" end
+        if not U.qualified(value.glyph) then return nil, "a glyph is its qualified id" end
+        if value.units ~= nil then return nil, "a glyph is counted in items, not units" end
+        local count = U.whole(value.count or 1, 1, 64)
+        if not count then return nil, "the count of " .. value.glyph .. " is a whole number" end
+        return { name = name, glyph = value.glyph, count = count, units = 0 }
     end
     local units
     if value.units ~= nil then
@@ -306,12 +337,17 @@ function R.register(spec)
             return nil, "tools is a list of at most " .. C.max_tools
         end
         for i, tool in ipairs(spec.tools) do
-            local name, wear = tool, 1
-            if type(tool) == "table" then name, wear = tool[1] or tool.material, tool.wear or 1 end
+            local name, wear, glyph = tool, 1, nil
+            if type(tool) == "table" then
+                -- A carved thing is not worn: a glyph tool's wear is 0 unless said.
+                glyph = tool.glyph
+                name, wear = tool[1] or tool.material, tool.wear or (glyph and 0 or 1)
+            end
             if not (U.qualified(name) or U.group(name)) then return nil, "a tool is a qualified id or a #group" end
+            if glyph ~= nil and not U.qualified(glyph) then return nil, "a glyph is its qualified id" end
             local w = U.whole(wear, 0, 1000)
             if not w then return nil, "a tool's wear is a whole number" end
-            tools[i] = { name = name, wear = w }
+            tools[i] = { name = name, wear = w, glyph = glyph }
         end
     end
 
@@ -521,12 +557,15 @@ end
 local glyphs = {}   -- mask -> id
 
 --- Registers a glyph: the mask, a 27-bit occupancy (`x + 3*y + 9*z`), and
---- a qualified id for what it means. While mods load; one id a mask.
+--- a qualified id for what it means. While mods load; one id a mask, and
+--- the same mask registered again with the SAME id is `true` (Magic's C-M7,
+--- Science's C-S5): two mods that both know a glyph may both say so.
 function R.register_glyph(mask, id)
     if not tdc.loading() then return nil, "glyphs are registered while mods load" end
     local m = U.whole(mask, 1, (1 << 27) - 1)
     if not m then return nil, "a glyph is a 27-cell mask, not empty" end
     if not U.qualified(id) then return nil, "a glyph's id is qualified" end
+    if glyphs[m] == id then return true end
     if glyphs[m] then return nil, "that mask is already " .. glyphs[m] end
     glyphs[m] = id
     return true
@@ -576,13 +615,13 @@ local function resolve(recipe)
     for i, e in ipairs(recipe.inputs) do
         local c = candidates(e.name)
         if #c == 0 then why = "nothing registered is " .. e.name break end
-        r.inputs[i] = { candidates = c, units = e.units, name = e.name }
+        r.inputs[i] = { candidates = c, units = e.units, name = e.name, glyph = e.glyph, count = e.count }
     end
     if not why then
         for i, t in ipairs(recipe.tools) do
             local c = candidates(t.name)
             if #c == 0 then why = "nothing registered is " .. t.name break end
-            r.tools[i] = { candidates = c, wear = t.wear, name = t.name }
+            r.tools[i] = { candidates = c, wear = t.wear, name = t.name, glyph = t.glyph }
         end
     end
     if not why then
@@ -619,55 +658,100 @@ local function source_for(uuid, station, container)
     return { player = uuid, station = station }
 end
 
---- Plain stacks available to a recipe, by where they are: for a container,
---- each input slot's `{ slot, material, units }`; for a player, one entry per
---- material. A stack with a shape or a `detail` is somebody's particular
---- thing — a carved block, a named tool — and is never an ingredient.
+--- How many cells a mask fills: what one carved item costs, in units.
+local function cells(mask)
+    local n = 0
+    while mask ~= 0 do
+        n = n + (mask & 1)
+        mask = mask >> 1
+    end
+    return n
+end
+
+--- Stacks available to a recipe, by where they are: for a container, each
+--- input slot's `{ slot, material, units }`; for a player, one entry per
+--- stack. A stack with a shape or a `detail` is somebody's particular thing —
+--- a carved block, a named tool — and is never an ingredient, except that a
+--- stack carved to a registered glyph is one to a recipe that NAMES the
+--- glyph (Magic's C-M1, Science's C-S3): those come back as `carved`, `{
+--- slot?, material, shape, glyph, count, cells }`.
 local function available(source)
-    local out = {}
+    local out, carved = {}, {}
+    local function add(stack, slot)
+        if stack.detail ~= nil then return end
+        if stack.shape == nil then
+            out[#out + 1] = { slot = slot, material = stack.material, units = stack.units }
+            return
+        end
+        local glyph = R.glyph_of(stack.shape)
+        local per = cells(stack.shape)
+        if glyph and per > 0 then
+            carved[#carved + 1] = { slot = slot, material = stack.material, shape = stack.shape, glyph = glyph,
+                count = stack.units // per, cells = per }
+        end
+    end
     if source.container then
         local inputs = {}
         for _, slot in ipairs(source.station.slots.input) do inputs[slot] = true end
         for _, stack in ipairs(game.container(source.container)) do
-            if inputs[stack.slot] and stack.shape == nil and stack.detail == nil then
-                out[#out + 1] = { slot = stack.slot, material = stack.material, units = stack.units }
-            end
+            if inputs[stack.slot] then add(stack, stack.slot) end
         end
         table.sort(out, function(a, b) return a.slot < b.slot end)
+        table.sort(carved, function(a, b) return a.slot < b.slot end)
     else
-        for _, stack in ipairs(game.inventory(source.player)) do
-            if stack.shape == nil and stack.detail == nil then
-                out[#out + 1] = { material = stack.material, units = stack.units }
-            end
-        end
+        for _, stack in ipairs(game.inventory(source.player)) do add(stack, nil) end
         table.sort(out, function(a, b) return a.material < b.material end)
+        table.sort(carved, function(a, b)
+            if a.material ~= b.material then return a.material < b.material end
+            return a.shape < b.shape
+        end)
     end
-    return out
+    return out, carved
 end
 
 --- Which stacks each input comes out of: a list of `{ slot?, material,
---- units }` takes, or nil and the first thing missing. Candidates are tried in
---- the order they were named, and a stack spent on one input is not counted
---- again for the next.
+--- units, shape? }` takes, or nil and the first thing missing. Candidates are
+--- tried in the order they were named, and a stack spent on one input is not
+--- counted again for the next.
 local function plan(resolved, source)
-    local stock = available(source)
+    local stock, carved = available(source)
     local takes = {}
     for _, input in ipairs(resolved.inputs) do
-        local need = input.units
-        for _, material in ipairs(input.candidates) do
-            for _, stack in ipairs(stock) do
-                if need == 0 then break end
-                if stack.material == material and stack.units > 0 then
-                    local take = math.min(need, stack.units)
-                    stack.units = stack.units - take
-                    need = need - take
-                    takes[#takes + 1] = { slot = stack.slot, material = material, units = take }
+        if input.glyph then
+            local need = input.count
+            for _, material in ipairs(input.candidates) do
+                for _, stack in ipairs(carved) do
+                    if need == 0 then break end
+                    if stack.material == material and stack.glyph == input.glyph and stack.count > 0 then
+                        local take = math.min(need, stack.count)
+                        stack.count = stack.count - take
+                        need = need - take
+                        takes[#takes + 1] = { slot = stack.slot, material = material, shape = stack.shape,
+                            units = take * stack.cells }
+                    end
                 end
+                if need == 0 then break end
             end
-            if need == 0 then break end
-        end
-        if need > 0 then
-            return nil, "missing " .. U.friendly(input.name)
+            if need > 0 then
+                return nil, "missing " .. U.friendly(input.name) .. " carved as " .. U.friendly(input.glyph)
+            end
+        else
+            local need = input.units
+            for _, material in ipairs(input.candidates) do
+                for _, stack in ipairs(stock) do
+                    if need == 0 then break end
+                    if stack.material == material and stack.units > 0 then
+                        local take = math.min(need, stack.units)
+                        stack.units = stack.units - take
+                        need = need - take
+                        takes[#takes + 1] = { slot = stack.slot, material = material, units = take }
+                    end
+                end
+                if need == 0 then break end
+            end
+            if need > 0 then
+                return nil, "missing " .. U.friendly(input.name)
+            end
         end
     end
     return takes
@@ -701,14 +785,23 @@ local function find_tools(resolved, source, uuid, unattended)
         local hit
         for _, material in ipairs(tool.candidates) do
             for _, place in ipairs(places) do
-                if place.stack.material == material and place.stack.shape == nil and not place.used then
+                local stack = place.stack
+                local fits
+                if tool.glyph then
+                    fits = stack.shape ~= nil and stack.detail == nil and R.glyph_of(stack.shape) == tool.glyph
+                else
+                    fits = stack.shape == nil
+                end
+                if stack.material == material and fits and not place.used then
                     hit = place
                     break
                 end
             end
             if hit then break end
         end
-        if not hit then return nil, "needs " .. U.friendly(tool.name) end
+        if not hit then
+            return nil, "needs " .. U.friendly(tool.name) .. (tool.glyph and (" carved as " .. U.friendly(tool.glyph)) or "")
+        end
         hit.used = true
         found[#found + 1] = {
             material = hit.stack.material, detail = hit.stack.detail, wear = tool.wear,
@@ -724,11 +817,12 @@ local function take_all(source, takes)
     for _, t in ipairs(takes) do
         local n
         if source.container then
-            n = game.container_take(source.container, { material = t.material, units = t.units, slot = t.slot })
+            n = game.container_take(source.container,
+                { material = t.material, units = t.units, slot = t.slot, shape = t.shape })
         else
-            n = game.take(source.player, { material = t.material, units = t.units })
+            n = game.take(source.player, { material = t.material, units = t.units, shape = t.shape })
         end
-        if n > 0 then got[#got + 1] = { slot = t.slot, material = t.material, units = n } end
+        if n > 0 then got[#got + 1] = { slot = t.slot, material = t.material, units = n, shape = t.shape } end
         if n < t.units then return got, false end
     end
     return got, true
@@ -741,14 +835,15 @@ local function give_back(source, got, uuid)
     for _, g in ipairs(got) do
         local left = g.units
         if source.container then
-            left = left - game.container_give(source.container, { material = g.material, units = left, slot = g.slot })
+            left = left - game.container_give(source.container,
+                { material = g.material, units = left, slot = g.slot, shape = g.shape })
             if left > 0 then
-                left = left - game.container_give(source.container, { material = g.material, units = left })
+                left = left - game.container_give(source.container, { material = g.material, units = left, shape = g.shape })
             end
         end
         if left > 0 then
             local to = source.player or uuid
-            if not to or U.give(to, { material = g.material, units = left }) > 0 then
+            if not to or U.give(to, { material = g.material, units = left, shape = g.shape }) > 0 then
                 game.log(string.format("tiamat_default_craft: %d units of %s had nowhere to go back to",
                     left, tostring(game.block_of(g.material))))
             end
@@ -856,7 +951,8 @@ function R.check(uuid, id, opts)
         if tuning.input and copy.inputs[1] then
             local e = copy.inputs[1]
             local delta = R.effect(uuid, tuning.input) * (e.units // U.UNITS)
-            copy.inputs[1] = { candidates = e.candidates, name = e.name, units = math.max(1, e.units + delta) }
+            copy.inputs[1] = { candidates = e.candidates, name = e.name, units = math.max(1, e.units + delta),
+                glyph = e.glyph, count = e.count }
         end
         if tuning.output and copy.outputs[1] then
             local e = copy.outputs[1]
@@ -903,15 +999,17 @@ function R.perform(uuid, id, opts)
     for i, out in ipairs(job.resolved.outputs) do
         outputs[i] = { material = out.name, units = out.units }
     end
-    R.announce(uuid, id, outputs)
+    R.announce(uuid, id, outputs, source.container)
     return true, outputs
 end
 
 --- Tells the subscribers a recipe was made, for a maker that did not go
---- through `perform` (the anvil worked from the off-hand).
-function R.announce(uuid, id, outputs)
+--- through `perform` (the anvil worked from the off-hand). `container` is
+--- the station's it was made in, nil for one made from a player's own
+--- things: where a flame powder was thrown on a fire (Magic's C-M9).
+function R.announce(uuid, id, outputs, container)
     for _, fn in ipairs(subscribers.crafted) do
-        fn(uuid, id, U.copy(outputs))
+        fn(uuid, id, U.copy(outputs), container)
     end
     R.first(uuid, recipes[id].first)
 end
