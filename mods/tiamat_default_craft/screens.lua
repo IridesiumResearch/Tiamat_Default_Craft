@@ -10,8 +10,9 @@
 -- not used, because what they answer is a read-only view that cannot be
 -- sent inside another mod's tree.
 --
--- Nothing scrolls, and a sheet's body is about 530 by 260: so the recipe
--- list is paged, eight to a page.
+-- A sheet's body is about 530 by 260. A grid's recipes are a scrolling
+-- list beside it, each saying on hover what it takes; other stations' lists
+-- are paged, eight to a page.
 
 local R = tdc.registry
 local U = tdc.util
@@ -19,7 +20,6 @@ local U = tdc.util
 local S = {}
 
 S.PAGE = 8
-S.HAND_PAGE = 6   -- the Craft tab is a tab's body, smaller than a sheet
 
 local ui = game.exports("tiamat_default_ui")
 if not (ui and ui.version == 1) then ui = nil end
@@ -82,6 +82,77 @@ function S.recipe_text(recipe)
     return text
 end
 
+--- An amount of units as a player reads it: "3", or "1/3" of an item.
+local function amount(units)
+    local n, rest = units // U.UNITS, units % U.UNITS
+    if rest == 0 then return tostring(n) end
+    local part = rest == 9 and "1/3" or rest == 18 and "2/3" or (rest .. "/27")
+    return n == 0 and part or (n .. " " .. part)
+end
+
+local function thing(name)
+    if U.group(name) then return "any " .. U.friendly(name) end
+    return U.friendly(name)
+end
+
+--- What a recipe takes and makes, for its button's hover: the grid laid
+--- out and what each letter is, or a list. At most 256 bytes, the engine's
+--- cap: the layout is dropped first, then the end cut.
+function S.recipe_tip(recipe)
+    local out = recipe.outputs[1]
+    local head = out and ("Makes " .. amount(out.units) .. " " .. U.friendly(out.name) .. ".") or "Makes nothing."
+    local lines = { head }
+    local layout = {}
+    if recipe.pattern then
+        local p = recipe.pattern
+        for r = 1, p.height do
+            local row = {}
+            for c = 1, p.width do row[c] = p.cells[r][c] or "." end
+            layout[#layout + 1] = table.concat(row, " ")
+        end
+        for _, ch in ipairs(U.sorted_keys(p.keys)) do
+            local k = p.keys[ch]
+            if k.tool then
+                lines[#lines + 1] = ch .. ": " .. thing(k.name) .. " (kept)"
+            else
+                local n = k.glyph and tostring(k.count) or amount(k.units)
+                lines[#lines + 1] = ch .. ": " .. (n ~= "1" and (n .. " ") or "") .. thing(k.name)
+                    .. (k.glyph and (" carved as " .. U.friendly(k.glyph)) or "")
+            end
+        end
+    else
+        for _, e in ipairs(recipe.inputs) do
+            local n = e.glyph and tostring(e.count) or amount(e.units)
+            lines[#lines + 1] = n .. " " .. thing(e.name) .. (e.glyph and (" carved as " .. U.friendly(e.glyph)) or "")
+        end
+    end
+    for _, t in ipairs(recipe.tools) do
+        if not t.cell then lines[#lines + 1] = "With " .. thing(t.name) .. " (kept)" end
+    end
+    local full = table.concat(lines, "\n")
+    if #layout > 0 then
+        local with = lines[1] .. "\n" .. table.concat(layout, "\n") .. "\n" .. table.concat(lines, "\n", 2)
+        if #with <= 256 then return with end
+    end
+    if #full <= 256 then return full end
+    return string.sub(full, 1, 253) .. "..."
+end
+
+--- Every recipe of `ids` as a button, `r<n>`, in a list that scrolls, each
+--- with its hover. One that cannot be made from the pack now is dim, and
+--- pressing it does nothing.
+function S.recipe_panel(player, ids, width, height)
+    local children = {}
+    for i, id in ipairs(ids) do
+        local recipe = R.recipe(id)
+        local button = S.button("r" .. i, S.recipe_text(recipe), not R.check(player, id, { pack = true }))
+        button.tooltip = S.recipe_tip(recipe)
+        children[#children + 1] = button
+    end
+    if #ids == 0 then children[1] = S.hint("Nothing is made here yet.") end
+    return { type = "scroll", size = width, cross_size = height, children = children }
+end
+
 --- The recipe buttons of one page, `r<n>` by index into `ids`, and the page
 --- buttons. Recipes that cannot be made now are drawn dim, and say why when
 --- pressed.
@@ -93,7 +164,9 @@ function S.recipe_list(player, ids, page, container, per)
     for i = (page - 1) * per + 1, math.min(#ids, page * per) do
         local recipe = R.recipe(ids[i])
         local ok = R.check(player, ids[i], container)
-        children[#children + 1] = S.button("r" .. i, S.recipe_text(recipe), not ok)
+        local button = S.button("r" .. i, S.recipe_text(recipe), not ok)
+        button.tooltip = S.recipe_tip(recipe)
+        children[#children + 1] = button
     end
     if #ids == 0 then
         children[#children + 1] = S.hint("Nothing is made here yet.")
@@ -146,6 +219,29 @@ function S.station(player, station, container, ids, page, note, status)
     return tree, page
 end
 
+--- A grid and what it makes: the grid `n` by `n` from slot `first`, then
+--- the output slot.
+local function grid_and_output(container, first, n, output)
+    return S.box("row", { S.grid(container, first, n * n, n), S.label(">"), S.grid(container, output, 1, 1) }, 10)
+end
+
+--- A grid station's screen (the workbench): its recipes down the left, to
+--- make at once from the pack; the grid and what it makes; the pack.
+function S.grid_station(player, station, container, ids, note)
+    local work = S.box("column", {
+        S.label(station.name, true),
+        grid_and_output(container, station.slots.input[1], station.grid, station.slots.output[1]),
+        S.hint(note or "Take what it makes."),
+    }, 8)
+    local tree = S.box("column", {
+        S.box("row", { S.recipe_panel(player, ids, 230, 170), work }, 16),
+        S.label("Yours"),
+        S.grid("player:main", 1, 27, 9),
+    }, 6)
+    tree.padding = 8
+    return tree
+end
+
 --- The chest's screen.
 function S.chest(container, size)
     local tree = S.box("column", {
@@ -158,16 +254,18 @@ function S.chest(container, size)
     return tree
 end
 
---- The hand's recipes, as a tab body or a dialog.
-function S.hand(player, ids, page, note)
-    local list
-    list, page = S.recipe_list(player, ids, page, nil, S.HAND_PAGE)
-    return S.box("column", {
+--- By hand, as a tab body or a dialog: the recipes, the two by two and
+--- what it makes, and the pack.
+function S.hand(player, ids, container, note)
+    local work = S.box("column", {
         S.label("By hand", true),
-        S.hint("From what you carry. A dim one is missing something."),
-        list,
+        grid_and_output(container, 1, 2, 5),
         S.hint(note or ""),
-    }, 6), page
+    }, 6)
+    return S.box("column", {
+        S.box("row", { S.recipe_panel(player, ids, 200, 120), work }, 12),
+        S.grid("player:main", 1, 27, 9),
+    }, 6)
 end
 
 return S

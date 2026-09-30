@@ -220,6 +220,7 @@ C.chest_slots = 27
 -- blown with bellows, step 8).
 
 C.furnace_step = 20             -- furnaces are tended once a second
+C.grid_shift_most = 64         -- shift-taking from a grid makes at most this many
 C.max_run_percent = 1000        -- a station run by another mod: ten times speed at most
 C.catch_up_pieces = 4096        -- a long station's missed time, worked in at most this many pieces
 
@@ -265,6 +266,21 @@ C.heads = {
     pick = 3, axe = 3, spade = 3, hammer = 2, sickle = 2, hoe = 2, chisel = 1, knife = 1,
 }
 C.mould_uses = 4                -- pours before a mould cracks
+-- Each mould is wet clay laid at the workbench in the shape of what it
+-- casts, one clay a cell: the rows of its pattern.
+C.mould_shapes = {
+    pick = { "CCC" },
+    axe = { "CC", "C " },
+    spade = { "C" },
+    hammer = { "CC", "CC" },
+    sickle = { "C  ", " C ", "  C" },
+    hoe = { "CC" },
+    chisel = { "C", "C", "C" },
+    knife = { "C", "C" },
+    pot = { "C C", "CCC" },
+    tuyere = { "C C", "C C" },
+    gear = { " C ", "C C", " C " },
+}
 
 -- The sluice ------------------------------------------------------------------
 

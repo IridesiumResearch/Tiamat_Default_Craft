@@ -46,6 +46,22 @@ local function block_pos(pos)
         and math.type(pos.z) == "integer" and (pos.domain == nil or type(pos.domain) == "string")
 end
 
+--- A recipe's pattern as plain data: `{ rows, key }`, a dot an empty cell.
+local function public_pattern(p)
+    if not p then return nil end
+    local rows = {}
+    for r = 1, p.height do
+        local row = {}
+        for c = 1, p.width do row[c] = p.cells[r][c] or "." end
+        rows[r] = table.concat(row)
+    end
+    local key = {}
+    for ch, k in pairs(p.keys) do
+        key[ch] = k.tool and { tool = k.name, wear = k.wear } or { name = k.name, units = k.units, glyph = k.glyph }
+    end
+    return { rows = rows, key = key }
+end
+
 --- A recipe as plain data another mod may keep.
 local function public_recipe(recipe)
     local function list(entries, key)
@@ -63,6 +79,7 @@ local function public_recipe(recipe)
         ticks = recipe.ticks,
         outputs = list(recipe.outputs, "units"),
         requires = recipe.requires,
+        pattern = public_pattern(recipe.pattern),
     }
 end
 

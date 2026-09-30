@@ -31,6 +31,7 @@ local C = tdc.config
 local U = tdc.util
 local R = tdc.registry
 local S = tdc.screens
+local G = tdc.grid
 
 local ST = {}
 
@@ -214,7 +215,11 @@ local function draw(player, first)
         elseif o.station.forge and tdc.anvil then
             status = tdc.anvil.status(o.container)
         end
-        tree, o.page = S.station(player, o.station, o.container, o.ids, o.page, o.note, status)
+        if o.grid then
+            tree = S.grid_station(player, o.station, o.container, o.ids, o.note)
+        else
+            tree, o.page = S.station(player, o.station, o.container, o.ids, o.page, o.note, status)
+        end
     else
         tree = S.chest(o.container, o.size)
     end
@@ -249,24 +254,53 @@ tdc.on_use(function(e)
     if not game.open_container(name, e.player) then
         return "Somebody is using that."
     end
-    open[e.player] = {
+    local o = {
         container = name, station = kind.station, size = kind.size, pos = pos,
         ids = kind.station and recipe_ids(kind.id) or {}, page = 1,
     }
+    if kind.station and kind.station.grid then
+        -- A grid at a station holds that station's recipes and the hand's.
+        local ids = recipe_ids(kind.id)
+        for _, id in ipairs(recipe_ids("hand")) do ids[#ids + 1] = id end
+        G.recover(name, kind.station.slots.output[1])
+        o.grid = G.new{
+            container = name, n = kind.station.grid, inputs = kind.station.slots.input,
+            output = kind.station.slots.output[1], ids = ids, player = e.player,
+        }
+        G.refresh(o.grid)
+    end
+    open[e.player] = o
     draw(e.player, true)
     return ""
 end)
+
+--- A recipe from the list beside a grid: made at once from the pack. A dim
+--- one (something missing) does nothing; its hover says what it takes.
+local function quick(player, id)
+    if not R.check(player, id, { pack = true }) then return nil end
+    local ok = R.perform(player, id, { pack = true })
+    if not ok then return nil end
+    tdc.sounds.at_player("craft", player)
+    return "Made " .. S.recipe_text(R.recipe(id)) .. "."
+end
 
 tdc.on_dialog(FORM, function(e)
     local o = open[e.player]
     if not o then return end
     if e.kind == "closed" then
+        if o.grid then G.closed(o.grid) end
         open[e.player] = nil
         return
     end
+    if e.kind == "clicked" and o.grid then
+        G.clicked(o.grid, e)
+    end
     if e.kind == "pressed" and e.name then
         local index = tonumber(string.match(e.name, "^r(%d+)$"))
-        if index and o.ids[index] and o.station.forge then
+        if index and o.ids[index] and o.grid then
+            o.note = quick(e.player, o.ids[index]) or o.note
+            G.refresh(o.grid)
+        elseif index and o.ids[index] and o.station.forge then
             tdc.anvil.choose(o.container, o.ids[index])
             o.note = nil
         elseif index and o.ids[index] and o.station.auto then
@@ -311,7 +345,10 @@ tdc.on_dug(function(e)
     if not kind then return end
     local name = ST.name(kind.id, { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
     -- Nothing is destroyed (charter rule 5): what was inside goes to the
-    -- digger. Units, not counts: a stack is blocks and loose nodes.
+    -- digger. Units, not counts: a stack is blocks and loose nodes. A
+    -- grid's preview was never made, and is not handed out.
+    local station = R.station(kind.id)
+    if station and station.grid then G.recover(name, station.slots.output[1]) end
     for _, stack in ipairs(game.break_container(name)) do
         U.give(e.player, { material = stack.material, units = stack.units, shape = stack.shape,
             detail = stack.detail })
@@ -327,34 +364,34 @@ end)
 
 local HAND_TAB = game.mod_id .. ":hand"
 local HAND_FORM = "hand"
-local hand = {}   -- uuid -> { page, note }
+local hand = {}   -- uuid -> { note }
 
 local function hand_ids()
     return recipe_ids("hand")
 end
 
 local function press_hand(player, name)
-    local h = hand[player] or { page = 1 }
+    local h = hand[player] or {}
     hand[player] = h
     local ids = hand_ids()
     local index = tonumber(string.match(name or "", "^r(%d+)$"))
     if index and ids[index] then
-        local ok, why = R.perform(player, ids[index], nil)
-        if ok then tdc.sounds.at_player("craft", player) end
-        h.note = ok and ("Made " .. S.recipe_text(R.recipe(ids[index])) .. ".") or ("Cannot: " .. why .. ".")
-    elseif name == "prev" then
-        h.page = h.page - 1
-    elseif name == "next" then
-        h.page = h.page + 1
+        h.note = quick(player, ids[index]) or h.note
     end
 end
 
+--- A slot clicked on the hand's screen: its grid, or the pack beside it.
+local function click_hand(player, event)
+    local g = G.hand_of(player)
+    if g then G.clicked(g, event) end
+end
+
 local function hand_tree(player)
-    local h = hand[player] or { page = 1 }
+    local h = hand[player] or {}
     hand[player] = h
-    local tree
-    tree, h.page = S.hand(player, hand_ids(), h.page, h.note)
-    return tree
+    local g = G.hand(player, hand_ids())
+    G.refresh(g)
+    return S.hand(player, g.ids, g.container, h.note)
 end
 
 local tab = false
@@ -368,6 +405,9 @@ if S.ui then
         on_event = function(player, event)
             if event.kind == "pressed" then
                 press_hand(player, event.name)
+                return true
+            elseif event.kind == "clicked" then
+                click_hand(player, event)
                 return true
             end
         end,
@@ -385,10 +425,14 @@ end)
 tdc.on_dialog(HAND_FORM, function(e)
     if e.kind == "closed" then
         hand[e.player] = nil
+        local g = G.hand_of(e.player)
+        if g then G.closed(g) end
         return
     end
     if e.kind == "pressed" then
         press_hand(e.player, e.name)
+    elseif e.kind == "clicked" then
+        click_hand(e.player, e)
     end
     game.update_dialog{ player = e.player, form = HAND_FORM, tree = hand_tree(e.player) }
 end)

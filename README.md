@@ -35,6 +35,9 @@ Built in the brief's order (§12), each step shipping on its own:
 | 8 | Bloomery, bellows, anvil: iron | **done** |
 | 9 | Torch, HUD, sounds, the ladder written down (`0.2.0`) | **done** |
 | 10 | After the loop: parts, brick, glass, lantern (`0.3.0`) | **done** |
+| — | Glyphs; Life's kitchen and leather; the iron anvil (`0.4.0`) | **done** |
+| — | What science and magic asked for: frames, glyph ingredients, lighting (`0.5.0`) | **done** |
+| — | Crafting grids: patterns, the result in the output slot, the list beside (`0.6.0`) | **done** |
 
 **The loop is complete (0.2.0), and after it (0.3.0) the parts the Fork's
 Keystone and both trees are built from: iron plate, nails, chain, hinge and
@@ -138,6 +141,18 @@ The brief (`docs/brief.md`) is kept as written; where building it found
 something it did not know, the code follows the engine and the siblings,
 and the change is recorded here.
 
+- **Shaped recipes, in a grid** (2026-09-30, asked for after the loop). The
+  brief made every recipe a multiset; now the hand's and the workbench's are
+  patterns laid in a two by two (the Craft tab) or a three by three (the
+  bench), the result standing in the output slot until it is taken, with
+  the recipe list down the left making any of them at once from the pack.
+  Fitting a grid moved a few numbers: bark strips and wedges are two logs
+  for twice as many, a chest is eight planks, each mould is wet clay laid
+  in its own shape (one to five clay, not two), and the kiln and bloomery
+  lay their eighteen in six cells of three. Other mods' recipes without a
+  pattern go in the grid in any arrangement. `docs/progression.md` has
+  every pattern.
+
 - **The tool gate is on `register_on_dig_start`**, which landed the day the
   brief was written: a wrong tool is refused as the dig begins.
 - **Flint is `cracked`, not `rock`.** The first fire is struck with flint,
@@ -231,7 +246,6 @@ Uses for silver, gold, lead, crystal, diamond, orichalcum and the world's
 `metal` — mined and kept for the trees. Insight, research and the Fork
 (the progress mod). Farming, which is Life's: Craft adds bronze and iron
 farm tools through Life's exports, nothing more. Items lying on the ground.
-Shaped (grid-position) recipes: a recipe is a multiset.
 
 ## Licence
 

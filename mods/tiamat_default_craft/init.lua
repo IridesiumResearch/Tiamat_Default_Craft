@@ -36,6 +36,7 @@ tdc.tools = load("tools")         -- the hand, tools, dig classes, wear
 tdc.fire = load("fire")           -- campfires: lighting, fuel, burning out, fire-setting
 load("recipes")                   -- this mod's own stations and recipes, into the registry
 tdc.screens = load("screens")     -- dialog trees, in Tiamat Default UI's look when present
+tdc.grid = load("grid")           -- crafting grids: what the output slot shows, and taking it
 tdc.stations = load("stations")   -- stations and chests in the world; the Craft tab
 tdc.furnace = load("furnace")     -- stations that burn: heat, fuel, jobs
 tdc.runs = load("runs")           -- stations another mod says are running

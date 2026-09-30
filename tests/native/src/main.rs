@@ -11,6 +11,7 @@ mod rig;
 mod fit;
 
 use rig::{MOD, OTHER, PLAYER, Rig, Setup, hex};
+use tiamat_core::proto::Click;
 use tiamat_core::script::{ChatEvent, ScriptVm};
 
 /// A stand-in for the progress mod: it owns the gate, and counts what the
@@ -658,17 +659,72 @@ fn stations() {
     assert_eq!(r.use_at(OTHER, 5, 64, 5).as_deref(), Some("Somebody is using that."));
     fit::check("the workbench", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
 
-    // Planks: a log in the grid, a wedge in the hands, the recipe pressed.
-    // Workbench recipes are listed by id; planks are the seventh.
+    // Planks: a wedge over a log in the grid. What it makes waits in the
+    // output slot, and taking it is what spends the log.
     r.huds.operators.lock().unwrap().push(PLAYER);
     r.say("toolkit");
-    r.boxes.set(bench, 1, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    let wedge = r.details(PLAYER, "wooden_wedge")[0].clone();
+    let wedge_stack = tiamat_core::inventory::Stack { detail: Some(wedge.clone()), ..r.stack("wooden_wedge", 27) };
+    r.inventory.clear(PLAYER);
+    r.boxes.set(bench, 2, Some(wedge_stack.clone()));
+    r.boxes.set(bench, 5, Some(r.stack("tiamat_default_world:oak_log", 27 * 3)));
+    r.click(PLAYER, "station", bench, 5, Click::Left);
+    let plank = r.material("plank");
+    assert_eq!(r.boxes.get(bench, 10).map(|s| (s.material, s.units)), Some((plank, 108)), "shown");
+    assert_eq!(r.boxes.get(bench, 5).map(|s| s.units), Some(81), "nothing spent yet");
+    let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    assert!(tree.contains("W: any wedge (kept)"), "the hover says what it takes");
+    // The wedge moved beside the log: no pattern, nothing shown.
+    r.boxes.set(bench, 2, None);
+    r.boxes.set(bench, 4, Some(wedge_stack.clone()));
+    r.click(PLAYER, "station", bench, 4, Click::Left);
+    assert_eq!(r.boxes.get(bench, 10), None, "withdrawn");
+    // Over it again, one column across: anywhere in the grid.
+    r.boxes.set(bench, 4, None);
+    r.boxes.set(bench, 3, Some(wedge_stack.clone()));
+    r.boxes.set(bench, 6, r.boxes.get(bench, 5));
+    r.boxes.set(bench, 5, None);
+    r.click(PLAYER, "station", bench, 6, Click::Left);
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(108));
+    r.take_slot(PLAYER, "station", bench, 10, false);
+    assert_eq!(r.units(PLAYER, "plank"), 108, "taken");
+    assert_eq!(r.boxes.get(bench, 6).map(|s| s.units), Some(54), "one log spent");
+    assert!(r.boxes.get(bench, 3).and_then(|s| s.detail).is_some_and(|d| d.ends_with(";w=1")), "the wedge wore in the grid");
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(108), "and the next shown");
+    // Shift-click: this one and as many more as the grid holds.
+    r.take_slot(PLAYER, "station", bench, 10, true);
+    assert_eq!(r.units(PLAYER, "plank"), 108 * 3, "all three logs");
+    assert_eq!(r.boxes.get(bench, 6), None);
+    assert_eq!(r.boxes.get(bench, 10), None, "nothing left to show");
+    // Put onto, not taken: the same thing dropped on what is shown.
+    r.boxes.set(bench, 6, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    r.click(PLAYER, "station", bench, 6, Click::Left);
+    r.boxes.set(bench, 10, Some(r.stack("plank", 108 + 27)));
+    r.click(PLAYER, "station", bench, 10, Click::Left);
+    assert_eq!(r.boxes.get(bench, 6).map(|s| s.units), Some(27), "the log is not spent");
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(27), "the preview came back out");
+    r.boxes.set(bench, 10, None);
+    r.click(PLAYER, "station", bench, 10, Click::Left);
+    assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(108), "shown again");
+
+    // The list beside it makes at once from the pack; a dim one does nothing.
+    r.give(PLAYER, "tiamat_default_world:oak_log", 27);
+    r.give_detail(PLAYER, "wooden_wedge", 27, &wedge);
+    let before = r.units(PLAYER, "plank");
     r.press_labelled(PLAYER, "station", "Planks x4");
-    assert_eq!(r.boxes.get(bench, 10).map(|s| s.units), Some(4 * 27), "four planks out");
-    assert_eq!(r.boxes.get(bench, 1), None);
-    assert!(r.details(PLAYER, "wooden_wedge").iter().any(|d| d.ends_with(";w=1")), "the wedge wore: {:?}", r.details(PLAYER, "wooden_wedge"));
+    assert!(r.screen_says(PLAYER, "Made Planks x4."));
+    assert_eq!(r.units(PLAYER, "plank"), before + 108);
     r.press_labelled(PLAYER, "station", "Planks x4");
-    assert!(r.screen_says(PLAYER, "Cannot: missing log."), "the screen says why");
+    assert_eq!(r.units(PLAYER, "plank"), before + 108, "no log in the pack: nothing");
+    assert!(!r.screen_says(PLAYER, "Cannot"), "and no sentence about it");
+
+    // Closed, what was shown is gone: it was never made.
+    r.close(PLAYER, "station");
+    assert_eq!(r.boxes.get(bench, 10), None, "withdrawn on close");
+    assert_eq!(r.boxes.get(bench, 6).map(|s| s.units), Some(27));
+    r.boxes.set(bench, 3, None);
+    r.boxes.set(bench, 6, None);
+    assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
 
     // Somebody else cannot dig it from under them; they can, and get the planks.
     assert_eq!(r.dig_complete_at(OTHER, 5, 64, 5), Err("Somebody is using that.".into()));
@@ -680,14 +736,15 @@ fn stations() {
     assert_eq!(r.units(PLAYER, "plank"), planks + 54, "what was in it comes back");
     assert!(!r.boxes.exists("tiamat_default_craft:workbench:100,64,100"));
 
-    // The chest: nine planks and two cord at the bench.
-    r.close(PLAYER, "station");
-    r.boxes.set(bench, 1, Some(r.stack("plank", 27 * 9)));
-    r.boxes.set(bench, 2, Some(r.stack("cord", 54)));
-    r.boxes.set(bench, 10, None);
-    assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
-    r.press_labelled(PLAYER, "station", "Chest");
+    // The chest: a ring of planks round two cord.
+    for slot in [1, 2, 3, 4, 6, 7, 8, 9] {
+        r.boxes.set(bench, slot, Some(r.stack("plank", 27)));
+    }
+    r.boxes.set(bench, 5, Some(r.stack("cord", 54)));
+    r.click(PLAYER, "station", bench, 5, Click::Left);
     assert_eq!(r.boxes.get(bench, 10).map(|s| s.material), Some(r.material("chest")));
+    r.take_slot(PLAYER, "station", bench, 10, false);
+    assert_eq!(r.boxes.get(bench, 1), None, "the planks spent");
     r.close(PLAYER, "station");
 
     r.give(PLAYER, "chest", 27);
@@ -721,6 +778,22 @@ fn stations() {
     r.give(PLAYER, "tiamat_default_world:oak_log", 27);
     r.press_labelled(PLAYER, "hand", "Sticks x4");
     assert!(r.screen_says(PLAYER, "Made Sticks x4."));
+    // Its own two by two: two flints side by side are a striker.
+    let hand = format!("tiamat_default_craft:hand_grid:{}", hex(PLAYER));
+    assert!(r.boxes.exists(&hand), "a grid of the player's own");
+    r.boxes.set(&hand, 3, Some(r.stack("tiamat_default_world:flint", 27)));
+    r.boxes.set(&hand, 4, Some(r.stack("tiamat_default_world:flint", 27)));
+    r.click(PLAYER, "hand", &hand, 4, Click::Left);
+    assert_eq!(r.boxes.get(&hand, 5).map(|s| s.material), Some(r.material("fire_striker")));
+    let strikers = r.details(PLAYER, "fire_striker").len();
+    r.take_slot(PLAYER, "hand", &hand, 5, false);
+    assert_eq!(r.details(PLAYER, "fire_striker").len(), strikers + 1, "a striker, with its serial");
+    // Closed with something still in it: back to the pack.
+    r.boxes.set(&hand, 1, Some(r.stack("tiamat_default_world:bramble", 27)));
+    let bramble = r.units(PLAYER, "tiamat_default_world:bramble");
+    r.close(PLAYER, "hand");
+    assert_eq!(r.units(PLAYER, "tiamat_default_world:bramble"), bramble + 27);
+    assert_eq!(r.boxes.get(&hand, 1), None);
     println!("stations: ok");
 }
 
@@ -735,6 +808,28 @@ fn craft_tab() {
     let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
     assert!(tree.contains("By hand"), "on the Craft tab");
     fit::check("the Craft tab", &r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+
+    // Its two by two, through the interface's screen: a slot clicked there
+    // reaches this mod, and a log shows sticks.
+    let hand = format!("tiamat_default_craft:hand_grid:{}", hex(PLAYER));
+    assert_eq!(r.boxes.holders.lock().unwrap().get(&hand), Some(&PLAYER), "lent while the tab is open");
+    r.boxes.set(&hand, 1, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    r.dialog_of(PLAYER, &form, tiamat_core::proto::DialogEvent::Clicked { view: hand.clone(), index: 0, click: Click::Left });
+    assert_eq!(r.boxes.get(&hand, 5).map(|s| (s.material, s.units)), Some((r.material("stick"), 108)));
+    // The interface says nothing when it closes; the engine takes the grid
+    // back, and within a second the preview is gone and the log is home.
+    r.boxes.holders.lock().unwrap().retain(|_, p| *p != PLAYER);
+    r.tick(20);
+    assert_eq!(r.boxes.get(&hand, 5), None, "never made");
+    assert_eq!(r.boxes.get(&hand, 1), None);
+    assert_eq!(r.units(PLAYER, "tiamat_default_world:oak_log"), 27, "back in the pack");
+    assert_eq!(r.units(PLAYER, "stick"), 0);
+
+    // Every pattern, laid out alone, makes its own recipe (the interface's
+    // shape crafter among them).
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("grids");
+    assert_eq!(r.said(), "every pattern makes its own recipe");
     println!("craft tab: ok");
 }
 
@@ -831,13 +926,15 @@ fn kiln() -> String {
     r.give(PLAYER, "workbench", 27);
     r.place(PLAYER, 22, 64, 20, "workbench").unwrap();
     let b = "tiamat_default_craft:workbench:22,64,20";
-    r.boxes.set(b, 1, Some(heads));
-    r.boxes.set(b, 2, Some(r.stack("haft", 27)));
+    r.boxes.set(b, 2, Some(heads));
+    r.boxes.set(b, 5, Some(r.stack("haft", 27)));
     assert_eq!(r.use_at(PLAYER, 22, 64, 20).as_deref(), Some(""));
-    r.press_labelled(PLAYER, "station", "Bronze pick");
-    let made = r.boxes.get(b, 10).expect("a pick");
+    let made = r.boxes.get(b, 10).expect("a pick shown: the head over the haft");
     assert_eq!(made.material, r.material("bronze_pick"));
     assert!(made.detail.as_deref().is_some_and(|d| d.starts_with("t=")), "minted with a serial");
+    r.take_slot(PLAYER, "station", b, 10, false);
+    assert!(r.details(PLAYER, "bronze_pick").contains(made.detail.as_ref().unwrap()), "the one shown is the one had");
+    assert_eq!(r.boxes.get(b, 5), None, "the haft spent");
     r.close(PLAYER, "station");
 
     // Life hears the kiln is a heat source.
@@ -995,10 +1092,12 @@ fn iron() {
     r.give(PLAYER, "workbench", 27);
     r.place(PLAYER, 50, 64, 50, "workbench").unwrap();
     let bench = "tiamat_default_craft:workbench:50,64,50";
-    r.boxes.set(bench, 1, Some(r.stack("tiamat_default_world:granite", 27)));
+    r.give(PLAYER, "tiamat_default_world:granite", 27);
     assert_eq!(r.use_at(PLAYER, 50, 64, 50).as_deref(), Some(""));
+    let anvils = r.units(PLAYER, "stone_anvil");
     r.press_labelled(PLAYER, "station", "Stone anvil");
-    assert_eq!(r.boxes.get(bench, 10).map(|s| s.material), Some(r.material("stone_anvil")));
+    assert_eq!(r.units(PLAYER, "stone_anvil"), anvils + 27, "made from the pack");
+    let _ = bench;
     let chisels: Vec<String> = r.details(PLAYER, "bronze_chisel");
     assert!(chisels.iter().any(|d| d.ends_with(";w=10")), "the chisel wore ten, on the chisel: {chisels:?}");
     r.close(PLAYER, "station");
@@ -1099,7 +1198,7 @@ fn torch_and_hud() {
     r.tick(1);
 
     // Torches by hand, and one burning out on a random tick.
-    r.give(PLAYER, "tiamat_default_world:oak_log", 54);
+    r.give(PLAYER, "tiamat_default_world:oak_log", 81);   // a stick's and two for bark
     r.give(PLAYER, "tiamat_default_world:tall_grass", 9);
     for recipe in ["stick", "bark_strip", "tinder", "torch"] {
         r.say(&format!("craft {recipe}"));
@@ -1224,19 +1323,19 @@ fn after_the_loop() {
     r.give(PLAYER, "workbench", 27);
     r.place(PLAYER, 72, 64, 70, "workbench").unwrap();
     let b = "tiamat_default_craft:workbench:72,64,70";
-    r.boxes.set(b, 1, Some(r.stack("iron_plate", 27 * 4)));
-    r.boxes.set(b, 2, Some(r.stack("iron_nails", 27)));
+    r.give(PLAYER, "iron_plate", 27 * 4);
+    r.give(PLAYER, "iron_nails", 27);
     r.hold_nothing(PLAYER);
     r.use_at(PLAYER, 72, 64, 70);
+    let _ = b;
     r.press_labelled(PLAYER, "station", "Iron frame");
-    assert_eq!(r.boxes.get(b, 10).map(|s| s.material), Some(r.material("iron_frame")));
+    assert_eq!(r.units(PLAYER, "iron_frame"), 27, "from the pack, a hammer at hand");
     // A lantern: a plate, glass and a torch.
-    r.boxes.set(b, 10, None);
-    r.boxes.set(b, 1, Some(r.stack("iron_plate", 27)));
-    r.boxes.set(b, 2, Some(r.stack("glass", 27)));
-    r.boxes.set(b, 3, Some(r.stack("torch", 27)));
+    r.give(PLAYER, "iron_plate", 27);
+    r.give(PLAYER, "glass", 27);
+    r.give(PLAYER, "torch", 27);
     r.press_labelled(PLAYER, "station", "Iron lantern");
-    assert_eq!(r.boxes.get(b, 10).map(|s| s.material), Some(r.material("iron_lantern")));
+    assert_eq!(r.units(PLAYER, "iron_lantern"), 27);
     r.close(PLAYER, "station");
 
     // A fire burned out leaves ash on it.
@@ -1465,33 +1564,27 @@ fn life_goods_and_iron_anvil() {
     r.give(PLAYER, "workbench", 27);
     r.place(PLAYER, 110, 64, 110, "workbench").unwrap();
     let b = "tiamat_default_craft:workbench:110,64,110";
-    let make = |r: &mut Rig, puts: &[(&str, u32)], label: &str| {
-        for slot in 1..=10 {
-            r.boxes.set(b, slot, None);
+    // Each from the pack, by the list beside the grid.
+    let make = |r: &mut Rig, puts: &[(&str, u32)], label: &str, out: &str| {
+        for (id, units) in puts {
+            r.give(PLAYER, id, *units);
         }
-        for (i, (id, units)) in puts.iter().enumerate() {
-            r.boxes.set(b, i + 1, Some(r.stack(id, *units)));
-        }
+        let before = r.units(PLAYER, out);
         r.hold_nothing(PLAYER);
         assert_eq!(r.use_at(PLAYER, 110, 64, 110).as_deref(), Some(""));
         r.press_labelled(PLAYER, "station", label);
-        let made = r.boxes.get(b, 10);
         r.close(PLAYER, "station");
-        made.unwrap_or_else(|| panic!("{label} made nothing"))
+        assert_eq!(r.units(PLAYER, out), before + 27, "{label}");
     };
-    let leather = make(&mut r, &[("tiamat_default_life:hide", 27), ("bark_strip", 54)], "Leather");
-    assert_eq!(leather.material, r.material("leather"));
-    let cloth = make(&mut r, &[("tiamat_default_life:wool", 81)], "Cloth");
-    assert_eq!(cloth.material, r.material("cloth"));
-    let needle = make(&mut r, &[("tiamat_default_life:bone", 27)], "Bone needle");
-    assert_eq!(needle.material, r.material("bone_needle"), "a knife at hand from the toolkit");
-    r.inventory.put(PLAYER, needle);
-    let coat = make(&mut r, &[("leather", 81), ("cloth", 54)], "Warm coat");
-    assert_eq!(coat.material, r.material("tiamat_default_life:warm_coat"));
-    let cloak = make(&mut r, &[("cloth", 108)], "Cool cloak");
-    assert_eq!(cloak.material, r.material("tiamat_default_life:cool_cloak"));
-    let cured = make(&mut r, &[("tiamat_default_life:raw_meat", 27), ("tiamat_default_world:salt", 9)], "Cured meat");
-    assert_eq!(cured.material, r.material("cured_meat"));
+    let _ = b;
+    make(&mut r, &[("tiamat_default_life:hide", 27), ("bark_strip", 54)], "Leather", "leather");
+    make(&mut r, &[("tiamat_default_life:wool", 81)], "Cloth", "cloth");
+    make(&mut r, &[("tiamat_default_life:bone", 27)], "Bone needle", "bone_needle");
+    make(&mut r, &[("leather", 54), ("cloth", 27)], "Warm coat", "tiamat_default_life:warm_coat");
+    make(&mut r, &[("cloth", 108)], "Cool cloak", "tiamat_default_life:cool_cloak");
+    make(&mut r, &[("tiamat_default_life:raw_meat", 27), ("tiamat_default_world:salt", 9)], "Cured meat", "cured_meat");
+    r.say("grids");
+    assert_eq!(r.said(), "every pattern makes its own recipe", "with Life's goods too");
     r.say("life heard food tiamat_default_craft:cured_meat");
     assert_eq!(r.said(), "yes");
     r.give(PLAYER, "cloth", 27);

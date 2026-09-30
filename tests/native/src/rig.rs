@@ -234,11 +234,10 @@ impl inventory::Access for Inventory {
         player: [u8; 32],
         view: &str,
         slot: Option<usize>,
-        material: MaterialId,
-        shape: Option<Shape>,
-        detail: Option<&str>,
+        which: tiamat_core::inventory::StackKey<'_>,
         units: u32,
     ) -> u32 {
+        let (material, shape, detail) = (which.material, which.shape, which.detail);
         let mut views = self.views.lock().unwrap();
         let Some(slots) = views.get_mut(&(player, view.to_owned())) else { return 0 };
         let indices: Vec<usize> = match slot {
@@ -360,11 +359,10 @@ impl inventory::Containers for Boxes {
         &self,
         name: &str,
         slot: Option<usize>,
-        material: MaterialId,
-        shape: Option<Shape>,
-        detail: Option<&str>,
+        which: tiamat_core::inventory::StackKey<'_>,
         units: u32,
     ) -> u32 {
+        let (material, shape, detail) = (which.material, which.shape, which.detail);
         let mut all = self.slots.lock().unwrap();
         let Some(list) = all.get_mut(name) else { return 0 };
         let indices: Vec<usize> = match slot {
@@ -1056,6 +1054,7 @@ impl Rig {
             material: self.material(id),
             occupancy: 0x7FF_FFFF,
             units: 27,
+            cells: None,
         });
         assert!(out.faults.is_empty(), "faulted in place: {:?}", out.faults);
         if !out.allowed {
@@ -1076,8 +1075,38 @@ impl Rig {
         self.assert_healthy(form);
     }
 
+    /// Something done in another mod's dialog: `form` as the client has it,
+    /// `"tiamat_default_ui:inventory"`.
+    pub fn dialog_of(&mut self, player: [u8; 32], form: &str, event: tiamat_core::proto::DialogEvent) {
+        let owner = form.split(':').next().unwrap_or_default().to_owned();
+        let _ = self.vm.dialog_event(&tiamat_core::script::DialogEvent {
+            player,
+            mod_id: owner,
+            form: form.into(),
+            event,
+        });
+        self.assert_healthy(form);
+    }
+
     pub fn press(&mut self, player: [u8; 32], form: &str, name: &str) {
         self.dialog(player, form, tiamat_core::proto::DialogEvent::Pressed { name: name.into(), click: Default::default() });
+    }
+
+    /// A slot clicked on a screen (`slot` one-based), after the test has moved
+    /// what the engine would have moved.
+    pub fn click(&mut self, player: [u8; 32], form: &str, view: &str, slot: u16, click: tiamat_core::proto::Click) {
+        self.dialog(player, form, tiamat_core::proto::DialogEvent::Clicked { view: view.into(), index: slot - 1, click });
+    }
+
+    /// Takes what a container's slot holds into the pack (the cursor, which a
+    /// mod cannot see, stood in for by the pack) and says so, as the engine
+    /// does on a left click or a shift-click.
+    pub fn take_slot(&mut self, player: [u8; 32], form: &str, view: &str, slot: u16, shift: bool) {
+        let stack = self.boxes.get(view, slot as usize).expect("something to take");
+        self.boxes.set(view, slot as usize, None);
+        self.inventory.put(player, stack);
+        let click = if shift { tiamat_core::proto::Click::ShiftLeft } else { tiamat_core::proto::Click::Left };
+        self.click(player, form, view, slot, click);
     }
 
     /// A dialog closed, and the container it lent put back, as the engine does.

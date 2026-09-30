@@ -27,11 +27,11 @@ keep.
 | Field | Shape | What it does |
 |---|---|---|
 | `version` | integer, `1` | Bumped only when a change would break a reader. |
-| `register(spec)` | `{ id, station, inputs, tools?, heat?, ticks?, outputs, requires?, name?, first?, conserve? }` | Registers a recipe. Answers `true`. |
+| `register(spec)` | `{ id, station, inputs or pattern and key, tools?, heat?, ticks?, outputs, requires?, name?, first?, conserve? }` | Registers a recipe. Answers `true`. |
 | `register_group(name, members)` | `"#log"`, `{ "mod:thing", ... }` | Adds to a group, making it if new. Additive: nobody can take a member out. |
-| `register_station(spec)` | `{ id, name?, slots?, heat?, fuels?, block?, lit_block?, inventory?, auto?, forge?, boost?, refuse_fuel?, runs?, long? }` | Registers a station: where recipes are made. |
+| `register_station(spec)` | `{ id, name?, slots?, heat?, fuels?, block?, lit_block?, inventory?, auto?, forge?, boost?, refuse_fuel?, runs?, long?, grid? }` | Registers a station: where recipes are made. |
 | `register_fuel(material, heat, ticks)` | a qualified id or a `#group`; a tier 1..9; ticks per 27 units | What burns, how hot and for how long. |
-| `recipes(station?)` | a station id, or nothing for all | Every recipe (or a station's), sorted by id, as `{ id, name, station, inputs = { { name, units } }, tools = { { name, wear } }, heat, ticks, outputs = { { name, units } }, requires }`. |
+| `recipes(station?)` | a station id, or nothing for all | Every recipe (or a station's), sorted by id, as `{ id, name, station, inputs = { { name, units } }, tools = { { name, wear } }, heat, ticks, outputs = { { name, units } }, requires, pattern? }`; `pattern` is its rows, a dot an empty cell, and `key` what each letter is (`{ name, units }` or `{ tool = name }`). |
 | `can(uuid, recipe_id, container?)` | a UUID in hex; a recipe id; a container name | Whether that player could make it now: `true`, or `nil` and why. |
 | `perform(uuid, recipe_id, container?, opts?)` | the same; `{ unattended = true }` | Makes it: `true` and `{ { material, units } }`, or `nil` and why, with everything taken put back. Unattended, a container's tools must be in it (below). |
 | `add_progress(container, ticks)` | a container name; 1..72000 | Adds ticks to the job a lit heat station or a running station has in hand; the next step makes it if that is enough. Answers whether there was a job. |
@@ -49,7 +49,7 @@ keep.
 - `id` is qualified with your mod's id, `"my_mod:elixir"`: the registry
   cannot see which mod is calling it, so it is told.
 - `station` is a registered station's id. This mod's are `"hand"` (from the
-  player's own inventory) and, as they land, `"workbench"`, `"campfire"`,
+  player's own inventory) and, as they land, `"workbench"` (the two with grids), `"campfire"`,
   `"kiln"`, `"bloomery"`, `"anvil"` and `"sluice"`. Name yours with your
   mod's id in front, `"my_mod:alembic"`.
 - `inputs` and `outputs` are lists of `{ "mod:thing", count = n }` or
@@ -78,6 +78,22 @@ keep.
   it; the default is `"craft:<recipe id>"`.
 - `conserve = true` holds the recipe to taking and giving the same number
   of units, and refuses it otherwise.
+
+- **A pattern**, at a station with a `grid` (the workbench and `"hand"`):
+  `pattern = { "W", "L" }`, `key = { W = { tool = "#wedge" }, L = "#log" }`
+  in place of `inputs`. Rows are strings of at most the grid's width, a
+  space or a dot an empty cell, with no empty first or last row or column.
+  Each letter is ONE cell, and its key entry what that cell takes: `"mod:thing"`
+  (one item), `{ "mod:thing", count = n }`, `{ "#group", units = n }`, a
+  glyph entry, or `{ tool = "mod:thing" or "#group", wear? }` for a tool
+  that lies in the grid and is kept. `inputs` are what the cells add up to,
+  so `can`, `perform` and `recipes` read a pattern recipe like any other.
+  `tools` beside a pattern are looked for in the pack. A recipe with no
+  pattern at a grid station is laid in the grid in any arrangement, every
+  cell used, its tools in the grid or the pack. Two patterns alike are two
+  recipes one grid cannot tell apart: the one naming exact ids beats one
+  naming groups, else the first id; the `grids` chat word (operators) says
+  of any that clash.
 
 **A stack with a shape or a `detail` is never an ingredient** — unless a
 recipe names the glyph it is carved to, above. A carved block or a named
@@ -150,6 +166,16 @@ its recipes are not pressed. A heat station is `auto` too. A station that
 makes things on its own tries its recipes most particular first — most
 inputs and tools, then by id — so a stew (meat, fruit, a pot) is made from
 what would otherwise only roast.
+
+**A station with `grid = 2` or `3`** is a crafting grid: its first n×n
+input slots, row by row, and one output slot (or, at an `inventory`
+station, a grid of the player's own). Its screen is the recipes in a
+scrolling list — each saying on hover what it takes, a press making it at
+once from the pack — beside the grid. While the grid holds a recipe, what it
+makes stands in the output slot unpaid-for; the player taking it is what
+spends the grid, and shift-click makes as many as the grid holds. The
+workbench's grid also makes the hand's recipes. `perform` with `{ pack =
+true }` is the list's press: a grid station's recipe from the pack.
 
 **`perform`** takes from the container's input slots and gives to its output
 slots when a container is named, and from and to the player's own
@@ -365,7 +391,8 @@ Chat words, said by a player and swallowed. For anyone: `recipes
 [station]` lists what could be made by hand from what the player carries,
 and `craft <recipe> [times]` makes it. A sentence that only begins with
 one of them is chat. For operators, and everyone in a Creative world:
-`toolkit`, one of every tool.
+`toolkit`, one of every tool. For operators: `grids`, every pattern laid
+out alone, saying of any that makes another recipe instead.
 
 ## Data it stores or sends
 
@@ -378,7 +405,11 @@ player's firsts (`first:<uuid>:<event>`), the tool serial counter
 (`furnace:<container>`), each running station's work (`run:<container>`),
 the ticks the world has run (`clock`, for a long station's missed time), each fire's cooking (`cook:<container>`), each sluice's washing
 (`sluice:<container>`) and each anvil's choice and blows
-(`anvil:<container>`). Stations themselves are found by the engine's
+(`anvil:<container>`), and what a crafting grid is showing and has not
+yet made (`preview:<container>`), so one a crash left in an output slot is
+taken back out. Each player's two by two is a container of its own,
+`tiamat_default_craft:hand_grid:<uuid>`, emptied back into the pack when its
+screen closes. Stations themselves are found by the engine's
 container listing, and a tool's wear rides on the tool.
 
 ## What it reads from other mods

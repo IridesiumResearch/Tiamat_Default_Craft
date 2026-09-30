@@ -75,4 +75,28 @@ tdc.on_chat("craft", function(player, rest)
     end
 end)
 
+-- `grids`, for an operator: every pattern laid out alone, and any that
+-- makes something else said. Two patterns alike are a recipe nobody can
+-- make in a grid, which nothing else would show.
+tdc.on_chat("grids", function(player, rest)
+    if not game.is_operator(player) then
+        game.chat_to(player, "grids is for operators")
+        return
+    end
+    local clashes = {}
+    for _, id in ipairs(R.station_ids()) do
+        local station = R.station(id)
+        if station.grid then
+            local ids = {}
+            for _, recipe in ipairs(R.list(id)) do ids[#ids + 1] = recipe.id end
+            if id ~= "hand" then
+                for _, recipe in ipairs(R.list("hand")) do ids[#ids + 1] = recipe.id end
+            end
+            for _, clash in ipairs(R.grid_clashes(ids, station.grid)) do clashes[#clashes + 1] = clash end
+        end
+    end
+    game.chat_to(player, #clashes == 0 and "every pattern makes its own recipe"
+        or ("clashes: " .. table.concat(clashes, "; ")))
+end)
+
 return {}

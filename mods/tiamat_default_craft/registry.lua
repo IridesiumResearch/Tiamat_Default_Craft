@@ -213,6 +213,20 @@ function R.register_station(spec)
         if not record.heat then return nil, "a long station burns" end
         record.long = true
     end
+    if spec.grid ~= nil then
+        -- A crafting grid, n by n: the first n*n input slots, row by row, or
+        -- (by hand) a grid of the player's own. Its recipes may be patterns.
+        local n = U.whole(spec.grid, 2, 3)
+        if not n then return nil, "grid is 2 or 3" end
+        if record.slots.input then
+            if #record.slots.input < n * n then return nil, "a grid of " .. n .. " needs " .. n * n .. " input slots" end
+            if #record.slots.output ~= 1 then return nil, "a grid station has one output slot" end
+            if record.heat or record.runs or record.forge then return nil, "a grid is worked by hand" end
+        elseif not record.inventory then
+            return nil, "a grid is laid in input slots, or by hand"
+        end
+        record.grid = n
+    end
     if spec.refuse_fuel ~= nil then
         if type(spec.refuse_fuel) ~= "string" then return nil, "refuse_fuel is a sentence" end
         record.refuse_fuel = string.sub(spec.refuse_fuel, 1, 200)
@@ -311,6 +325,76 @@ local function entries(list, limit, groups_ok, what, empty_ok)
     return out
 end
 
+--- A pattern and its key, as a grid station lays them out: `{ width,
+--- height, cells = { [row] = { [column] = char or false } }, keys, inputs,
+--- tools }`, `inputs` and `tools` being what the cells add up to. Or nil
+--- and why.
+---
+--- Rows are strings, a space or a dot an empty cell. A key maps each other
+--- character to an entry, which is what ONE cell takes — `"mod:thing"`,
+--- `{ "#group", count = n }`, `{ "mod:thing", units = n }`, a glyph entry —
+--- or to `{ tool = "mod:thing" or "#group", wear? }`, a tool that lies in
+--- the grid and is kept.
+local function parse_pattern(spec, station)
+    local n = station.grid
+    if not n then return nil, "station " .. station.id .. " has no grid for a pattern" end
+    if spec.inputs ~= nil then return nil, "a pattern's inputs are its key" end
+    local rows = spec.pattern
+    if type(rows) ~= "table" or #rows == 0 or #rows > n then return nil, "a pattern is 1 to " .. n .. " rows" end
+    if type(spec.key) ~= "table" then return nil, "a pattern has a key" end
+    local width = 0
+    for _, row in ipairs(rows) do
+        if type(row) ~= "string" or #row == 0 or #row > n then
+            return nil, "a pattern's rows are 1 to " .. n .. " characters"
+        end
+        width = math.max(width, #row)
+    end
+    local cells, counts = {}, {}
+    local used_rows, used_columns = {}, {}
+    for r, row in ipairs(rows) do
+        cells[r] = {}
+        for c = 1, width do
+            local ch = string.sub(row, c, c)
+            if ch == "" or ch == " " or ch == "." then
+                cells[r][c] = false
+            else
+                cells[r][c] = ch
+                counts[ch] = (counts[ch] or 0) + 1
+                used_rows[r], used_columns[c] = true, true
+            end
+        end
+    end
+    -- No empty edge: a pattern is its bounding box, so it may sit anywhere.
+    if not (used_rows[1] and used_rows[#rows] and used_columns[1] and used_columns[width]) then
+        return nil, "a pattern has no empty first or last row or column"
+    end
+    local keys, inputs, tools = {}, {}, {}
+    for ch in pairs(spec.key) do
+        if not counts[ch] then return nil, "the key's " .. tostring(ch) .. " is not in the pattern" end
+    end
+    for _, ch in ipairs(U.sorted_keys(counts)) do
+        local value = spec.key[ch]
+        if type(value) == "string" then value = { value } end
+        if type(value) ~= "table" then return nil, "the key has no " .. ch end
+        if value.tool ~= nil then
+            local name = value.tool
+            if not (U.qualified(name) or U.group(name)) then return nil, "a tool is a qualified id or a #group" end
+            local wear = U.whole(value.wear or 1, 0, 1000)
+            if not wear then return nil, "a tool's wear is a whole number" end
+            keys[ch] = { tool = true, name = name, wear = wear }
+            for _ = 1, counts[ch] do tools[#tools + 1] = { name = name, wear = wear, cell = true } end
+        else
+            local e, why = entry(value, true)
+            if not e then return nil, why end
+            keys[ch] = e
+            inputs[#inputs + 1] = { name = e.name, units = e.units * counts[ch], glyph = e.glyph,
+                count = e.glyph and e.count * counts[ch] or nil }
+        end
+    end
+    if #inputs == 0 then return nil, "a pattern takes something" end
+    return { width = width, height = #rows, cells = cells, keys = keys, inputs = inputs, tools = tools }
+end
+
 --- Registers a recipe. `id` is qualified — `"my_mod:elixir"` — because the
 --- registry cannot see which mod is calling it; this mod's own recipes are
 --- qualified for it by `R.own`.
@@ -323,8 +407,16 @@ function R.register(spec)
     local station = stations[spec.station]
     if not station then return nil, "no station " .. tostring(spec.station) end
 
-    local inputs, why = entries(spec.inputs, C.max_inputs, true, "inputs")
-    if not inputs then return nil, why end
+    local pattern, inputs, why
+    if spec.pattern ~= nil then
+        pattern, why = parse_pattern(spec, station)
+        if not pattern then return nil, why end
+        inputs = pattern.inputs
+    else
+        if spec.key ~= nil then return nil, "a key belongs to a pattern" end
+        inputs, why = entries(spec.inputs, C.max_inputs, true, "inputs")
+        if not inputs then return nil, why end
+    end
     local outputs
     -- A recipe may make nothing: a study, whose product is what its
     -- `on_crafted` subscribers make of it (insight, to the progress mod).
@@ -350,6 +442,8 @@ function R.register(spec)
             tools[i] = { name = name, wear = w, glyph = glyph }
         end
     end
+    -- A pattern's tools lie in the grid; the rest are looked for in the pack.
+    for _, tool in ipairs(pattern and pattern.tools or {}) do tools[#tools + 1] = tool end
 
     local heat = U.whole(spec.heat or 0, 0, C.max_heat)
     if not heat then return nil, "heat is a tier 0.." .. C.max_heat end
@@ -394,6 +488,8 @@ function R.register(spec)
         requires = spec.requires,
         first = spec.first or ("craft:" .. id),
         strikes = strikes,
+        pattern = pattern and { width = pattern.width, height = pattern.height, cells = pattern.cells,
+            keys = pattern.keys } or nil,
     }
     return true
 end
@@ -621,7 +717,17 @@ local function resolve(recipe)
         for i, t in ipairs(recipe.tools) do
             local c = candidates(t.name)
             if #c == 0 then why = "nothing registered is " .. t.name break end
-            r.tools[i] = { candidates = c, wear = t.wear, name = t.name, glyph = t.glyph }
+            r.tools[i] = { candidates = c, wear = t.wear, name = t.name, glyph = t.glyph, cell = t.cell }
+        end
+    end
+    if not why and recipe.pattern then
+        r.keys = {}
+        for _, ch in ipairs(U.sorted_keys(recipe.pattern.keys)) do
+            local k = recipe.pattern.keys[ch]
+            local c = candidates(k.name)
+            if #c == 0 then why = "nothing registered is " .. k.name break end
+            r.keys[ch] = { candidates = c, units = k.units, glyph = k.glyph, count = k.count, tool = k.tool,
+                wear = k.wear, name = k.name }
         end
     end
     if not why then
@@ -647,7 +753,13 @@ end
 
 --- Where the ingredients come from and the products go: a container's roles,
 --- or a player's own inventory.
-local function source_for(uuid, station, container)
+local function source_for(uuid, station, container, pack)
+    if pack then
+        -- A grid station's recipe made at once from what the player carries.
+        if uuid == nil then return nil, "nobody to make it" end
+        if not station.grid then return nil, "that is not made from the pack" end
+        return { player = uuid, station = station }
+    end
     if container ~= nil then
         if type(container) ~= "string" or #container > 256 then return nil, "no such container" end
         if not station.slots.input then return nil, "that is made by hand, not at a station" end
@@ -921,8 +1033,8 @@ end
 --- the firsts), and none of their own things are used — a kiln's crucible is
 --- in the kiln.
 local function options(opts)
-    if type(opts) == "table" then return opts.container, opts.heat, opts.unattended end
-    return opts, nil, nil
+    if type(opts) == "table" then return opts.container, opts.heat, opts.unattended, opts.pack end
+    return opts, nil, nil, nil
 end
 
 --- Whether `uuid` could make recipe `id` now, without making it. Answers
@@ -930,9 +1042,9 @@ end
 function R.check(uuid, id, opts)
     local recipe = recipes[id]
     if not recipe then return nil, "no such recipe" end
-    local container, heat, unattended = options(opts)
+    local container, heat, unattended, pack = options(opts)
     local station = stations[recipe.station]
-    local source, why = source_for(uuid, station, container)
+    local source, why = source_for(uuid, station, container, pack)
     if not source then return nil, why end
     if not R.allowed(uuid, recipe.requires) then return nil, "you do not know how to make that yet" end
     if recipe.heat > 0 then
@@ -1001,6 +1113,249 @@ function R.perform(uuid, id, opts)
     end
     R.announce(uuid, id, outputs, source.container)
     return true, outputs
+end
+
+-- The grid --------------------------------------------------------------------------
+--
+-- What a grid holds is matched against recipes as it lies: a pattern
+-- anywhere in the grid (and mirrored), or a recipe without one in any
+-- arrangement, every cell used. The first output is shown in the output
+-- slot before it is made (grid.lua); taking it is what makes it.
+
+--- Whether `stack` fits a key's cell, and the units that cell takes.
+local function cell_fits(key, stack)
+    if not stack then return false end
+    local known = false
+    for _, material in ipairs(key.candidates) do
+        if material == stack.material then known = true break end
+    end
+    if not known then return false end
+    if key.tool then return stack.shape == nil, 0 end   -- any detail: a tool's is its serial
+    if stack.detail ~= nil then return false end
+    if key.glyph then
+        if stack.shape == nil or R.glyph_of(stack.shape) ~= key.glyph then return false end
+        local units = key.count * cells(stack.shape)
+        return stack.units >= units, units
+    end
+    return stack.shape == nil and stack.units >= key.units, key.units
+end
+
+--- A pattern against a grid: its takes, its tools and how many of its cells
+--- named an exact id (not a group), or nil.
+local function match_pattern(recipe, resolved, grid)
+    local n = grid.n
+    local top, bottom, left, right
+    for i = 1, n * n do
+        if grid.stacks[i] then
+            local r, c = (i - 1) // n + 1, (i - 1) % n + 1
+            top, bottom = math.min(top or r, r), math.max(bottom or r, r)
+            left, right = math.min(left or c, c), math.max(right or c, c)
+        end
+    end
+    local p = recipe.pattern
+    if not top or bottom - top + 1 ~= p.height or right - left + 1 ~= p.width then return nil end
+    for _, mirror in ipairs({ false, true }) do
+        local takes, tools, exact, ok = {}, {}, 0, true
+        for r = 1, p.height do
+            for c = 1, p.width do
+                local ch = p.cells[r][mirror and (p.width - c + 1) or c]
+                local stack = grid.stacks[(top + r - 2) * n + (left + c - 1)]
+                if not ch then
+                    ok = stack == nil
+                else
+                    local key = resolved.keys[ch]
+                    local fits, units = cell_fits(key, stack)
+                    ok = fits
+                    if fits and key.tool then
+                        tools[#tools + 1] = { material = stack.material, detail = stack.detail, wear = key.wear,
+                            slot = stack.slot }
+                    elseif fits then
+                        takes[#takes + 1] = { slot = stack.slot, material = stack.material, units = units,
+                            shape = stack.shape }
+                    end
+                    if fits and not U.group(key.name) then exact = exact + 1 end
+                end
+                if not ok then break end
+            end
+            if not ok then break end
+        end
+        if ok then return takes, tools, exact end
+    end
+    return nil
+end
+
+--- A recipe without a pattern against a grid: every input found in it,
+--- every non-empty cell used by an input or a tool. Tools not in the grid
+--- are answered as missing, to be looked for in the pack.
+local function match_loose(resolved, grid)
+    local stock = {}
+    for i = 1, grid.n * grid.n do
+        local s = grid.stacks[i]
+        if s then stock[#stock + 1] = { stack = s, left = s.units } end
+    end
+    if #stock == 0 then return nil end
+    local takes = {}
+    for _, input in ipairs(resolved.inputs) do
+        local need = input.glyph and input.count or input.units
+        for _, material in ipairs(input.candidates) do
+            for _, st in ipairs(stock) do
+                if need == 0 then break end
+                local s = st.stack
+                if s.material == material and s.detail == nil and st.left > 0 then
+                    local per, take = 1, 0
+                    if input.glyph then
+                        if s.shape and R.glyph_of(s.shape) == input.glyph then
+                            per = cells(s.shape)
+                            take = math.min(need, st.left // per)
+                        end
+                    elseif s.shape == nil then
+                        take = math.min(need, st.left)
+                    end
+                    if take > 0 then
+                        takes[#takes + 1] = { slot = s.slot, material = material, units = take * per, shape = s.shape }
+                        st.left, st.used, need = st.left - take * per, true, need - take
+                    end
+                end
+            end
+            if need == 0 then break end
+        end
+        if need > 0 then return nil end
+    end
+    local tools, missing = {}, {}
+    for _, tool in ipairs(resolved.tools) do
+        local hit
+        for _, material in ipairs(tool.candidates) do
+            for _, st in ipairs(stock) do
+                local s = st.stack
+                local fits
+                if tool.glyph then fits = s.shape ~= nil and R.glyph_of(s.shape) == tool.glyph else fits = s.shape == nil end
+                if not st.used and s.material == material and fits then hit = st break end
+            end
+            if hit then break end
+        end
+        if hit then
+            hit.used = true
+            tools[#tools + 1] = { material = hit.stack.material, detail = hit.stack.detail, wear = tool.wear,
+                slot = hit.stack.slot }
+        else
+            missing[#missing + 1] = tool
+        end
+    end
+    for _, st in ipairs(stock) do
+        if not st.used then return nil end
+    end
+    return takes, tools, missing
+end
+
+--- The recipe a grid holds, of the ids given, for `uuid`: `{ recipe,
+--- resolved, takes, tools }`, or nil. `grid` is `{ n, stacks = { [cell] =
+--- { slot, material, units, shape, detail } } }`, cells row by row from 1.
+--- A pattern beats a recipe without one, and a pattern naming exact ids
+--- beats one naming groups (ironwood makes ironwood wedges, not wooden
+--- ones); otherwise the first id wins.
+function R.grid_match(uuid, ids, grid, ungated)
+    local best
+    for _, id in ipairs(ids) do
+        local recipe = recipes[id]
+        local p = recipe and recipe.pattern
+        local resolved = recipe and (p == nil or (p.width <= grid.n and p.height <= grid.n)) and resolve(recipe)
+        if resolved and #resolved.outputs > 0 and recipe.heat == 0 and (ungated or R.allowed(uuid, recipe.requires)) then
+            local takes, tools, missing, score
+            if p then
+                local exact
+                takes, tools, exact = match_pattern(recipe, resolved, grid)
+                missing, score = {}, 1000 + (exact or 0)
+                for _, t in ipairs(resolved.tools) do
+                    if not t.cell then missing[#missing + 1] = t end
+                end
+            else
+                takes, tools, missing = match_loose(resolved, grid)
+                score = 0
+            end
+            if takes and (not best or score > best.score) then
+                local more = #missing == 0 and {}
+                    or find_tools({ tools = missing }, { station = stations[recipe.station] }, uuid, false)
+                if more then
+                    for _, f in ipairs(more) do tools[#tools + 1] = f end
+                    best = { recipe = recipe, resolved = resolved, takes = takes, tools = tools, score = score }
+                end
+            end
+        end
+    end
+    return best
+end
+
+--- Every pattern of `ids` laid in an `n` by `n` grid (each group by its
+--- first member) that does not make its own recipe: `{ "<id> makes <other>" }`.
+--- Two patterns alike would leave one of them unmakeable in the grid.
+function R.grid_clashes(ids, n)
+    local out = {}
+    for _, id in ipairs(ids) do
+        local recipe = recipes[id]
+        local p = recipe and recipe.pattern
+        local resolved = p and p.width <= n and p.height <= n and resolve(recipe)
+        if resolved then
+            local stacks, carved = {}, false
+            for r = 1, p.height do
+                for c = 1, p.width do
+                    local ch = p.cells[r][c]
+                    if ch then
+                        local key = resolved.keys[ch]
+                        carved = carved or key.glyph ~= nil
+                        local i = (r - 1) * n + c
+                        stacks[i] = { slot = i, material = key.candidates[1], units = key.tool and U.UNITS or key.units }
+                    end
+                end
+            end
+            local match = not carved and R.grid_match(nil, ids, { n = n, stacks = stacks }, true)
+            if not carved and (not match or match.recipe.id ~= id) then
+                out[#out + 1] = id .. " makes " .. (match and match.recipe.id or "nothing")
+            end
+        end
+    end
+    return out
+end
+
+--- What a match shows in the output slot: its first output's first piece
+--- (a tool is minted here, serial and all). Any more of it is given with
+--- the rest when it is made.
+function R.grid_preview(match)
+    local list = pieces(match.resolved.outputs[1])
+    match.rest = { table.unpack(list, 2) }
+    return list[1]
+end
+
+--- Makes a match whose first piece the player has already taken from the
+--- output slot: takes each cell's share from `container`, wears the tools,
+--- gives `uuid` everything else it makes, and tells the subscribers.
+--- Answers whether the ingredients were all there.
+function R.grid_make(uuid, match, container)
+    local source = { container = container }
+    local got, complete = take_all(source, match.takes)
+    if not complete then
+        give_back(source, got, uuid)
+        return false
+    end
+    for _, tool in ipairs(match.tools) do
+        if tool.wear > 0 then
+            if tool.player == nil then tool.container = container end
+            R.wear(uuid, tool, tool.wear)
+        end
+    end
+    for _, piece in ipairs(match.rest or {}) do
+        if U.give(uuid, piece) > 0 then
+            game.log("tiamat_default_craft: " .. match.recipe.id .. " had more than the pack could hold")
+        end
+    end
+    local outputs = {}
+    for i, out in ipairs(match.resolved.outputs) do
+        outputs[i] = { material = out.name, units = out.units }
+        if i > 1 then
+            for _, piece in ipairs(pieces(out)) do U.give(uuid, piece) end
+        end
+    end
+    R.announce(uuid, match.recipe.id, outputs, container)
+    return true
 end
 
 --- Tells the subscribers a recipe was made, for a maker that did not go

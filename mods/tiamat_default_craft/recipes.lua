@@ -14,12 +14,12 @@ local M = tdc.materials
 -- Stations -------------------------------------------------------------------
 
 -- By hand, from what the player carries: the Craft tab, or `craft <recipe>`.
-assert(R.register_station{ id = "hand", name = "Hand", inventory = true })
+assert(R.register_station{ id = "hand", name = "Hand", inventory = true, grid = 2 })
 
--- The workbench: nine slots in, one out.
+-- The workbench: a grid of nine, one out.
 assert(R.register_station{
     id = "workbench", name = "Workbench", block = M.id("workbench"),
-    slots = { input = { from = 1, to = 9 }, output = 10 },
+    slots = { input = { from = 1, to = 9 }, output = 10 }, grid = 3,
 })
 
 -- The kiln: fuel, two inputs, the crucible or mould, the output.
@@ -81,53 +81,59 @@ for _, fuel in ipairs(C.fuels) do
 end
 
 -- Recipes --------------------------------------------------------------------
+--
+-- By hand and at the workbench a recipe is a PATTERN, laid out in the grid
+-- as it reads here (and mirrored, and anywhere it fits): each letter is one
+-- cell, and the key says what that cell takes. A `tool` in the key lies in
+-- the grid and is kept. The same recipe is made at once from the pack by
+-- the list beside the grid.
 
 R.own{
     id = "stick", station = "hand", name = "Sticks",
-    inputs = { { "#log", count = 1 } },
+    pattern = { "L" }, key = { L = "#log" },
     outputs = { { M.id("stick"), count = 4 } },
 }
 
 R.own{
     id = "tinder", station = "hand", name = "Tinder",
-    inputs = { { "#tinder", units = 9 } },
+    pattern = { "T" }, key = { T = { "#tinder", units = 9 } },
     outputs = { { M.id("tinder"), count = 1 } },
 }
 
 R.own{
     id = "fire_striker", station = "hand", name = "Fire striker",
-    inputs = { { U.world("flint"), count = 2 } },
+    pattern = { "FF" }, key = { F = U.world("flint") },
     outputs = { { M.id("fire_striker"), count = 1 } },
     first = "craft:fire_striker",
 }
 
 R.own{
     id = "cord", station = "hand", name = "Cord",
-    inputs = { { U.world("bramble"), count = 1 } },
+    pattern = { "B" }, key = { B = U.world("bramble") },
     outputs = { { M.id("cord"), count = 2 } },
 }
 
 R.own{
     id = "workbench", station = "hand", name = "Workbench",
-    inputs = { { "#log", count = 4 }, { M.id("cord"), count = 4 } },
+    pattern = { "LL", "CC" }, key = { L = { "#log", count = 2 }, C = { M.id("cord"), count = 2 } },
     outputs = { { M.id("workbench"), count = 1 } },
 }
 
 R.own{
     id = "bark_strip", station = "hand", name = "Bark strips",
-    inputs = { { "#log", count = 1 } },
-    outputs = { { M.id("bark_strip"), count = 4 } },
+    pattern = { "LL" }, key = { L = "#log" },
+    outputs = { { M.id("bark_strip"), count = 8 } },
 }
 
 R.own{
     id = "torch", station = "hand", name = "Torches",
-    inputs = { { M.id("stick"), count = 1 }, { M.id("bark_strip"), count = 1 }, { M.id("tinder"), count = 1 } },
+    pattern = { "TB", "S " }, key = { T = M.id("tinder"), B = M.id("bark_strip"), S = M.id("stick") },
     outputs = { { M.id("torch"), count = 2 } },
 }
 
 R.own{
     id = "unlit_campfire", station = "hand", name = "Campfire",
-    inputs = { { M.id("stick"), count = 3 }, { "#log", count = 2 }, { M.id("tinder"), count = 1 } },
+    pattern = { "ST", "LL" }, key = { S = { M.id("stick"), count = 3 }, T = M.id("tinder"), L = "#log" },
     outputs = { { M.id("unlit_campfire"), count = 1 } },
 }
 
@@ -135,32 +141,31 @@ R.own{
 
 R.own{
     id = "plank", station = "workbench", name = "Planks",
-    inputs = { { "#log", count = 1 } },
-    tools = { "#wedge" },
+    pattern = { "W", "L" }, key = { W = { tool = "#wedge" }, L = "#log" },
     outputs = { { M.id("plank"), count = 4 } },
 }
 
 R.own{
     id = "haft", station = "workbench", name = "Haft",
-    inputs = { { M.id("stick"), count = 2 }, { M.id("cord"), count = 1 } },
+    pattern = { "S", "C", "S" }, key = { S = M.id("stick"), C = M.id("cord") },
     outputs = { { M.id("haft"), count = 1 } },
 }
 
 R.own{
     id = "digging_stick", station = "workbench", name = "Digging stick",
-    inputs = { { M.id("stick"), count = 2 }, { M.id("cord"), count = 1 } },
+    pattern = { "C ", " S", " S" }, key = { S = M.id("stick"), C = M.id("cord") },
     outputs = { { M.id("digging_stick"), count = 1 } },
 }
 
 R.own{
     id = "wooden_wedge", station = "workbench", name = "Wooden wedge",
-    inputs = { { "#log", count = 1 } },
-    outputs = { { M.id("wooden_wedge"), count = 2 } },
+    pattern = { "L", "L" }, key = { L = "#log" },
+    outputs = { { M.id("wooden_wedge"), count = 4 } },
 }
 
 R.own{
     id = "wooden_maul", station = "workbench", name = "Wooden maul",
-    inputs = { { "#log", count = 1 }, { M.id("haft"), count = 1 } },
+    pattern = { "L", "H" }, key = { L = "#log", H = M.id("haft") },
     outputs = { { M.id("wooden_maul"), count = 1 } },
 }
 
@@ -168,19 +173,19 @@ R.own{
 
 R.own{
     id = "ironwood_digging_stick", station = "workbench", name = "Ironwood digging stick",
-    inputs = { { U.world("ironwood_log"), count = 1 }, { M.id("cord"), count = 1 } },
+    pattern = { "C ", " I" }, key = { C = M.id("cord"), I = U.world("ironwood_log") },
     outputs = { { M.id("ironwood_digging_stick"), count = 1 } },
 }
 
 R.own{
     id = "ironwood_wedge", station = "workbench", name = "Ironwood wedge",
-    inputs = { { U.world("ironwood_log"), count = 1 } },
-    outputs = { { M.id("ironwood_wedge"), count = 2 } },
+    pattern = { "I", "I" }, key = { I = U.world("ironwood_log") },
+    outputs = { { M.id("ironwood_wedge"), count = 4 } },
 }
 
 R.own{
     id = "ironwood_maul", station = "workbench", name = "Ironwood maul",
-    inputs = { { U.world("ironwood_log"), count = 1 }, { M.id("haft"), count = 1 } },
+    pattern = { "I", "H" }, key = { I = U.world("ironwood_log"), H = M.id("haft") },
     outputs = { { M.id("ironwood_maul"), count = 1 } },
 }
 
@@ -188,49 +193,50 @@ R.own{
 
 R.own{
     id = "unfired_kiln", station = "workbench", name = "Kiln",
-    inputs = { { U.world("wet_clay"), count = 9 }, { U.world("cobbles"), count = 9 } },
+    pattern = { "CCC", "BBB" }, key = { C = { U.world("wet_clay"), count = 3 }, B = { U.world("cobbles"), count = 3 } },
     outputs = { { M.id("unfired_kiln"), count = 1 } },
 }
 
 R.own{
     id = "unfired_crucible", station = "workbench", name = "Crucible (unfired)",
-    inputs = { { U.world("wet_clay"), count = 3 } },
+    pattern = { "C C", " C " }, key = { C = U.world("wet_clay") },
     outputs = { { M.id("unfired_crucible"), count = 1 } },
 }
 
+-- A mould is wet clay laid in the shape of what it casts (C.mould_shapes).
 for _, shape in ipairs(U.sorted_keys(C.heads)) do
     R.own{
         id = "unfired_mould_" .. shape, station = "workbench", name = U.title(shape) .. " mould (unfired)",
-        inputs = { { U.world("wet_clay"), count = 2 } },
+        pattern = C.mould_shapes[shape], key = { C = U.world("wet_clay") },
         outputs = { { M.id("unfired_mould_" .. shape), count = 1 } },
     }
 end
 R.own{
     id = "unfired_mould_pot", station = "workbench", name = "Pot mould (unfired)",
-    inputs = { { U.world("wet_clay"), count = 2 } },
+    pattern = C.mould_shapes.pot, key = { C = U.world("wet_clay") },
     outputs = { { M.id("unfired_mould_pot"), count = 1 } },
 }
 R.own{
     id = "unfired_mould_tuyere", station = "workbench", name = "Tuyere mould (unfired)",
-    inputs = { { U.world("wet_clay"), count = 2 } },
+    pattern = C.mould_shapes.tuyere, key = { C = U.world("wet_clay") },
     outputs = { { M.id("unfired_mould_tuyere"), count = 1 } },
 }
 
 -- Iron's workshop, at the workbench: the bloomery, its bellows, the anvil.
 R.own{
     id = "bloomery", station = "workbench", name = "Bloomery",
-    inputs = { { M.id("fired_clay"), count = 9 }, { U.world("stone"), count = 9 }, { M.id("bronze_tuyere"), count = 1 } },
+    pattern = { "FFF", " T ", "SSS" },
+    key = { F = { M.id("fired_clay"), count = 3 }, T = M.id("bronze_tuyere"), S = { U.world("stone"), count = 3 } },
     outputs = { { M.id("bloomery"), count = 1 } },
 }
 R.own{
     id = "bellows", station = "workbench", name = "Bellows",
-    inputs = { { "#plank", count = 4 }, { M.id("cord"), count = 4 }, { M.id("copper_nozzle"), count = 1 } },
+    pattern = { "PCP", "CNC", "PCP" }, key = { P = "#plank", C = M.id("cord"), N = M.id("copper_nozzle") },
     outputs = { { M.id("bellows"), count = 1 } },
 }
 R.own{
     id = "stone_anvil", station = "workbench", name = "Stone anvil",
-    inputs = { { U.world("granite"), count = 1 } },
-    tools = { { "#chisel", wear = 10 } },
+    pattern = { "K", "G" }, key = { K = { tool = "#chisel", wear = 10 }, G = U.world("granite") },
     outputs = { { M.id("stone_anvil"), count = 1 } },
 }
 
@@ -241,7 +247,7 @@ for _, metal in ipairs({ "bronze", "iron" }) do
         local handle = (shape == "chisel" or shape == "knife") and M.id("stick") or M.id("haft")
         R.own{
             id = metal .. "_" .. shape, station = "workbench", name = U.title(metal) .. " " .. shape,
-            inputs = { { M.id(metal .. "_" .. shape .. "_head"), count = 1 }, { handle, count = 1 } },
+            pattern = { "H", "S" }, key = { H = M.id(metal .. "_" .. shape .. "_head"), S = handle },
             outputs = { { M.id(metal .. "_" .. shape), count = 1 } },
             first = "haft:" .. metal .. "_" .. shape,
         }
@@ -250,7 +256,7 @@ end
 
 R.own{
     id = "sluice", station = "workbench", name = "Sluice",
-    inputs = { { "#plank", count = 4 }, { M.id("cord"), count = 2 } },
+    pattern = { "PCP", "PCP" }, key = { P = "#plank", C = M.id("cord") },
     outputs = { { M.id("sluice"), count = 1 } },
 }
 
@@ -263,7 +269,7 @@ R.own{
 
 R.own{
     id = "chest", station = "workbench", name = "Chest",
-    inputs = { { "#plank", count = 9 }, { M.id("cord"), count = 2 } },
+    pattern = { "PPP", "PCP", "PPP" }, key = { P = "#plank", C = { M.id("cord"), count = 2 } },
     outputs = { { M.id("chest"), count = 1 } },
 }
 
@@ -274,7 +280,7 @@ local UI = game.exports("tiamat_default_ui")
 if UI and type(UI.shape_crafter) == "string" then
     R.own{
         id = "shape_crafter", station = "workbench", name = "Shape crafter",
-        inputs = { { "#plank", count = 4 }, { U.world("cobbles"), count = 4 } },
+        pattern = { "PB", "BP" }, key = { P = { "#plank", count = 2 }, B = { U.world("cobbles"), count = 2 } },
         outputs = { { UI.shape_crafter, count = 1 } },
     }
 end
@@ -471,55 +477,52 @@ R.own{
 
 R.own{
     id = "cured_meat", station = "workbench", name = "Cured meat",
-    inputs = { { LIFE .. "raw_meat", count = 1 }, { U.world("salt"), units = 9 } },
+    pattern = { "S", "M" }, key = { S = { U.world("salt"), units = 9 }, M = LIFE .. "raw_meat" },
     outputs = { { M.id("cured_meat"), count = 1 } },
     first = "cook:cured",
 }
 R.own{
     id = "cord_from_sinew", station = "hand", name = "Cord",
-    inputs = { { LIFE .. "sinew", count = 1 } },
+    pattern = { "S" }, key = { S = LIFE .. "sinew" },
     outputs = { { M.id("cord"), count = 3 } },
 }
 R.own{
     id = "leather", station = "workbench", name = "Leather",
-    inputs = { { LIFE .. "hide", count = 1 }, { M.id("bark_strip"), count = 2 } },
+    pattern = { "BHB" }, key = { B = M.id("bark_strip"), H = LIFE .. "hide" },
     outputs = { { M.id("leather"), count = 1 } },
     first = "craft:leather",
 }
 R.own{
     id = "cloth", station = "workbench", name = "Cloth",
-    inputs = { { LIFE .. "wool", count = 3 } },
+    pattern = { "WWW" }, key = { W = LIFE .. "wool" },
     outputs = { { M.id("cloth"), count = 1 } },
     first = "craft:cloth",
 }
 R.own{
     id = "bone_needle", station = "workbench", name = "Bone needle",
-    inputs = { { LIFE .. "bone", count = 1 } },
-    tools = { "#knife" },
+    pattern = { "K", "B" }, key = { K = { tool = "#knife" }, B = LIFE .. "bone" },
     outputs = { { M.id("bone_needle"), count = 1 } },
 }
 R.own{
     id = "warm_coat", station = "workbench", name = "Warm coat",
-    inputs = { { M.id("leather"), count = 3 }, { M.id("cloth"), count = 2 } },
-    tools = { M.id("bone_needle") },
+    pattern = { "LNL", "CLC" }, key = { L = M.id("leather"), C = M.id("cloth"), N = { tool = M.id("bone_needle") } },
     outputs = { { LIFE .. "warm_coat", count = 1 } },
     first = "sew:warm_coat",
 }
 R.own{
     id = "cool_cloak", station = "workbench", name = "Cool cloak",
-    inputs = { { M.id("cloth"), count = 4 } },
-    tools = { M.id("bone_needle") },
+    pattern = { "CNC", "C C" }, key = { C = M.id("cloth"), N = { tool = M.id("bone_needle") } },
     outputs = { { LIFE .. "cool_cloak", count = 1 } },
     first = "sew:cool_cloak",
 }
 R.own{
     id = "bandage", station = "hand", name = "Bandages",
-    inputs = { { M.id("cloth"), count = 1 } },
+    pattern = { "C" }, key = { C = M.id("cloth") },
     outputs = { { LIFE .. "bandage", count = 2 } },
 }
 R.own{
     id = "leather_bellows", station = "workbench", name = "Bellows (leather)",
-    inputs = { { "#plank", count = 4 }, { M.id("leather"), count = 2 }, { M.id("copper_nozzle"), count = 1 } },
+    pattern = { "P P", "LNL", "P P" }, key = { P = "#plank", L = M.id("leather"), N = M.id("copper_nozzle") },
     outputs = { { M.id("bellows"), count = 1 } },
 }
 
@@ -551,8 +554,7 @@ end
 
 R.own{
     id = "iron_frame", station = "workbench", name = "Iron frame",
-    inputs = { { M.id("iron_plate"), count = 4 }, { M.id("iron_nails"), count = 1 } },
-    tools = { "#hammer" },
+    pattern = { "PHP", "PNP" }, key = { P = M.id("iron_plate"), N = M.id("iron_nails"), H = { tool = "#hammer" } },
     outputs = { { M.id("iron_frame"), count = 1 } },
     first = "craft:iron_frame",
 }
@@ -560,7 +562,7 @@ R.own{
 -- Gears are bronze, cast: there is no zinc in the world for brass.
 R.own{
     id = "unfired_mould_gear", station = "workbench", name = "Gear mould (unfired)",
-    inputs = { { U.world("wet_clay"), count = 2 } },
+    pattern = C.mould_shapes.gear, key = { C = U.world("wet_clay") },
     outputs = { { M.id("unfired_mould_gear"), count = 1 } },
 }
 R.own{
@@ -579,7 +581,7 @@ R.own{
 -- Building.
 R.own{
     id = "mudbrick", station = "workbench", name = "Mudbrick",
-    inputs = { { U.world("wet_clay"), count = 1 }, { M.id("tinder"), count = 1 } },
+    pattern = { "C", "T" }, key = { C = U.world("wet_clay"), T = M.id("tinder") },
     outputs = { { M.id("mudbrick"), count = 1 } },
 }
 R.own{
@@ -595,7 +597,7 @@ R.own{
 }
 R.own{
     id = "iron_lantern", station = "workbench", name = "Iron lantern",
-    inputs = { { M.id("iron_plate"), count = 1 }, { M.id("glass"), count = 1 }, { M.id("torch"), count = 1 } },
+    pattern = { "P", "T", "G" }, key = { P = M.id("iron_plate"), T = M.id("torch"), G = M.id("glass") },
     outputs = { { M.id("iron_lantern"), count = 1 } },
 }
 
