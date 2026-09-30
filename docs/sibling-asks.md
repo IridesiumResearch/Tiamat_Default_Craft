@@ -17,7 +17,7 @@ its animals drop hide, bone and sinew. Its own asks of this mod (its
 `docs/sibling-asks.md`, C1 the kitchen and C2 leather, cord and cloth) are
 this mod's to build.
 
-### L9. `steady` on bread and `hearty` on hot stew, in Life's own items (2026-09-28): OPEN
+### L9. `steady` on bread and `hearty` on hot stew, in Life's own items (2026-09-28): ANSWERED (Life `da87daf`)
 
 **Wanted.** Life's C1 asked Craft to register bread with `steady` and a
 stew with `hearty`. But the bread and hot stew Craft makes are Life's own
@@ -25,6 +25,9 @@ items (`tiamat_default_life:bread`, `:hot_stew`), and `add_food` on them
 from here would replace Life's whole definition — its food, saturation,
 warmth — with numbers this mod has no business choosing. The effects belong
 in Life's own `items.lua` definitions of the two.
+
+**Answered** 2026-09-28, in Life `da87daf`: bread gives `steady` and hot
+stew `hearty`, in Life's own definitions, with nothing needed from here.
 
 ### Life's C1 and C2, its asks of this mod: BUILT 2026-09-28
 
