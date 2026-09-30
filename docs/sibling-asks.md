@@ -152,12 +152,18 @@ the brief's own ratio — which is "a log gives a third more charcoal".
 
 ## Tiamat Default World
 
-### W4. White sand for glass (2026-09-26): OPEN, for step 10
+### W4. White sand for glass (2026-09-26): ANSWERED (World e0ddfc3)
 
 **Wanted.** Confirmation that `white_sand` is the sand glass is made from.
-Glass is after the loop; nothing waits on it yet.
+**Answered:** it is the one near-white sand in the world, on the
+Coral-Fringed Shallows' lagoon flats and sandspits, and the glass recipe
+takes it.
 
-### W3. Pitchblende (2026-09-26): OPEN, for the tech tree
+### W3. Pitchblende (2026-09-26): ANSWERED (World e0ddfc3)
+
+**Answered:** `pitchblende` veins from 1,200 blocks down, beside the lead
+and silver and rarer than either, tagged `ore`, `metal_ore` and
+`radioactive`. Nothing in this mod uses it; it is there for the tech tree.
 
 **Wanted.** A `pitchblende` vein at 1,200 blocks and deeper, beside lead and
 silver, where it really occurs. It is the one ore of the Schism design with

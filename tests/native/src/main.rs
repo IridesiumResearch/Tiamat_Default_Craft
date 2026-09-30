@@ -453,7 +453,6 @@ fn tools() {
     assert_eq!(r.heard(PLAYER), vec!["Your bronze pick has worn to nothing."]);
     let other: Vec<String> = picks.iter().filter(|d| **d != bronze_pick).cloned().collect();
     assert_eq!(r.details(PLAYER, "bronze_pick"), other, "only the other pick is left");
-    let serial = bronze_pick.trim_start_matches("t=");
     assert!(!r.storage.dump().contains("wear:"), "no wear is kept in storage");
     r.tick(1);
     assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
