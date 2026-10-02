@@ -138,19 +138,25 @@ function S.recipe_tip(recipe)
     return string.sub(full, 1, 253) .. "..."
 end
 
---- Every recipe of `ids` as a button, `r<n>`, in a list that scrolls, each
---- with its hover. One that cannot be made from the pack now is dim, and
---- pressing it does nothing.
+--- The recipes of `ids` that the player could make from their pack now —
+--- what they carry, and what their research has opened — as buttons,
+--- `r<n>` by index into `ids`, in a list that scrolls, each saying on hover
+--- what it takes.
+---
+--- A scroll gives EACH child the whole box (the engine's layout), so the
+--- buttons go in one column inside it, never straight in.
 function S.recipe_panel(player, ids, width, height)
-    local children = {}
+    local buttons = {}
     for i, id in ipairs(ids) do
-        local recipe = R.recipe(id)
-        local button = S.button("r" .. i, S.recipe_text(recipe), not R.check(player, id, { pack = true }))
-        button.tooltip = S.recipe_tip(recipe)
-        children[#children + 1] = button
+        if R.check(player, id, { pack = true }) then
+            local recipe = R.recipe(id)
+            local button = S.button("r" .. i, S.recipe_text(recipe))
+            button.tooltip = S.recipe_tip(recipe)
+            buttons[#buttons + 1] = button
+        end
     end
-    if #ids == 0 then children[1] = S.hint("Nothing is made here yet.") end
-    return { type = "scroll", size = width, cross_size = height, children = children }
+    if #buttons == 0 then buttons[1] = S.hint("Nothing to make yet.") end
+    return { type = "scroll", size = width, cross_size = height, children = { S.box("column", buttons, 4) } }
 end
 
 --- The recipe buttons of one page, `r<n>` by index into `ids`, and the page

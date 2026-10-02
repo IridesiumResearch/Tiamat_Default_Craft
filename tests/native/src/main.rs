@@ -672,8 +672,6 @@ fn stations() {
     let plank = r.material("plank");
     assert_eq!(r.boxes.get(bench, 10).map(|s| (s.material, s.units)), Some((plank, 108)), "shown");
     assert_eq!(r.boxes.get(bench, 5).map(|s| s.units), Some(81), "nothing spent yet");
-    let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
-    assert!(tree.contains("W: any wedge (kept)"), "the hover says what it takes");
     // The wedge moved beside the log: no pattern, nothing shown.
     r.boxes.set(bench, 2, None);
     r.boxes.set(bench, 4, Some(wedge_stack.clone()));
@@ -711,12 +709,14 @@ fn stations() {
     r.give(PLAYER, "tiamat_default_world:oak_log", 27);
     r.give_detail(PLAYER, "wooden_wedge", 27, &wedge);
     let before = r.units(PLAYER, "plank");
+    r.click(PLAYER, "station", "player:main", 1, Click::Left);   // the pack changed: the list follows
+    let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    assert!(tree.contains("W: any wedge (kept)"), "the hover says what it takes");
     r.press_labelled(PLAYER, "station", "Planks x4");
     assert!(r.screen_says(PLAYER, "Made Planks x4."));
     assert_eq!(r.units(PLAYER, "plank"), before + 108);
-    r.press_labelled(PLAYER, "station", "Planks x4");
-    assert_eq!(r.units(PLAYER, "plank"), before + 108, "no log in the pack: nothing");
-    assert!(!r.screen_says(PLAYER, "Cannot"), "and no sentence about it");
+    let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
+    assert!(!tree.contains("Button { text: \"Planks x4\""), "no log in the pack: not in the list");
 
     // Closed, what was shown is gone: it was never made.
     r.close(PLAYER, "station");

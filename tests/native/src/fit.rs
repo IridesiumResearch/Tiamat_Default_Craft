@@ -60,6 +60,11 @@ fn walk(tree: &ui_layout::Tree, at: usize, laid: &ui_layout::Laid, parent: Optio
         found.push(format!("{:?} spills out of its parent: {r:?} in {p:?}", node.widget));
     }
     match &node.widget {
+        // The engine gives every child of a scroll the whole box, so two
+        // children are drawn one over the other: a scroll holds one column.
+        Widget::Scroll if laid.children.len() > 1 => {
+            found.push(format!("a scroll with {} children, drawn over each other", laid.children.len()));
+        }
         Widget::ItemSlot { view, index } => {
             let ratio = r.w as f32 / r.h.max(1) as f32;
             if r.w.min(r.h) < 36 || !(0.8..=1.25).contains(&ratio) {

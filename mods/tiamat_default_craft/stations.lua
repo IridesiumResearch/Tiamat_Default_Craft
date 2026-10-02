@@ -274,8 +274,9 @@ tdc.on_use(function(e)
     return ""
 end)
 
---- A recipe from the list beside a grid: made at once from the pack. A dim
---- one (something missing) does nothing; its hover says what it takes.
+--- A recipe from the list beside a grid: made at once from the pack. The
+--- list shows only what can be made, so a refusal here is a pack that
+--- changed under the screen, and does nothing.
 local function quick(player, id)
     if not R.check(player, id, { pack = true }) then return nil end
     local ok = R.perform(player, id, { pack = true })
