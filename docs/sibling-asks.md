@@ -95,6 +95,14 @@ uses each the way they will.
 - **C-M9:** option (b), `on_crafted` passes the container as a fourth
   argument.
 
+### C-S8: ANSWERED 2026-10-05
+
+- **C-S8, a station's domain when it is placed:** a station placed off the
+  overworld is named `<domain>@x,y,z`, as a use there names it. The place
+  event has no domain yet (engine ask E-S4), so it is the placer's: the
+  crosshair's domain, which every placement has, or the last their feet
+  were in. Placement checks (a sluice's water) read that domain too.
+
 **C-M10, a slow fire,** was withdrawn before it was built, and C-S4 before
 that; nothing was done for either.
 

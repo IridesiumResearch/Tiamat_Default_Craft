@@ -522,6 +522,8 @@ pub struct World {
     pub fluids: Mutex<HashMap<(i32, i32, i32), u32>>,
     pub edits: Mutex<Vec<(BlockPos, String)>>,
     pub aimed: Mutex<Option<(i32, i32, i32)>>,
+    /// The domain the aim is in, when it is not the overworld.
+    pub aimed_domain: Mutex<Option<String>>,
     pub names: Mutex<HashMap<String, MaterialId>>,
     /// Blocks whose chunk is not loaded: read as absent.
     pub absent: Mutex<HashSet<(i32, i32, i32)>>,
@@ -555,7 +557,7 @@ impl sight::Access for World {
         }
         let Reading::Single { material, occupancy } = self.block_at("", BlockPos { x, y, z }) else { return None };
         (occupancy != 0).then(|| Looked::Block {
-            domain: "overworld".into(),
+            domain: self.aimed_domain.lock().unwrap().clone().unwrap_or_else(|| "overworld".into()),
             cell: tiamat_core::SubNodePos { x: x * 3 + 1, y: y * 3 + 2, z: z * 3 + 1 },
             material,
             face: [0, 1, 0],

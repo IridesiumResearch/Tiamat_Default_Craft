@@ -653,6 +653,18 @@ fn stations() {
     assert!(r.boxes.exists(bench));
     assert!(r.storage.dump().contains(&format!("placer:{bench}=Text(\"{}\")", hex(PLAYER))), "{}", r.storage.dump());
 
+    // Placed in another domain, its box is named there (Science's C-S8): the
+    // same place in the overworld is a different box.
+    *r.world.aimed.lock().unwrap() = Some((5, 64, 5));
+    *r.world.aimed_domain.lock().unwrap() = Some("schism_magic:deep".into());
+    r.give(PLAYER, "workbench", 27);
+    r.place(PLAYER, 6, 64, 5, "workbench").unwrap();
+    assert!(r.boxes.exists("tiamat_default_craft:workbench:schism_magic:deep@6,64,5"), "named with its domain");
+    assert!(!r.boxes.exists("tiamat_default_craft:workbench:6,64,5"));
+    *r.world.aimed.lock().unwrap() = None;
+    *r.world.aimed_domain.lock().unwrap() = None;
+    r.world.blocks.lock().unwrap().remove(&(6, 64, 5));
+
     // Used: the screen, and the container lent to this player alone.
     assert_eq!(r.use_at(PLAYER, 5, 64, 5).as_deref(), Some(""));
     assert_eq!(r.last_form(), "tiamat_default_craft:station");

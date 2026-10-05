@@ -177,10 +177,32 @@ function ST.check(id, fn)
     checks[id] = fn
 end
 
+-- The place event carries no domain (engine ask E-S4), so a station placed
+-- off the overworld learns where it is from the player: the crosshair's
+-- domain (a placement is always aimed at the face it builds against), or
+-- the last the player's feet were in. Science's C-S8: a frame at a star
+-- must not share a box with one at the same place in the overworld.
+local where = {}   -- uuid -> the domain their feet were last in
+
+game.register_on_player_move(function(e)
+    where[e.player] = e.domain
+end)
+
+tdc.on_leave(function(e)
+    where[e.player] = nil
+end)
+
+local function domain_of(player)
+    local look = game.looking_at(player)
+    local domain = look and look.domain or where[player]
+    if domain == nil or domain == "overworld" then return nil end
+    return domain
+end
+
 tdc.on_place(function(e)
     local kind = kind_of(e.material)
     if not kind then return end
-    local pos = { x = e.x, y = e.y, z = e.z }
+    local pos = { x = e.x, y = e.y, z = e.z, domain = domain_of(e.player) }
     local check = checks[kind.id]
     local refusal = check and check(pos)
     if refusal then return refusal end
