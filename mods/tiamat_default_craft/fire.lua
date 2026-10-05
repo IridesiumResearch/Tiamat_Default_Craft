@@ -245,6 +245,30 @@ end
 
 -- Lighting and feeding ----------------------------------------------------------------
 
+-- A torch held to a laid fire, or to a furnace with fuel in it, lights it.
+-- Holding a torch, the place control places one, so this is heard as a
+-- placement: aimed at something to light, the fire is lit and no torch is
+-- set down. The torch is not spent; it is still burning.
+tdc.on_place(function(e)
+    if game.block_of(e.material) ~= game.mod_id .. ":torch" then return nil end
+    local look = game.looking_at(e.player)
+    if not (look and look.x and look.material) then return nil end
+    local pos = { x = look.x // 3, y = look.y // 3, z = look.z // 3,
+        domain = look.domain ~= "overworld" and look.domain or nil }
+    local name = game.block_of(look.material)
+    if name == UNLIT then
+        local ok, why = F.ignite(pos, e.player)
+        return ok and "" or why
+    end
+    local kind = tdc.stations and tdc.stations.kind(look.material)
+    if kind and kind.station and kind.station.heat and tdc.furnace
+        and name ~= kind.station.lit_block then
+        local ok, why = tdc.furnace.ignite(kind.station, tdc.stations.name(kind.id, pos), pos, e.player)
+        return ok and "" or why
+    end
+    return nil
+end)
+
 --- Ticks of fire in 27 units of a material, by name, or nil.
 local function fuel_ticks(name)
     if C.campfire_fuel[name] then return C.campfire_fuel[name] end

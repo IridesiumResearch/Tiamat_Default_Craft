@@ -106,12 +106,17 @@ block("chest", {
     hardness = 1.0,
 })
 
--- The torch (fire.lua): a light that burns out.
+-- The torch (fire.lua): a light that burns out. Drawn as a crossed sprite,
+-- as grass is, in the middle column of its block: one piece, a whole torch
+-- to place and to dig, never a cube.
+local TORCH_SHAPE = { "... .#. ...", "... .#. ...", "... .#. ..." }
 block("torch", {
     name = "Torch",
-    description = "Tinder bound to a stick with bark. It burns out, in time.",
+    description = "Tinder bound to a stick with bark. It burns out, in time; held to a laid fire, it lights it.",
     hardness = 0.1,
-    cutout = true,
+    billboard = "cross",
+    whole = true,
+    shape = TORCH_SHAPE,
     passable = true,
     light_emit = tdc.config.torch_light,
 })
@@ -119,7 +124,9 @@ block("spent_torch", {
     name = "Spent torch",
     description = "Burned out. The stick is still good.",
     hardness = 0.1,
-    cutout = true,
+    billboard = "cross",
+    whole = true,
+    shape = TORCH_SHAPE,
     passable = true,
     drops = { stick = 27 },
 })

@@ -117,8 +117,8 @@ hands its contents to whoever digs it. An alembic is a station record, a
 block and some recipes; register them and it works.
 
 **A station with `heat = true` burns**, and must have a `fuel` slot. It is
-lit with this mod's fire striker once there is fuel in it, or by another
-mod through `ignite`; from then it
+lit with this mod's fire striker (or a torch held to it) once there is fuel
+in it, or by another mod through `ignite`; from then it
 burns its fuel 27 units at a time (each fuel's heat and ticks from
 `register_fuel`) until the fuel slot is empty, and while it burns it makes,
 on its own, the first of its recipes (by id) that its input slots, its tool

@@ -1213,6 +1213,29 @@ fn torch_and_hud() {
     assert!(out.faults.is_empty(), "{:?}", out.faults);
     assert_eq!(r.block_name(60, 64, 60), "tiamat_default_craft:spent_torch");
 
+    // A torch held to a laid fire lights it: placed while aiming at the
+    // fire, no torch is set down, and the torch is not spent.
+    r.put(62, 64, 60, "unlit_campfire");
+    *r.world.aimed.lock().unwrap() = Some((62, 64, 60));
+    let torches = r.units(PLAYER, "torch");
+    assert_eq!(r.place(PLAYER, 62, 65, 60, "torch"), Err(String::new()), "handled, not placed");
+    assert!(r.block_name(62, 64, 60).ends_with("campfire_lit") || r.block_name(62, 64, 60).ends_with(":campfire"),
+        "lit: {}", r.block_name(62, 64, 60));
+    assert_eq!(r.units(PLAYER, "torch"), torches, "the torch is kept");
+    assert_eq!(r.block_name(62, 65, 60), "air");
+    // ...and a kiln with fuel in it; an empty one says what it wants.
+    r.give(PLAYER, "kiln", 27);
+    r.place(PLAYER, 64, 64, 60, "kiln").unwrap();
+    *r.world.aimed.lock().unwrap() = Some((64, 64, 60));
+    assert_eq!(r.place(PLAYER, 64, 65, 60, "torch"), Err("It wants fuel first.".into()));
+    r.boxes.set("tiamat_default_craft:kiln:64,64,60", 1, Some(r.stack("tiamat_default_world:oak_log", 27)));
+    assert_eq!(r.place(PLAYER, 64, 65, 60, "torch"), Err(String::new()));
+    assert_eq!(r.block_name(64, 64, 60), "tiamat_default_craft:kiln_lit");
+    // Aimed at nothing to light, a torch is a torch.
+    *r.world.aimed.lock().unwrap() = Some((60, 64, 60));
+    assert_eq!(r.place(PLAYER, 66, 64, 60, "torch"), Ok(()));
+    *r.world.aimed.lock().unwrap() = None;
+
     // The HUD: a bronze pick in hand is whole; worn, it says so.
     r.huds.operators.lock().unwrap().push(PLAYER);
     r.say("toolkit");

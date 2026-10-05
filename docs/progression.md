@@ -76,7 +76,8 @@ cord).
 
 ## Fire
 
-Lay the campfire and strike it with the striker. It burns twenty minutes
+Lay the campfire and strike it with the striker — or hold a burning torch to
+it, which lights it and is not spent. It burns twenty minutes
 and takes logs for more. After thirty seconds it **cracks the rock around
 it** — stone, slate, calcite, basalt, copper and iron ore, coal — and
 cracked rock comes away by hand, giving the rock whole. Dig the cracked face
