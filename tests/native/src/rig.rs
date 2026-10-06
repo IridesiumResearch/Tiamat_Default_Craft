@@ -964,6 +964,7 @@ impl Rig {
             target: tiamat_core::SubNodePos { x: 301, y: 193, z: 301 },
             material: self.material(material),
             brush,
+            domain: "overworld".into(),
         }
     }
 
@@ -985,6 +986,7 @@ impl Rig {
             target: tiamat_core::SubNodePos { x: x * 3 + 1, y: y * 3 + 1, z: z * 3 + 1 },
             material,
             brush: tiamat_core::dig::Brush::Block,
+            domain: "overworld".into(),
         });
         assert!(out.faults.is_empty(), "faulted in dig complete: {:?}", out.faults);
         if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
@@ -1050,6 +1052,8 @@ impl Rig {
     /// A player placing a whole block of `id`: the mod's veto, then the
     /// block written if it allowed it.
     pub fn place(&mut self, player: [u8; 32], x: i32, y: i32, z: i32, id: &str) -> Result<(), String> {
+        // Read first: a guard held through the call would deadlock the aim.
+        let domain = self.world.aimed_domain.lock().unwrap().clone().unwrap_or_else(|| "overworld".into());
         let out = self.vm.place(&tiamat_core::script::PlaceEvent {
             player,
             block: BlockPos { x, y, z },
@@ -1057,6 +1061,7 @@ impl Rig {
             occupancy: 0x7FF_FFFF,
             units: 27,
             cells: None,
+            domain,
         });
         assert!(out.faults.is_empty(), "faulted in place: {:?}", out.faults);
         if !out.allowed {

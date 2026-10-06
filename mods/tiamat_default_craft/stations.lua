@@ -177,32 +177,18 @@ function ST.check(id, fn)
     checks[id] = fn
 end
 
--- The place event carries no domain (engine ask E-S4), so a station placed
--- off the overworld learns where it is from the player: the crosshair's
--- domain (a placement is always aimed at the face it builds against), or
--- the last the player's feet were in. Science's C-S8: a frame at a star
--- must not share a box with one at the same place in the overworld.
-local where = {}   -- uuid -> the domain their feet were last in
-
-game.register_on_player_move(function(e)
-    where[e.player] = e.domain
-end)
-
-tdc.on_leave(function(e)
-    where[e.player] = nil
-end)
-
-local function domain_of(player)
-    local look = game.looking_at(player)
-    local domain = look and look.domain or where[player]
-    if domain == nil or domain == "overworld" then return nil end
-    return domain
+-- A placement and a dig say which domain they are in, and a station's box
+-- is named with it (Science's C-S8): a frame at a star must not share a box
+-- with one at the same place in the overworld.
+local function domain_of(e)
+    if e.domain == nil or e.domain == "overworld" then return nil end
+    return e.domain
 end
 
 tdc.on_place(function(e)
     local kind = kind_of(e.material)
     if not kind then return end
-    local pos = { x = e.x, y = e.y, z = e.z, domain = domain_of(e.player) }
+    local pos = { x = e.x, y = e.y, z = e.z, domain = domain_of(e) }
     local check = checks[kind.id]
     local refusal = check and check(pos)
     if refusal then return refusal end
@@ -351,7 +337,7 @@ end)
 tdc.on_dig_complete(function(e)
     local kind = kind_of(e.material)
     if not kind then return end
-    local name = ST.name(kind.id, { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
+    local name = ST.name(kind.id, { x = e.x // 3, y = e.y // 3, z = e.z // 3, domain = domain_of(e) })
     local holder = game.container_holder(name)
     if holder ~= nil and holder ~= e.player then
         return "Somebody is using that."
@@ -366,7 +352,7 @@ end)
 tdc.on_dug(function(e)
     local kind = kind_of(e.material)
     if not kind then return end
-    local name = ST.name(kind.id, { x = e.x // 3, y = e.y // 3, z = e.z // 3 })
+    local name = ST.name(kind.id, { x = e.x // 3, y = e.y // 3, z = e.z // 3, domain = domain_of(e) })
     -- Nothing is destroyed (charter rule 5): what was inside goes to the
     -- digger. Units, not counts: a stack is blocks and loose nodes. A
     -- grid's preview was never made, and is not handed out.

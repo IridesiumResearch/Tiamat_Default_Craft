@@ -221,6 +221,13 @@ and the change is recorded here.
 
 ## Pictures and sounds, and replacing them
 
+The campfire is a model: `art/campfire.glb`, built into the mod by
+`tools/make_campfire.py`, which bakes the source's material colours into a
+small palette (the engine draws one material per model and reads no
+material colour) and leaves the logs alone for the unlit fire. A fire is
+lit as this mod's own block now, which burns and warms through Life as
+Life's campfire did; a fire already lit as Life's still burns.
+
 Most textures are placeholders: a flat colour, and for an item one shape on
 a clear ground, drawn by `tools/make_textures.py` in the world's muted
 palette. Some are hand-drawn now — the stick, tinder, torch, wooden

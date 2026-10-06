@@ -45,6 +45,9 @@ local STRIKER = game.mod_id .. ":fire_striker"
 -- anvil is an anvil (anvil.lua counts its blows).
 ST.alias(game.mod_id .. ":unfired_kiln", "kiln")
 ST.alias(game.mod_id .. ":iron_anvil", "anvil")
+-- A fire lit as Life's campfire, before this mod's own had a model, still
+-- opens as a fire.
+if U.material("tiamat_default_life:campfire") then ST.alias("tiamat_default_life:campfire", "campfire") end
 
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 and life.add_heat_source then

@@ -44,8 +44,10 @@ local OWN_LIT = game.mod_id .. ":campfire_lit"
 local LIFE_LIT = "tiamat_default_life:campfire"
 local STRIKER = game.mod_id .. ":fire_striker"
 
---- The block a fire is lit as.
-F.LIT = U.material(LIFE_LIT) and LIFE_LIT or OWN_LIT
+--- The block a fire is lit as: this mod's own, drawn as its model. Life's
+--- campfire was the lit fire before there was one (0.6 and earlier), and a
+--- fire burning as one still burns, is fed and goes out.
+F.LIT = OWN_LIT
 
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 then
@@ -124,7 +126,7 @@ end
 
 --- Whether a block is a lit fire, by name.
 local function is_lit(name)
-    return name == F.LIT or name == OWN_LIT
+    return name == OWN_LIT or name == LIFE_LIT
 end
 
 --- Every fire this mod lit, sorted: `{ { pos, by } }`.

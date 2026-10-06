@@ -205,20 +205,27 @@ block("kiln_lit", {
     light_emit = { r = 12, g = 6, b = 1 },
 })
 
--- Fire (fire.lua). The lit fire is Life's campfire when Life is here, so
--- its heat and its burn are Life's; `campfire_lit` is this mod's own, for a
--- world without Life.
+-- Fire (fire.lua), drawn as Iridesium's campfire model (art/campfire.glb,
+-- built into models/ by tools/make_campfire.py): the logs laid, and the
+-- logs burning. Its cells are what a body bumps and the aim finds: the
+-- logs' layer, and the flame's column above them when it burns. A lit fire
+-- is this mod's own block, and burns and warms through Life's exports as
+-- Life's campfire does (fire.lua).
+game.register_model{ id = "campfire_unlit", file = "models/campfire_unlit.glb", texture = "models/campfire.png" }
+game.register_model{ id = "campfire_lit", file = "models/campfire_lit.glb", texture = "models/campfire.png" }
 block("unlit_campfire", {
     name = "Campfire (unlit)",
-    description = "Sticks, logs and tinder, laid. Strike it with a fire striker.",
+    description = "Sticks, logs and tinder, laid. Strike it with a fire striker, or hold a torch to it.",
     hardness = 0.4,
-    cutout = true,
+    model = "campfire_unlit",
+    shape = { "### ### ###", "... ... ...", "... ... ..." },
 })
 block("campfire_lit", {
     name = "Campfire",
     description = "A fire of your own making. Feed it logs; it cracks the rock beside it.",
     hardness = 0.4,
-    cutout = true,
+    model = "campfire_lit",
+    shape = { "### ### ###", "... .#. ...", "... .#. ..." },
     light_emit = { r = 14, g = 9, b = 4 },
 })
 

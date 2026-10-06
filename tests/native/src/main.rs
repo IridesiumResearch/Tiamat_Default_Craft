@@ -152,6 +152,7 @@ fn main() {
     anvil_offhand();
     life_goods_and_iron_anvil();
     sibling_asks();
+    models();
     // The same world, played the same way twice, is the same world.
     let (a, b) = (kiln(), kiln());
     assert_eq!(a, b, "two runs of the kiln leave the same storage");
@@ -549,7 +550,7 @@ fn fire() {
     r.close(PLAYER, "station");
     r.hold(PLAYER, "fire_striker", Some(&striker));
     assert_eq!(r.use_at(PLAYER, 10, 64, 10).as_deref(), Some(""));
-    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_life:campfire", "lit as Life's campfire");
+    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_craft:campfire_lit", "lit as this mod's own, drawn as its model");
     let serial = striker.trim_start_matches("t=");
     assert_eq!(r.details(PLAYER, "fire_striker"), vec![format!("t={serial};w=1")], "the wear is on the striker");
 
@@ -598,7 +599,7 @@ fn fire() {
     });
     r.join(PLAYER);
     r.tick(6000);
-    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_life:campfire", "still burning");
+    assert_eq!(r.block_name(10, 64, 10), "tiamat_default_craft:campfire_lit", "still burning");
     r.tick(1200);
     assert_eq!(r.block_name(10, 64, 10), "tiamat_default_craft:unlit_campfire", "burned out");
     assert!(!r.storage.dump().contains("fire:overworld@"), "and forgotten");
@@ -1777,4 +1778,18 @@ fn sibling_asks() {
     assert_eq!(r.boxes.get(e, 4).map(|s| s.units), Some(27), "powered, it blasts");
     r.assert_healthy("sibling asks");
     println!("sibling asks: ok");
+}
+
+/// The campfire models read as the engine's client reads them: not refused,
+/// and with UVs into their palette, so they are drawn in their colours and
+/// not matte white.
+fn models() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mods/tiamat_default_craft/models");
+    for file in ["campfire_lit.glb", "campfire_unlit.glb"] {
+        let bytes = std::fs::read(dir.join(file)).expect(file);
+        let model = tiamat_core::model::load_isolated(&bytes, &tiamat_core::model::Limits::default())
+            .unwrap_or_else(|e| panic!("{file} refused: {e:?}"));
+        assert!(!model.vertices.is_empty(), "{file} has a mesh");
+    }
+    println!("models: ok");
 }
