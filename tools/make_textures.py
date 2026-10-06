@@ -708,11 +708,26 @@ for shape, draw in HEAD_SHAPES.items():
         ITEMS["bronze_" + shape + "_head"] = (lambda d: lambda: head_of(d))(draw)
 
 
+# Drawn by hand, and never overwritten by a placeholder: add a name here
+# when its picture is replaced with real art.
+HAND_DRAWN = {
+    "stick", "stone_anvil", "tin_grain", "tin_ingot", "tinder", "torch",
+    "unfired_crucible", "unfired_kiln", "workbench", "wooden_maul", "wooden_wedge",
+    "unfired_mould_axe", "unfired_mould_chisel", "unfired_mould_gear", "unfired_mould_hammer",
+    "unfired_mould_hoe", "unfired_mould_knife", "unfired_mould_pick", "unfired_mould_pot",
+    "unfired_mould_sickle", "unfired_mould_spade", "unfired_mould_tuyere",
+}
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    written = 0
     for name, draw in sorted(ITEMS.items()):
+        if name in HAND_DRAWN:
+            continue
         (OUT / (name + ".png")).write_bytes(png(draw()))
-    print(f"wrote {len(ITEMS)} textures to {OUT}")
+        written += 1
+    print(f"wrote {written} textures to {OUT}, kept {len(HAND_DRAWN)} drawn by hand")
 
 
 if __name__ == "__main__":

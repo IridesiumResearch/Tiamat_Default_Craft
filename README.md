@@ -221,13 +221,14 @@ and the change is recorded here.
 
 ## Pictures and sounds, and replacing them
 
-Every texture is a placeholder: a flat colour, and for an item one shape on
+Most textures are placeholders: a flat colour, and for an item one shape on
 a clear ground, drawn by `tools/make_textures.py` in the world's muted
-palette. To use your own, drop a PNG of the same name into
-`mods/tiamat_default_craft/textures/`; the engine serves textures itself, so
-there is nothing to hash. Running the generator again overwrites the
-placeholders, so keep yours out of its list (`ITEMS` in the script) or do
-not run it. Sounds are the same, in `sounds/` from `tools/make_sounds.py`;
+palette. Some are hand-drawn now — the stick, tinder, torch, wooden
+wedge and maul, workbench, stone anvil, unfired kiln and crucible, tin grain
+and ingot, and every unfired mould. To use your own, drop a PNG of the same name
+into `mods/tiamat_default_craft/textures/` and add its name to `HAND_DRAWN`
+in the script, which never overwrites those; the engine serves textures
+itself, so there is nothing to hash. Sounds are the same, in `sounds/` from `tools/make_sounds.py`;
 or leave the files and bind your own sounds to the cues from a sound pack.
 
 ## For other mods
