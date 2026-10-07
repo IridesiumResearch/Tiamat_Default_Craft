@@ -525,6 +525,9 @@ pub struct World {
     /// The domain the aim is in, when it is not the overworld.
     pub aimed_domain: Mutex<Option<String>>,
     pub names: Mutex<HashMap<String, MaterialId>>,
+    /// Blocks of several materials, cell by cell (a model standing in a thin
+    /// floor); a write to one replaces it.
+    pub mixed: Mutex<HashMap<(i32, i32, i32), [MaterialId; 27]>>,
     /// Blocks whose chunk is not loaded: read as absent.
     pub absent: Mutex<HashSet<(i32, i32, i32)>>,
 }
@@ -536,6 +539,7 @@ impl World {
     pub fn apply(&self, pos: BlockPos, block: &str) {
         self.edits.lock().unwrap().push((pos, block.to_owned()));
         let key = (pos.x, pos.y, pos.z);
+        self.mixed.lock().unwrap().remove(&key);
         if block == "engine:air" {
             self.blocks.lock().unwrap().insert(key, (MaterialId(0), 0));
         } else if let Some(material) = self.names.lock().unwrap().get(block) {
@@ -576,6 +580,9 @@ impl sight::Access for World {
     fn block_at(&self, _: &str, pos: BlockPos) -> Reading {
         if self.absent.lock().unwrap().contains(&(pos.x, pos.y, pos.z)) {
             return Reading::Absent;
+        }
+        if let Some(cells) = self.mixed.lock().unwrap().get(&(pos.x, pos.y, pos.z)) {
+            return Reading::Mixed(Box::new(*cells));
         }
         match self.blocks.lock().unwrap().get(&(pos.x, pos.y, pos.z)) {
             Some((material, occupancy)) => Reading::Single { material: *material, occupancy: *occupancy },
@@ -1013,8 +1020,11 @@ impl Rig {
     /// The place control at a block, with what the player holds: `None` when
     /// nobody handled it, `Some(what they were told)` when somebody did.
     pub fn use_at(&mut self, player: [u8; 32], x: i32, y: i32, z: i32) -> Option<String> {
-        let Reading::Single { material, .. } = sight::Access::block_at(&*self.world, "", BlockPos { x, y, z }) else {
-            panic!("no block")
+        let material = match sight::Access::block_at(&*self.world, "", BlockPos { x, y, z }) {
+            Reading::Single { material, .. } => material,
+            // Several materials: the aim lands on the highest filled cell.
+            Reading::Mixed(cells) => (0..27).rev().map(|i| cells[i]).find(|m| m.0 != 0).expect("a filled cell"),
+            _ => panic!("no block"),
         };
         let held = inventory::Access::held(&*self.inventory, player);
         let out = self.vm.use_block(&tiamat_core::script::UseEvent {

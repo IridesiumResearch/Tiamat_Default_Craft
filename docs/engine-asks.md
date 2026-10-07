@@ -13,9 +13,10 @@ finds every mod's open asks in one place.
 Numbered as the brief (`docs/brief.md` §11) numbered them, from its audit of
 the engine on 2026-09-26; 0 was found and answered the same day.
 
-## Where these stand (2026-09-28)
+## Where these stand (2026-10-07)
 
-**Nothing is open.** Every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
+**12 is open**: a fire lit, or a torch burning out, in a thin floor erases
+the floor's cells in its block. Before it, every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
 in engine cbbbc5e, 10 in engine 7cf1c73, 11 in engine f2cbc36 — and every
 one is adopted. This mod names none of the world's blocks now but the four
 it reads otherwise than their tags.
@@ -23,6 +24,7 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
+| 12 swapping a whole material in a thin floor | **Open**, 2026-10-07. | a fire is recognised among floor cells; its floor is lost when it is lit. |
 | 11 the blocks carrying a tag | Landed, engine f2cbc36. | a tool's slower speeds on loose ground are keyed by tag (`["#soil"]`), resolved at freeze. |
 | 10 a listed use handler beside an unlisted one | Landed, engine 7cf1c73. | the fires have a listed handler, every other block the unlisted one. |
 | 9 reading one slot of a player's view | Landed, engine cbbbc5e. | the anvil works what is in the off-hand. |
@@ -35,6 +37,37 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 2 a tool's speed per material | Landed, engine c83fbc9. | picks, axes, mauls and chisels are slow on loose ground. |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
+
+## 12. Swapping a whole material standing in a thin floor (2026-10-07): OPEN
+
+**Seen.** Since engine 071a7978 a whole material placed on a thin floor goes
+INTO the floor's block and shares it with the floor's cells (Sub-Node
+Contract §7.6) — a campfire laid on snow, a torch stood in a sliver of
+earth. This mod then changes what the thing is, in place: a laid campfire
+is lit (`unlit_campfire` → `campfire_lit`), a fire goes out, a torch burns
+out (`torch` → `spent_torch`). Each is `game.set_block(pos, "<whole>")`, and
+`queue_seed` makes that a `Seed::Replace` of the whole material's shape —
+the WHOLE block is replaced, so the floor's cells in it are erased. Units
+destroyed by a fire catching, which charter rule 5 forbids. There is no
+other way to write it: a merge into a block holding a whole material is
+refused (§7.5), a masked write of one is refused, and a whole material may
+not be written as part of its shape.
+
+**Why the mod cannot.** Reading the floor's cells first and writing them
+back after is refused for the same reason (nothing is written into a whole
+material's block afterwards); giving the floor's units to somebody instead
+is not putting them back.
+
+**Smallest change.** `game.set_block(pos, whole)` on a block that holds a
+whole material replaces THAT material's cells with the new one's shape, and
+keeps the ground cells (§7.6's "air cells of its shape" again, against the
+block as it is less the old whole material) — the same rule the placement
+already follows. Or an explicit form, `game.set_block(pos, whole, nil, {
+swap = true })`, if a plain replace should stay a replace.
+
+**Stands in.** A fire lit, put out or a torch burned out in a thin floor
+loses that block's floor cells. Recognising the fire there is this mod's,
+and done: a mixed block is read by its cells (`util.lua`'s `name_at`).
 
 ## 11. The blocks carrying a tag (2026-09-28): LANDED 2026-09-28 (engine f2cbc36)
 

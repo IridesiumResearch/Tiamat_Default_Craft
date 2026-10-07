@@ -11,6 +11,7 @@ mod rig;
 mod fit;
 
 use rig::{MOD, OTHER, PLAYER, Rig, Setup, hex};
+use tiamat_core::MaterialId;
 use tiamat_core::proto::Click;
 use tiamat_core::script::{ChatEvent, ScriptVm};
 
@@ -1244,6 +1245,29 @@ fn torch_and_hud() {
     r.boxes.set("tiamat_default_craft:kiln:64,64,60", 1, Some(r.stack("tiamat_default_world:oak_log", 27)));
     assert_eq!(r.place(PLAYER, 64, 65, 60, "torch"), Err(String::new()));
     assert_eq!(r.block_name(64, 64, 60), "tiamat_default_craft:kiln_lit");
+    // A fire laid in a thin floor shares its block with the floor's cells
+    // (Sub-Node Contract §7.6), and reads as mixed: still a fire, it lights,
+    // and burning there it is still a fire and is not forgotten.
+    let floor = r.material("tiamat_default_world:stone");
+    let mixed = |fire: MaterialId| {
+        let mut cells = [MaterialId(0); 27];
+        for (i, cell) in cells.iter_mut().enumerate() {
+            let y = (i / 3) % 3;          // index x + 3y + 9z
+            *cell = if y == 0 { floor } else if y == 1 { fire } else { MaterialId(0) };
+        }
+        cells
+    };
+    r.put(68, 64, 60, "unlit_campfire");
+    r.world.mixed.lock().unwrap().insert((68, 64, 60), mixed(r.material("unlit_campfire")));
+    r.huds.operators.lock().unwrap().push(PLAYER);
+    r.say("toolkit");
+    let striker = r.details(PLAYER, "fire_striker")[0].clone();
+    r.hold(PLAYER, "fire_striker", Some(&striker));
+    assert_eq!(r.use_at(PLAYER, 68, 64, 60).as_deref(), Some(""), "a laid fire among floor cells lights");
+    r.world.mixed.lock().unwrap().insert((68, 64, 60), mixed(r.material("campfire_lit")));
+    r.tick(60);
+    assert!(r.storage.dump().contains("68,64,60"), "burning among floor cells, it is still tended");
+    r.hold_nothing(PLAYER);
     // Aimed at nothing to light, a torch is a torch.
     *r.world.aimed.lock().unwrap() = Some((60, 64, 60));
     assert_eq!(r.place(PLAYER, 66, 64, 60, "torch"), Ok(()));

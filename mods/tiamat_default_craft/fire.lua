@@ -44,6 +44,15 @@ local OWN_LIT = game.mod_id .. ":campfire_lit"
 local LIFE_LIT = "tiamat_default_life:campfire"
 local STRIKER = game.mod_id .. ":fire_striker"
 
+--- The fire blocks, by name: what a mixed block is read as (U.name_at).
+local FIRES = { [UNLIT] = true, [OWN_LIT] = true, [LIFE_LIT] = true }
+
+--- The fire block at `pos`, or whatever is there, by name; nil if nothing
+--- is or the chunk is not loaded.
+function F.name_at(pos)
+    return U.name_at(game.get_block(pos), FIRES)
+end
+
 --- The block a fire is lit as: this mod's own, drawn as its model. Life's
 --- campfire was the lit fire before there was one (0.6 and earlier), and a
 --- fire burning as one still burns, is fed and goes out.
@@ -198,7 +207,7 @@ local function tend(key, fire, step)
     local pos = pos_of(fire)
     local at = game.get_block(pos)
     if at == nil then return end                    -- not loaded: paused
-    local name = at.material and game.block_of(at.material)
+    local name = U.name_at(at, FIRES)
     if not is_lit(name) then                         -- dug, or put out by something else
         forget(key)
         return
@@ -284,8 +293,7 @@ end
 --- What a striker does, and what another mod's fire-lighter does through
 --- `ignite` (Science's C-S6, a burning glass).
 function F.ignite(pos, uuid)
-    local at = game.get_block(pos)
-    local name = at and at.material and game.block_of(at.material)
+    local name = F.name_at(pos)
     if name == nil then return nil, "There is nothing there." end
     if is_lit(name) then return nil, "It is burning already." end
     if name ~= UNLIT then return nil, "There is no fire laid there." end

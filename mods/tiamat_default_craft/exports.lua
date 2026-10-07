@@ -200,8 +200,9 @@ return {
         if not block_pos(pos) then return nil, "a position is whole blocks" end
         if not player(uuid) then return nil, "a player is a UUID in hex" end
         local at = game.get_block(pos)
-        if at == nil or at.material == nil then return nil, "There is nothing there." end
-        if game.block_of(at.material) == game.mod_id .. ":unlit_campfire" or tdc.fire.burning(pos) then
+        local name = tdc.fire.name_at(pos)
+        if at == nil or name == nil then return nil, "There is nothing there." end
+        if name == game.mod_id .. ":unlit_campfire" or tdc.fire.burning(pos) then
             return tdc.fire.ignite(pos, uuid)
         end
         local kind = tdc.stations.kind(at.material)
