@@ -300,8 +300,7 @@ function FU.ignite(station, name, pos, uuid)
         end
         return nil, "It wants fuel first."
     end
-    local at = game.get_block(pos)
-    local was = at and at.material and game.block_of(at.material)
+    local was = U.name_at(game.get_block(pos))
     -- `by` first: the first fuel's ticks are the lighter's.
     s.by = uuid
     if not stoke(station, name, s) then return nil, "It wants fuel first." end

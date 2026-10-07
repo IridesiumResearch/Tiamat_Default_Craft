@@ -12,3 +12,5 @@ template's block texture and sound are gone. The campfire model is
 Iridesium's too, modelled by hand: `art/campfire.glb` is the source, and
 `tools/make_campfire.py` builds `models/campfire_lit.glb`,
 `models/campfire_unlit.glb` and their palette `models/campfire.png` from it.
+The stations' placeholder models and their palette `models/stations.png`
+are drawn by `tools/make_models.py`.

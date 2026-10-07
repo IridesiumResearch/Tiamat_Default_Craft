@@ -84,7 +84,7 @@ local IRON_ANVIL = game.mod_id .. ":iron_anvil"
 --- Whether the anvil at a use is iron.
 local function iron_at(e)
     local at = game.get_block{ x = e.x // 3, y = e.y // 3, z = e.z // 3, domain = e.domain ~= "overworld" and e.domain or nil }
-    return at ~= nil and at.material ~= nil and game.block_of(at.material) == IRON_ANVIL
+    return U.name_at(at) == IRON_ANVIL
 end
 
 --- Blows a recipe takes this player, on a stone anvil or an iron one.

@@ -221,6 +221,12 @@ and the change is recorded here.
 
 ## Pictures and sounds, and replacing them
 
+The stations whose look is no cube — the workbench, kiln, bloomery, both
+anvils, the sluice and the iron lantern — are models too, and occupy only
+their shape: placeholders blocked out of boxes by `tools/make_models.py`,
+to be replaced by hand. A replaced one goes in that script's `HAND_MADE`,
+which it never overwrites.
+
 The campfire is a model: `art/campfire.glb`, built into the mod by
 `tools/make_campfire.py`, which bakes the source's material colours into a
 small palette (the engine draws one material per model and reads no

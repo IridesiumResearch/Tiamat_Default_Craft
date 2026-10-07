@@ -115,13 +115,16 @@ end
 --- model block (a campfire) may stand in a thin floor and share its block
 --- with the floor's cells (Sub-Node Contract §7.6): such a block reads as
 --- mixed, `material` nil and `cells` listed, and it is the one of `whole`'s
---- names among its cells.
+--- names among its cells — or, with no `whole`, the one of this mod's.
 function U.name_at(at, whole)
     if at == nil then return nil end
     if at.material then return game.block_of(at.material) end
+    local own = game.mod_id .. ":"
     for _, cell in ipairs(at.cells or {}) do
         local name = cell ~= 0 and game.block_of(cell) or nil
-        if name and whole[name] then return name end
+        if name and (whole and whole[name] or (not whole and string.sub(name, 1, #own) == own)) then
+            return name
+        end
     end
     return nil
 end

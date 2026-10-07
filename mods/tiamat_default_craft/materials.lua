@@ -81,7 +81,25 @@ end
 --- Every block this mod registered, by short id: its numeric material.
 M.blocks = {}
 
-local function block(id, spec)
+-- Stations whose look is no cube are drawn as a model (tools/make_models.py:
+-- placeholders blocked out of boxes, to be replaced by hand as the campfire
+-- was) and occupy their `shape`: whole, so dug in one piece and placed as
+-- their shape, 27 units either way. Model and block share an id.
+local SHAPES = {
+    anvil = { "### ### ###", "... .#. ...", "### ### ###" },
+    workbench = { "#.# ... #.#", "#.# ... #.#", "### ### ###" },
+    sluice = { "### ### ###", "#.# #.# #.#", "... ... ..." },
+    lantern = { "... .#. ...", "... .#. ...", "... ... ..." },
+    kiln = { "### ### ###", "### ### ###", "... .#. ..." },
+    bloomery = { "### ### ###", ".#. ### .#.", ".#. ### .#." },
+}
+local function modelled(id, shape)
+    game.register_model{ id = id, file = "models/" .. id .. ".glb", texture = "models/stations.png" }
+    return { model = id, shape = SHAPES[shape] }
+end
+
+local function block(id, spec, look)
+    for k, v in pairs(look or {}) do spec[k] = v end
     spec.id = id
     spec.textures = spec.textures or { all = "textures/" .. id .. ".png" }
     M.blocks[id] = game.register_block(spec)
@@ -99,7 +117,7 @@ block("workbench", {
     name = "Workbench",
     description = "Logs lashed with cord. What is made of several things is made here.",
     hardness = 1.0,
-})
+}, modelled("workbench", "workbench"))
 block("chest", {
     name = "Chest",
     description = "Planks pegged into a box. Use it to open it; dig it to take it away, contents and all.",
@@ -152,39 +170,38 @@ block("iron_lantern", {
     name = "Iron lantern",
     description = "A torch behind glass in an iron case. It does not burn out.",
     hardness = 0.5,
-    cutout = true,
     light_emit = { r = 14, g = 11, b = 6 },
-})
+}, modelled("iron_lantern", "lantern"))
 
 -- The sluice (sluice.lua): it stands in running water.
 block("sluice", {
     name = "Sluice",
     description = "A plank trough with riffles. Stand it in running water and give it gravel.",
     hardness = 0.8,
-})
+}, modelled("sluice", "sluice"))
 
 -- The bloomery (furnace.lua) and the anvil (anvil.lua).
 block("bloomery", {
     name = "Bloomery",
     description = "A clay stack with a tuyere. Charcoal only; bellows make it burn white.",
     hardness = 1.5,
-})
+}, modelled("bloomery", "bloomery"))
 block("bloomery_lit", {
     name = "Bloomery (burning)",
     description = "Burning.",
     hardness = 1.5,
     light_emit = { r = 14, g = 8, b = 2 },
-})
+}, modelled("bloomery_lit", "bloomery"))
 block("iron_anvil", {
     name = "Iron anvil",
     description = "Iron on iron: half the blows of a stone anvil.",
     hardness = 3.0,
-})
+}, modelled("iron_anvil", "anvil"))
 block("stone_anvil", {
     name = "Stone anvil",
     description = "Granite, squared with a chisel. Put the work on it and strike it with a hammer.",
     hardness = 2.0,
-})
+}, modelled("stone_anvil", "anvil"))
 
 -- The kiln (furnace.lua): laid of wet clay and cobbles, fired once to be a
 -- kiln, lit with a striker to burn.
@@ -192,18 +209,18 @@ block("unfired_kiln", {
     name = "Unfired kiln",
     description = "Clay and cobbles, laid. Put fuel in it and strike it: the first fire makes it a kiln.",
     hardness = 0.8,
-})
+}, modelled("unfired_kiln", "kiln"))
 block("kiln", {
     name = "Kiln",
     description = "Fuel in the bottom, work in the middle. Strike it to light it.",
     hardness = 1.5,
-})
+}, modelled("kiln", "kiln"))
 block("kiln_lit", {
     name = "Kiln (burning)",
     description = "Burning.",
     hardness = 1.5,
     light_emit = { r = 12, g = 6, b = 1 },
-})
+}, modelled("kiln_lit", "kiln"))
 
 -- Fire (fire.lua), drawn as Iridesium's campfire model (art/campfire.glb,
 -- built into models/ by tools/make_campfire.py): the logs laid, and the

@@ -1804,12 +1804,19 @@ fn sibling_asks() {
     println!("sibling asks: ok");
 }
 
-/// The campfire models read as the engine's client reads them: not refused,
+/// Every model reads as the engine's client reads it: not refused,
 /// and with UVs into their palette, so they are drawn in their colours and
 /// not matte white.
 fn models() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mods/tiamat_default_craft/models");
-    for file in ["campfire_lit.glb", "campfire_unlit.glb"] {
+    let mut files: Vec<String> = std::fs::read_dir(&dir).unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|f| f.ends_with(".glb"))
+        .collect();
+    files.sort();
+    assert!(files.len() >= 12, "the campfire's two and the stations' ten: {files:?}");
+    for file in &files {
+        let file = file.as_str();
         let bytes = std::fs::read(dir.join(file)).expect(file);
         let model = tiamat_core::model::load_isolated(&bytes, &tiamat_core::model::Limits::default())
             .unwrap_or_else(|e| panic!("{file} refused: {e:?}"));
