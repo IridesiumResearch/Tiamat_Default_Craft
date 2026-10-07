@@ -719,6 +719,7 @@ HAND_DRAWN = {
     "iron_sickle", "iron_spade", "ironwood_digging_stick", "ironwood_wedge",
     "mould_axe", "mould_chisel", "mould_gear", "mould_hammer", "mould_hoe", "mould_knife",
     "mould_pot", "mould_sickle", "mould_spade", "mould_tuyere",
+    "mudbrick", "plank",
 }
 
 
