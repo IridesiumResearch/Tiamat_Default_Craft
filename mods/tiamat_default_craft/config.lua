@@ -70,7 +70,7 @@ C.groups = {
 -- Ironwood doubles a wooden tool's life, and is hardwood, so it comes after
 -- the first bronze axe.
 
-C.hand_speed = 1.0
+C.hand_speed = 0.45           -- the designer, 2026-10-08: a bare hand digs at a little under half what it did; mining was too quick
 
 C.tools = {
     digging_stick          = { name = "Digging stick", type = "spade", tier = 0, uses = 60, speed = 1.6 },
