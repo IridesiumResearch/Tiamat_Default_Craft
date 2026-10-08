@@ -256,50 +256,50 @@ end)
 -- Level this ground ---------------------------------------------------------------
 --
 -- A whole block (a model block: a campfire, a station, another mod's research
--- table or athanor) placed against the top of a block under three quarters
--- full goes INTO that block, among the ground's cells (Sub-Node Contract
--- §7.6). Among loose earth or sand that is a fire set down in the dirt; among
--- rock it is a kiln sunk into stone nobody dug. So it is refused where any
--- cell already there is one a bare hand could not dig: the dig gate's own
--- rule, for every mod's whole blocks, since this hook hears every placement.
+-- table or athanor) laid on a partial block with nothing in its top layer
+-- SWEEPS that block: what it holds is destroyed and the thing stands at its
+-- bottom (Sub-Node Contract §7.6, engine 2026-10-08), and the place event
+-- says so (`e.swept`). What a bare hand may clear that way is this mod's
+-- rule, the dig gate's own: where any cell there is one a bare hand could not
+-- dig, the placement is refused, "Level this ground". This hook hears every
+-- placement, so the rule is every mod's whole blocks'.
 --
--- A whole placement is known by its event: it costs a whole block's 27 units
--- however few cells its shape takes there, where anything else costs exactly
--- the cells it writes.
+-- A torch sweeps nothing but plants: it is too small a thing to clear the
+-- ground it is stood in. Clipping into the ground instead, as it should, is
+-- engine ask 14.
 
-local function cells_in(mask)
-    local n = 0
-    while mask ~= 0 do
-        n = n + (mask & 1)
-        mask = mask >> 1
-    end
-    return n
-end
+local TORCH = game.mod_id .. ":torch"
 
---- Whether a bare hand could dig every cell a block already holds.
-local function hand_could_dig(at)
-    local seen = {}
-    local function ok(material)
-        if material == nil or material == 0 or seen[material] then return true end
-        seen[material] = true
-        local class = T.class(material)
-        return not (class and T.refusal(class, nil))
-    end
+--- Whether every cell a block holds passes `ok(material)`.
+local function every_cell(at, ok)
     if at.cells then
         for _, cell in ipairs(at.cells) do
-            if not ok(cell) then return false end
+            if cell ~= 0 and not ok(cell) then return false end
         end
         return true
     end
     return at.occupancy == 0 or ok(at.material)
 end
 
+local function hand_digs(material)
+    local class = T.class(material)
+    return not (class and T.refusal(class, nil))
+end
+
+local function plant(material)
+    for _, tag in ipairs(game.tags(material) or {}) do
+        if tag == "plant" then return true end
+    end
+    return false
+end
+
 tdc.on_place(function(e)
-    if creative then return nil end
-    if e.units ~= U.UNITS or cells_in(e.occupancy) >= U.UNITS then return nil end   -- not whole into ground
+    if creative or not e.swept then return nil end
     local at = game.get_block{ x = e.x, y = e.y, z = e.z, domain = e.domain ~= "overworld" and e.domain or nil }
-    if at == nil or hand_could_dig(at) then return nil end
-    return C.level_ground
+    if at == nil then return nil end
+    if game.block_of(e.material) == TORCH and not every_cell(at, plant) then return C.torch_firm end
+    if not every_cell(at, hand_digs) then return C.level_ground end
+    return nil
 end)
 
 -- Wear ---------------------------------------------------------------------------

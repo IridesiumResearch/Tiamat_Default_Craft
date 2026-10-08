@@ -1064,15 +1064,16 @@ impl Rig {
     /// A placement asked of the mods alone, with the cells it would write and
     /// what it would cost, as the engine works them out (a whole block into
     /// a thin floor: the air cells of its shape, for 27). Writes nothing.
-    pub fn may_place(&mut self, player: [u8; 32], x: i32, y: i32, z: i32, id: &str, occupancy: u32, units: u32) -> Result<(), String> {
+    pub fn may_place(&mut self, player: [u8; 32], x: i32, y: i32, z: i32, id: &str, occupancy: u32, swept: bool) -> Result<(), String> {
         let out = self.vm.place(&tiamat_core::script::PlaceEvent {
             player,
             block: BlockPos { x, y, z },
             material: self.material(id),
             occupancy,
-            units,
+            units: 27,
             cells: None,
             domain: "overworld".into(),
+            swept,
         });
         assert!(out.faults.is_empty(), "faulted in place: {:?}", out.faults);
         if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
@@ -1089,6 +1090,7 @@ impl Rig {
             units: 27,
             cells: None,
             domain,
+            swept: false,
         });
         assert!(out.faults.is_empty(), "faulted in place: {:?}", out.faults);
         if !out.allowed {
