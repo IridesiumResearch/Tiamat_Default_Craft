@@ -492,6 +492,19 @@ fn tools() {
         r.say(&format!("life heard {call}"));
         assert_eq!(r.said(), want, "{call}");
     }
+    // Level this ground: a whole block set into a thin floor of rock is
+    // refused; into one of sand, or loose stone filling the gaps, it is not.
+    let floor = (1u32 << 0) | (1 << 1) | (1 << 2) | (1 << 9) | (1 << 10) | (1 << 11) | (1 << 18) | (1 << 19) | (1 << 20);
+    let torch_cells = (1u32 << 13) | (1 << 16);   // its column, less the floor's cell
+    let stone = r.material("tiamat_default_world:stone");
+    let sand = r.material("tiamat_default_world:sand");
+    r.world.blocks.lock().unwrap().insert((90, 64, 90), (stone, floor));
+    r.world.blocks.lock().unwrap().insert((92, 64, 90), (sand, floor));
+    assert_eq!(r.may_place(PLAYER, 90, 64, 90, "torch", torch_cells, 27), Err("Level this ground".into()));
+    assert_eq!(r.may_place(PLAYER, 92, 64, 90, "torch", torch_cells, 27), Ok(()), "sand a hand can dig");
+    assert_eq!(r.may_place(PLAYER, 90, 64, 90, "tiamat_default_world:stone", 0x7FF_FFFF & !floor, 18), Ok(()),
+        "loose stone filling the gaps is not a whole block");
+    assert_eq!(r.may_place(PLAYER, 94, 64, 90, "torch", (1 << 10) | torch_cells, 27), Ok(()), "into empty air");
     println!("tools: ok");
 }
 

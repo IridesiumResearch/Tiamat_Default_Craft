@@ -253,6 +253,55 @@ tdc.on_dig_complete(function(e)
     return T.refusal(class, (T.held(e.player)))
 end)
 
+-- Level this ground ---------------------------------------------------------------
+--
+-- A whole block (a model block: a campfire, a station, another mod's research
+-- table or athanor) placed against the top of a block under three quarters
+-- full goes INTO that block, among the ground's cells (Sub-Node Contract
+-- §7.6). Among loose earth or sand that is a fire set down in the dirt; among
+-- rock it is a kiln sunk into stone nobody dug. So it is refused where any
+-- cell already there is one a bare hand could not dig: the dig gate's own
+-- rule, for every mod's whole blocks, since this hook hears every placement.
+--
+-- A whole placement is known by its event: it costs a whole block's 27 units
+-- however few cells its shape takes there, where anything else costs exactly
+-- the cells it writes.
+
+local function cells_in(mask)
+    local n = 0
+    while mask ~= 0 do
+        n = n + (mask & 1)
+        mask = mask >> 1
+    end
+    return n
+end
+
+--- Whether a bare hand could dig every cell a block already holds.
+local function hand_could_dig(at)
+    local seen = {}
+    local function ok(material)
+        if material == nil or material == 0 or seen[material] then return true end
+        seen[material] = true
+        local class = T.class(material)
+        return not (class and T.refusal(class, nil))
+    end
+    if at.cells then
+        for _, cell in ipairs(at.cells) do
+            if not ok(cell) then return false end
+        end
+        return true
+    end
+    return at.occupancy == 0 or ok(at.material)
+end
+
+tdc.on_place(function(e)
+    if creative then return nil end
+    if e.units ~= U.UNITS or cells_in(e.occupancy) >= U.UNITS then return nil end   -- not whole into ground
+    local at = game.get_block{ x = e.x, y = e.y, z = e.z, domain = e.domain ~= "overworld" and e.domain or nil }
+    if at == nil or hand_could_dig(at) then return nil end
+    return C.level_ground
+end)
+
 -- Wear ---------------------------------------------------------------------------
 
 --- A new tool's detail: its serial, from a counter kept with the world.

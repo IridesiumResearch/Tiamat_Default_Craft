@@ -1061,6 +1061,23 @@ impl Rig {
 
     /// A player placing a whole block of `id`: the mod's veto, then the
     /// block written if it allowed it.
+    /// A placement asked of the mods alone, with the cells it would write and
+    /// what it would cost, as the engine works them out (a whole block into
+    /// a thin floor: the air cells of its shape, for 27). Writes nothing.
+    pub fn may_place(&mut self, player: [u8; 32], x: i32, y: i32, z: i32, id: &str, occupancy: u32, units: u32) -> Result<(), String> {
+        let out = self.vm.place(&tiamat_core::script::PlaceEvent {
+            player,
+            block: BlockPos { x, y, z },
+            material: self.material(id),
+            occupancy,
+            units,
+            cells: None,
+            domain: "overworld".into(),
+        });
+        assert!(out.faults.is_empty(), "faulted in place: {:?}", out.faults);
+        if out.allowed { Ok(()) } else { Err(out.reason.unwrap_or_default()) }
+    }
+
     pub fn place(&mut self, player: [u8; 32], x: i32, y: i32, z: i32, id: &str) -> Result<(), String> {
         // Read first: a guard held through the call would deadlock the aim.
         let domain = self.world.aimed_domain.lock().unwrap().clone().unwrap_or_else(|| "overworld".into());

@@ -412,6 +412,17 @@ taken back out. Each player's two by two is a container of its own,
 screen closes. Stations themselves are found by the engine's
 container listing, and a tool's wear rides on the tool.
 
+## What it does to every mod's whole blocks
+
+**Level this ground.** A whole block (any mod's model block: a campfire, a
+research table, an athanor) placed against the top of a block under three
+quarters full goes INTO that block, among its cells (the engine's Sub-Node
+Contract §7.6). This mod refuses that, saying "Level this ground", where any
+cell already there is one a bare hand could not dig — the dig gate's own
+rule — and the player keeps the item. Among earth, sand or grass a hand can
+dig it goes ahead. A Creative world refuses nothing. It is told from the
+place event: a whole placement costs 27 units however few cells it writes.
+
 ## What it reads from other mods
 
 Not exports, listed so the direction is clear: it names the blocks of

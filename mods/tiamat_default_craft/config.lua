@@ -220,6 +220,7 @@ C.chest_slots = 27
 -- blown with bellows, step 8).
 
 C.furnace_step = 20             -- furnaces are tended once a second
+C.level_ground = "Level this ground"   -- a whole block set into rock a hand could not dig
 C.grid_shift_most = 64         -- shift-taking from a grid makes at most this many
 C.max_run_percent = 1000        -- a station run by another mod: ten times speed at most
 C.catch_up_pieces = 4096        -- a long station's missed time, worked in at most this many pieces
