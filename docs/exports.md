@@ -420,8 +420,8 @@ layer sweeps that block, destroying what it holds (the engine's Sub-Node
 Contract §7.6; the place event's `swept`). This mod refuses such a sweep,
 saying "Level this ground", where any cell there is one a bare hand could
 not dig — the dig gate's own rule — and the player keeps the item. Over
-earth, sand or grass it goes ahead. A torch sweeps nothing but plants ("A
-torch wants firm ground."). A Creative world refuses nothing.
+earth, sand or grass it goes ahead. A torch sweeps nothing: it is `sweeps =
+false`, and clips into thin ground. A Creative world refuses nothing.
 
 ## What it reads from other mods
 

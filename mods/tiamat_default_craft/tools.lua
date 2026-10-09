@@ -262,13 +262,8 @@ end)
 -- says so (`e.swept`). What a bare hand may clear that way is this mod's
 -- rule, the dig gate's own: where any cell there is one a bare hand could not
 -- dig, the placement is refused, "Level this ground". This hook hears every
--- placement, so the rule is every mod's whole blocks'.
---
--- A torch sweeps nothing but plants: it is too small a thing to clear the
--- ground it is stood in. Clipping into the ground instead, as it should, is
--- engine ask 14.
-
-local TORCH = game.mod_id .. ":torch"
+-- placement, so the rule is every mod's whole blocks'. A torch sweeps
+-- nothing: it is `sweeps = false`, and clips into thin ground instead.
 
 --- Whether every cell a block holds passes `ok(material)`.
 local function every_cell(at, ok)
@@ -286,18 +281,10 @@ local function hand_digs(material)
     return not (class and T.refusal(class, nil))
 end
 
-local function plant(material)
-    for _, tag in ipairs(game.tags(material) or {}) do
-        if tag == "plant" then return true end
-    end
-    return false
-end
-
 tdc.on_place(function(e)
     if creative or not e.swept then return nil end
     local at = game.get_block{ x = e.x, y = e.y, z = e.z, domain = e.domain ~= "overworld" and e.domain or nil }
     if at == nil then return nil end
-    if game.block_of(e.material) == TORCH and not every_cell(at, plant) then return C.torch_firm end
     if not every_cell(at, hand_digs) then return C.level_ground end
     return nil
 end)

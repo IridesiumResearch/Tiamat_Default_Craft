@@ -15,10 +15,9 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-10-08)
 
-**13 and 14 are open**: a torch cannot light a fire from its top, and a
-torch would sweep the ground it is stood in rather than clip into it. 12
-landed in engine 671f5763 the day after it was asked; before it, every ask
-landed — 2 to 7 in engine c83fbc9, 8 and 9
+**Nothing is open.** 13 landed in engine 8f20397a and 14 in 13dc3e63, the
+day they were asked; 12 in engine 671f5763 the day after it was asked;
+before them, every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
 in engine cbbbc5e, 10 in engine 7cf1c73, 11 in engine f2cbc36 — and every
 one is adopted. This mod names none of the world's blocks now but the four
 it reads otherwise than their tags.
@@ -26,8 +25,8 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
-| 14 a small whole thing clipping into the ground | **Open**, 2026-10-08. | a torch that would sweep ground is refused, "A torch wants firm ground." |
-| 13 a whole block placed on top of another | **Open**, 2026-10-08. | a fire is lit with a torch from its side. |
+| 14 a small whole thing clipping into the ground | Landed, engine 13dc3e63. | the torch and the spent torch are `sweeps = false`: stood in thin ground they clip into it. |
+| 13 a whole block placed on top of another | Landed, engine 8f20397a. | a torch held to a fire's top lights it: the placement reaches `on_place` before the "one piece" refusal. |
 | 12 swapping a whole material in a thin floor | Landed, engine 671f5763. | a fire lit, put out or a torch burned out in a thin floor keeps the floor's cells: `set_block` swaps the whole material, nothing to change here. |
 | 11 the blocks carrying a tag | Landed, engine f2cbc36. | a tool's slower speeds on loose ground are keyed by tag (`["#soil"]`), resolved at freeze. |
 | 10 a listed use handler beside an unlisted one | Landed, engine 7cf1c73. | the fires have a listed handler, every other block the unlisted one. |
@@ -42,7 +41,7 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 14. A small whole thing that clips into the ground instead of sweeping it (2026-10-08): OPEN
+## 14. A small whole thing that clips into the ground instead of sweeping it (2026-10-08): LANDED 2026-10-08 (engine 13dc3e63)
 
 **Seen.** Since engine fc25ba71 a whole block laid on a partial block with no
 node in its top layer SWEEPS that block — its remains destroyed — and stands
@@ -64,10 +63,11 @@ cells of the shape among the block's cells (the `plan_whole` arithmetic,
 `shape & !filled`), the model clipping through the ground, as on a side face;
 refused, as there, when no cell of the shape is air.
 
-**Stands in.** A torch that would sweep anything but plants is refused, "A
-torch wants firm ground." It stands in grass, and on full blocks as ever.
+**Landed** as asked: `sweeps = false` on the torch and the spent torch. (It
+stood in, until then, as a torch that would sweep anything but plants being
+refused, "A torch wants firm ground.")
 
-## 13. A whole block placed on top of another whole block (2026-10-08): OPEN
+## 13. A whole block placed on top of another whole block (2026-10-08): LANDED 2026-10-08 (engine 8f20397a)
 
 **Seen.** Holding a torch, right-clicking the TOP of a laid campfire answers
 "that is one piece; it goes down whole or not at all", and the fire is not
@@ -85,7 +85,10 @@ material, a placement goes in the block above (a whole block is ground to
 what is put on it) — then `on_place` hears it, as at the side. Or: ask
 `on_place` before refusing, so a mod may handle it with `""`.
 
-**Stands in.** A fire is lit with a torch from its side, or with a striker.
+**Landed** as the second way: a placement into a whole material's block is
+given to `on_place` before the refusal, so this mod's torch handler hears it
+and lights the fire, unchanged. (It stood in, until then, as lighting a fire
+from its side, or with a striker.)
 
 ## 12. Swapping a whole material standing in a thin floor (2026-10-07): LANDED 2026-10-08 (engine 671f5763)
 

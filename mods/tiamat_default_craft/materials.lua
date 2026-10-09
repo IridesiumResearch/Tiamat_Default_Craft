@@ -126,7 +126,8 @@ block("chest", {
 
 -- The torch (fire.lua): a light that burns out. Drawn as a crossed sprite,
 -- as grass is, in the middle column of its block: one piece, a whole torch
--- to place and to dig, never a cube.
+-- to place and to dig, never a cube. Stood in thin ground it clips into it
+-- rather than sweeping it away (`sweeps = false`, engine ask 14).
 local TORCH_SHAPE = { "... .#. ...", "... .#. ...", "... .#. ..." }
 block("torch", {
     name = "Torch",
@@ -134,6 +135,7 @@ block("torch", {
     hardness = 0.1,
     billboard = "cross",
     whole = true,
+    sweeps = false,
     shape = TORCH_SHAPE,
     passable = true,
     light_emit = tdc.config.torch_light,
@@ -144,6 +146,7 @@ block("spent_torch", {
     hardness = 0.1,
     billboard = "cross",
     whole = true,
+    sweeps = false,
     shape = TORCH_SHAPE,
     passable = true,
     drops = { stick = 27 },

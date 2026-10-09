@@ -493,8 +493,8 @@ fn tools() {
         assert_eq!(r.said(), want, "{call}");
     }
     // Level this ground: a whole block that would sweep a thin floor of rock
-    // is refused; one of sand a hand digs is swept. A torch sweeps nothing
-    // but plants.
+    // is refused; one of sand a hand digs is swept. A torch never sweeps
+    // (`sweeps = false`): it clips in, and is not asked about.
     let floor = (1u32 << 0) | (1 << 1) | (1 << 2) | (1 << 9) | (1 << 10) | (1 << 11) | (1 << 18) | (1 << 19) | (1 << 20);
     let column = (1u32 << 1) | (1 << 4) | (1 << 7);
     let stone = r.material("tiamat_default_world:stone");
@@ -505,8 +505,8 @@ fn tools() {
     r.world.blocks.lock().unwrap().insert((96, 64, 90), (grass, column));
     assert_eq!(r.may_place(PLAYER, 90, 64, 90, "unlit_campfire", 0x1FF, true), Err("Level this ground".into()));
     assert_eq!(r.may_place(PLAYER, 92, 64, 90, "unlit_campfire", 0x1FF, true), Ok(()), "sand a hand can dig");
-    assert_eq!(r.may_place(PLAYER, 92, 64, 90, "torch", column, true), Err("A torch wants firm ground.".into()));
-    assert_eq!(r.may_place(PLAYER, 96, 64, 90, "torch", column, true), Ok(()), "a torch clears grass");
+    assert_eq!(r.may_place(PLAYER, 90, 64, 90, "torch", column, false), Ok(()), "a torch clips into rock");
+    assert_eq!(r.may_place(PLAYER, 96, 64, 90, "torch", column, false), Ok(()));
     assert_eq!(r.may_place(PLAYER, 90, 64, 90, "tiamat_default_world:stone", 0x7FF_FFFF & !floor, false), Ok(()),
         "nothing swept: no rule");
     println!("tools: ok");
