@@ -149,9 +149,11 @@ function F.list()
     return out
 end
 
---- Whether there is a fire this mod lit at a block position.
+--- Whether a fire burns at a block position: one this mod lit, or a lit
+--- fire block it did not — placed lit (Creative, the toolkit), or Life's
+--- dev kit — which burns for ever and cooks like any other.
 function F.burning(pos)
-    return fires[key_of(pos)] ~= nil
+    return fires[key_of(pos)] ~= nil or is_lit(F.name_at(pos))
 end
 
 --- Adds `ticks` of fuel to the fire at `pos`, up to the most a fire holds.
@@ -326,9 +328,9 @@ tdc.on_use(function(e)
     if is_lit(name) and held then
         local ticks = fuel_ticks(held)
         if not ticks then
-            -- Not fuel: food (or clay) held out over a fire this mod lit goes
-            -- on it, into its box (cooking.lua).
-            if fires[key_of(pos)] and tdc.cooking then return tdc.cooking.put_on(e, pos) end
+            -- Not fuel: food (or clay) held out over a burning fire goes on
+            -- it, into its box (cooking.lua).
+            if tdc.cooking then return tdc.cooking.put_on(e, pos) end
             return nil
         end
         local key = key_of(pos)

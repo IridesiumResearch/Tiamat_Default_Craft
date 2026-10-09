@@ -192,7 +192,9 @@ tdc.on_place(function(e)
     local check = checks[kind.id]
     local refusal = check and check(pos)
     if refusal then return refusal end
-    if e.occupancy == game.OCCUPANCY_FULL then
+    -- A whole block (a campfire, a modelled station) costs a whole block's
+    -- units whatever cells its shape takes: that is a station placed too.
+    if e.occupancy == game.OCCUPANCY_FULL or e.units == U.UNITS then
         ensure(kind, pos, e.player)
     end
 end)

@@ -118,6 +118,28 @@ local function cook(station, fire, step)
     ST.redraw(name)
 end
 
+--- A burning fire's flames, and its smoke while something is on it:
+--- presentation only, sent to whoever is near.
+local function show(fire, cooking)
+    local p = fire.pos
+    local at = { x = p.x + 0.5, y = p.y + 0.35, z = p.z + 0.5, domain = p.domain }
+    game.emit_particles{
+        pos = at, count = C.fire_embers, size = 0.08, lifetime = 1.2,
+        colour = { r = 1.0, g = 0.55, b = 0.15 },
+        velocity = { y = 1.1 }, spread = 0.3, area = { x = 0.25, y = 0.05, z = 0.25 },
+        gravity = -0.4, collide = false,
+    }
+    if cooking then
+        game.emit_particles{
+            pos = { x = at.x, y = p.y + 0.9, z = at.z, domain = p.domain },
+            count = C.fire_smoke, size = 0.35, lifetime = 4,
+            colour = { r = 0.42, g = 0.42, b = 0.42, a = 0.55 },
+            velocity = { y = 0.6 }, spread = 0.15, area = { x = 0.15, y = 0.05, z = 0.15 },
+            gravity = -0.15, collide = false,
+        }
+    end
+end
+
 local elapsed = 0
 tdc.on_tick(function(dt)
     elapsed = elapsed + dt
@@ -125,8 +147,18 @@ tdc.on_tick(function(dt)
     local step = elapsed
     elapsed = 0
     local station = R.station("campfire")
-    for _, fire in ipairs(F.list()) do
+    -- The fires this mod lit, and any other burning fire that has had
+    -- something put on it (a box): placed lit, or Life's dev kit.
+    local seen, list = {}, F.list()
+    for _, fire in ipairs(list) do seen[ST.name("campfire", fire.pos)] = true end
+    for _, placed in ipairs(ST.indexed("campfire")) do
+        if not seen[placed.name] and F.burning(placed.pos) then
+            list[#list + 1] = { pos = placed.pos, by = placed.by }
+        end
+    end
+    for _, fire in ipairs(list) do
         cook(station, fire, step)
+        show(fire, #game.container(ST.name("campfire", fire.pos)) > 0)
     end
 end)
 

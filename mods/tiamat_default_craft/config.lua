@@ -310,6 +310,8 @@ C.char_ticks = 60 * 20          -- cooked meat left over a fire this long chars
 C.fire_fuel = 20 * 60 * 20       -- ticks a newly lit fire burns: twenty minutes
 C.fire_max_fuel = 60 * 60 * 20   -- no fire holds more than an hour
 C.fire_step = 20                 -- fires are looked after once a second
+C.fire_embers = 6               -- flame sparks a burning fire sends up each second
+C.fire_smoke = 3                -- puffs of smoke a second while something is on it
 C.fireset_ticks = 30 * 20        -- burning this long cracks the rock beside it
 
 -- What a fire may be fed, ticks per 27 units.

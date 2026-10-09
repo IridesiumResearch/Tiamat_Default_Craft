@@ -1026,6 +1026,26 @@ fn cooking() {
     assert_eq!(r.boxes.get(fire, 4).map(|s| s.units), Some(54));
     assert!(r.storage.dump().contains(&format!("first:{}:cook:meat=", hex(PLAYER))));
 
+    // A campfire placed already lit (Creative, the toolkit) is a fire too:
+    // it cooks, it flames, and it smokes while something is on it.
+    r.give(PLAYER, "campfire_lit", 27);
+    r.place(PLAYER, 36, 64, 30, "campfire_lit").unwrap();
+    let lit = "tiamat_default_craft:campfire:36,64,30";
+    assert!(r.boxes.exists(lit), "placed, it has its box");
+    r.particles.0.lock().unwrap().clear();
+    r.tick(40);
+    let bursts = |r: &Rig| -> Vec<(f32, [f64; 3])> {
+        r.particles.0.lock().unwrap().iter().filter(|b| b.burst.pos[0] > 36.0 && b.burst.pos[0] < 37.0)
+            .map(|b| (b.burst.size, b.burst.pos)).collect()
+    };
+    assert!(bursts(&r).iter().any(|(s, _)| *s < 0.2), "flames over it");
+    assert!(!bursts(&r).iter().any(|(s, _)| *s > 0.3), "no smoke with nothing on it");
+    r.boxes.set(lit, 1, Some(r.stack("tiamat_default_life:raw_meat", 27)));
+    r.particles.0.lock().unwrap().clear();
+    r.tick(320);
+    assert_eq!(r.boxes.get(lit, 4).map(|s| s.material), Some(r.material("tiamat_default_life:cooked_meat")), "cooked");
+    assert!(bursts(&r).iter().any(|(s, _)| *s > 0.3), "smoke while it cooks");
+
     // Left on the fire, it chars.
     r.tick(1220);
     assert_eq!(r.boxes.get(fire, 4).map(|s| (s.material, s.units)), Some((r.material("charred_meat"), 54)));
