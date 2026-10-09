@@ -293,6 +293,17 @@ C.sluice_dry = "A sluice needs running water."
 -- random tick, about twenty minutes a block) and leaves a spent torch.
 C.torch_light = { r = 14, g = 10, b = 4 }
 
+-- How each light of fire breathes (the engine's `flicker`: `depth` 0..1 how
+-- far it dips, `rate` steps a second). Presentation only — the client's;
+-- the light the world propagates is steady.
+C.flicker = {
+    campfire = { depth = 0.3, rate = 8 },     -- an open fire
+    torch = { depth = 0.2, rate = 10 },       -- small and quick
+    kiln = { depth = 0.12, rate = 4 },        -- a fire shut in clay
+    bloomery = { depth = 0.15, rate = 6 },
+    lantern = { depth = 0.06, rate = 6 },     -- a torch behind glass, barely
+}
+
 -- The HUD is told what is in the hand and what it points at this often.
 C.hud_ticks = 5
 

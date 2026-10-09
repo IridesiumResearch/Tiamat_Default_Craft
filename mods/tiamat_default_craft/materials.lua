@@ -139,6 +139,7 @@ block("torch", {
     shape = TORCH_SHAPE,
     passable = true,
     light_emit = tdc.config.torch_light,
+    flicker = tdc.config.flicker.torch,
 })
 block("spent_torch", {
     name = "Spent torch",
@@ -174,6 +175,7 @@ block("iron_lantern", {
     description = "A torch behind glass in an iron case. It does not burn out.",
     hardness = 0.5,
     light_emit = { r = 14, g = 11, b = 6 },
+    flicker = tdc.config.flicker.lantern,
 }, modelled("iron_lantern", "lantern"))
 
 -- The sluice (sluice.lua): it stands in running water.
@@ -194,6 +196,7 @@ block("bloomery_lit", {
     description = "Burning.",
     hardness = 1.5,
     light_emit = { r = 14, g = 8, b = 2 },
+    flicker = tdc.config.flicker.bloomery,
 }, modelled("bloomery_lit", "bloomery"))
 block("iron_anvil", {
     name = "Iron anvil",
@@ -223,6 +226,7 @@ block("kiln_lit", {
     description = "Burning.",
     hardness = 1.5,
     light_emit = { r = 12, g = 6, b = 1 },
+    flicker = tdc.config.flicker.kiln,
 }, modelled("kiln_lit", "kiln"))
 
 -- Fire (fire.lua), drawn as Iridesium's campfire model (art/campfire.glb,
@@ -247,6 +251,7 @@ block("campfire_lit", {
     model = "campfire_lit",
     shape = { "### ### ###", "... .#. ...", "... .#. ..." },
     light_emit = { r = 14, g = 9, b = 4 },
+    flicker = tdc.config.flicker.campfire,
 })
 
 -- What fire leaves of rock: the rock it was, cracked, which the hand can
