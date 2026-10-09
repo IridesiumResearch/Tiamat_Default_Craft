@@ -303,8 +303,8 @@ All are namespaced `tiamat_default_craft:` by the engine.
   (transparent), `iron_lantern` (never burns out), `torch`, `spent_torch` (a torch burned out by a random tick;
   it drops its stick), `plank`, `workbench`, `chest`, `sluice`, `bloomery`,
   `bloomery_lit`, `stone_anvil`, `unfired_kiln`, `kiln`,
-  `kiln_lit`, `unlit_campfire`, `campfire_lit` (the lit fire in a world
-  without Life; with Life, a lit fire is Life's `campfire`), and the cracked
+  `kiln_lit`, `unlit_campfire`, `campfire_lit` (the lit fire, drawn as the
+  campfire model; it burns and warms through Life when Life is here), and the cracked
   rocks `cracked_stone`, `cracked_slate`, `cracked_calcite`,
   `cracked_dark_basalt`, `cracked_copper_ore`, `cracked_iron_ore`,
   `cracked_coal` (each only when the world's rock exists).
@@ -429,7 +429,7 @@ Not exports, listed so the direction is clear: it names the blocks of
 `tiamat_default_world` in its recipes, groups and dig classes when that mod
 is loaded; it tells `tiamat_default_life` which of its tools are weapons
 (`add_weapon`), sickles (`add_harvest_tool`) and hoes (`add_tilling_tool`),
-lights Life's `campfire` block and makes its own fire and its burning kiln and
+still tends a fire lit as Life's `campfire` before 0.7, and makes its own fire and its burning kiln and
 bloomery warm through `add_contact_fire` and `add_heat_source`, makes its charred meat food
 through `add_food`, cooks Life's raw meat, fruit and wheat into Life's own
 cooked meat, hot stew and bread, and reads Life's world option

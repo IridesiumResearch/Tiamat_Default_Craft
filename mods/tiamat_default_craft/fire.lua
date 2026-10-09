@@ -6,10 +6,11 @@
 --
 -- # The cycle
 --
--- An unlit campfire is a block a player lays. Struck with a fire striker it
--- becomes a lit fire: Life's campfire when Life is here (so its heat, light
--- and burn are Life's, written once), this mod's own `campfire_lit` when it
--- is not. A fire this mod lit has fuel, and goes back to an unlit campfire
+-- An unlit campfire is a block a player lays. Struck with a fire striker, or
+-- with a torch held to it, it becomes a lit fire: this mod's own
+-- `campfire_lit`, drawn as the campfire model, which burns and warms through
+-- Life's exports when Life is here. (A fire lit as Life's `campfire`, as
+-- they were before 0.7, still burns and is still tended.) A fire this mod lit has fuel, and goes back to an unlit campfire
 -- when the fuel runs out; logs thrown on keep it going. A fire it did not
 -- light — the dev kit's — burns for ever, as it always did, because it is
 -- not in the table.

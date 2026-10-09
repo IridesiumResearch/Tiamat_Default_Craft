@@ -38,6 +38,7 @@ Built in the brief's order (§12), each step shipping on its own:
 | — | Glyphs; Life's kitchen and leather; the iron anvil (`0.4.0`) | **done** |
 | — | What science and magic asked for: frames, glyph ingredients, lighting (`0.5.0`) | **done** |
 | — | Crafting grids: patterns, the result in the output slot, the list beside (`0.6.0`) | **done** |
+| — | Model blocks: the campfire, the stations and the torch; thin ground (`0.7.0`) | **done** |
 
 **The loop is complete (0.2.0), and after it (0.3.0) the parts the Fork's
 Keystone and both trees are built from: iron plate, nails, chain, hinge and
