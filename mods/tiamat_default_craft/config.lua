@@ -323,7 +323,10 @@ C.fire_max_fuel = 60 * 60 * 20   -- no fire holds more than an hour
 C.fire_step = 20                 -- fires are looked after once a second
 C.fire_embers = 6               -- flame sparks a burning fire sends up each second
 C.fire_smoke = 3                -- puffs of smoke a second while something is on it
-C.fireset_ticks = 30 * 20        -- burning this long cracks the rock beside it
+C.fireset_ticks = 30 * 20        -- burning this long heats the rock beside it until it comes away
+C.spall_ticks = 3 * 20           -- then every this long, each block of it loses...
+C.spall_cells = 3                -- ...this many cells, the nearest the fire, falling as the rock
+C.spall_dust = 8                 -- motes of rock dust as they come away
 
 -- What a fire may be fed, ticks per 27 units.
 C.campfire_fuel = {

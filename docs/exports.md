@@ -220,7 +220,7 @@ time it wears.
 | `is_burning(pos)` | `{ x, y, z, domain? }`, whole blocks | Whether a fire this mod lit burns there. |
 | `add_fuel_at(pos, ticks)` | the same; 1..72000 | Adds fuel to a fire this mod lit, up to an hour. Answers whether there was one. |
 | `ignite(pos, uuid)` | the same; a UUID in hex | Lights the laid campfire, or the unlit heat station with fuel in it, there, for that player, as a striker would but without one: a burning glass. `true`, or `nil` and why ("It is burning already.", "It wants fuel first."). |
-| `register_cracked(material, twin)` | two qualified block ids | `material` cracks into `twin` beside a burning fire, as the world's rock does. Register the twin yourself — breakable by hand, and dropping what it should: this mod gives the world's rock back for its own twins only. |
+| `register_cracked(material, twin)` | two qualified block ids | `material` comes away beside a burning fire, cell by cell, falling as itself, as the world's rock does. `twin` is its cracked block, from before cells fell; register it yourself, breakable by hand. |
 
 ### Progression
 
@@ -230,7 +230,7 @@ time it wears.
 | `set_effects(fn)` | `fn(uuid, prefix) -> { ["craft.<name>"] = delta }` | The numbers progression nodes change, read where each is used (below). One owner: the first to set it keeps it. A function answering nothing reads as no effects. |
 | `set_gate(fn)` | `fn(uuid, node) -> boolean` | The gate every `requires` is asked through. One owner: the first to set it keeps it. With none, everything is open; a gate that answers nothing (its mod faulted) is read as open, so a broken progress mod never stops the world making anything. |
 | `on_crafted(fn)` | `fn(uuid, recipe_id, outputs, container)` | Hears every recipe made; `container` is the station's it was made in, nil for one made from a player's own things (a flame powder thrown on a fire). |
-| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit cracks each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"forge:iron_anvil"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`, `"cook:cured"`, `"craft:leather"`, `"craft:cloth"`, `"sew:warm_coat"`, `"sew:cool_cloak"`, `"bloom:iron"`, `"wash:gold"` — the list below, frozen. |
+| `on_first(fn)` | `fn(uuid, event)` | Hears the first time a player does something, once per player for ever: `"craft:<recipe id>"`, or the recipe's own `first`; `"fire:lit"`; `"fireset:<rock>"` (`"fireset:copper_ore"`) the first time a fire a player lit breaks away each kind of rock; `"fire:kiln"` (a kiln's first firing), `"fire:charcoal"`, `"smelt:<metal>"` (copper, tin, silver, gold, lead, bronze), `"cast:bronze_<tool>"`, `"cast:copper_pot"`, `"haft:bronze_<tool>"`, `"cook:meat"`, `"cook:stew"`, `"cook:bread"`, `"wash:tin"`, `"craft:anvil"`, `"cast:bronze_tuyere"`, `"smelt:iron"`, `"forge:iron_bar"`, `"forge:iron_<tool>"`, `"forge:iron_hammer"` (the first, with bronze), `"haft:iron_<tool>"`, `"forge:iron_plate"`, `"forge:iron_nails"`, `"forge:iron_chain"`, `"forge:iron_hinge"`, `"forge:iron_anvil"`, `"craft:iron_frame"`, `"cast:bronze_gear"`, `"smelt:glass"`, `"cook:cured"`, `"craft:leather"`, `"craft:cloth"`, `"sew:warm_coat"`, `"sew:cool_cloak"`, `"bloom:iron"`, `"wash:gold"` — the list below, frozen. |
 | `on_tool_broken(fn)` | `fn(uuid, tool_id)` | Hears a tool wear out in somebody's hands (step 2). |
 
 ### The numbers `set_effects` moves
@@ -240,7 +240,7 @@ used and never stored.
 
 | Key | What it moves |
 |---|---|
-| `craft.fireset_ticks` | Ticks of burning before a fire the player lit cracks the rock round it (600). |
+| `craft.fireset_ticks` | Ticks of burning before the rock round a fire the player lit begins to come away (600). |
 | `craft.charcoal_yield` | Charcoal from a log in the kiln: three units a point, so 3 is a third more. |
 | `craft.fuel_percent` | How long each fuel lasts in any heat station the player lit (a kiln, a bloomery, yours), per cent. |
 | `craft.sluice_gold_period` | Washes to a gold flake in a sluice the player placed (9). |

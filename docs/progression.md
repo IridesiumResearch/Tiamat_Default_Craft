@@ -78,11 +78,12 @@ cord).
 
 Lay the campfire and strike it with the striker — or hold a burning torch to
 it, which lights it and is not spent. It burns twenty minutes
-and takes logs for more. After thirty seconds it **cracks the rock around
-it** — stone, slate, calcite, basalt, copper and iron ore, coal — and
-cracked rock comes away by hand, giving the rock whole. Dig the cracked face
-back and the fire reaches the next layer. Granite and the hard rocks do not
-crack.
+and takes logs for more. After thirty seconds the rock around it is hot
+and **comes away**: stone, slate, calcite, basalt, copper and iron ore,
+coal. Every three seconds each block of it loses the three cells nearest
+the fire, which fall at its foot as the rock they were — a unit a cell —
+until the block is gone and the one behind it heats in turn. Granite and
+the hard rocks do not come away.
 
 A fire opens with an empty hand: put raw meat on it and it roasts (leave it
 and it chars), put meat and fruit on it with a copper pot and it stews, put

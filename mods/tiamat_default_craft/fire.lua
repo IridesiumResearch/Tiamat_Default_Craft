@@ -193,15 +193,87 @@ local function reach(pos)
     return out
 end
 
---- Cracks what the fire reaches.
-local function crack_around(fire)
+-- Fire-setting: the rock the fire reaches comes away a few cells at a time,
+-- the cells nearest the fire first, each falling as the rock it was — one
+-- unit a cell, so the rock's own cells are what a player picks up and
+-- nothing is made twice. A block that loses its last cell is gone, and the
+-- block behind it is then within the fire's reach (`reach`), and no further.
+
+--- The rock a material is, for fire-setting: its parent's name (a cracked
+--- twin, from a world before cells fell, comes away as its rock too), or nil.
+local twins = nil
+local function rock_of(material)
     local table_ = cracks()
+    if table_[material] then return table_[material].parent end
+    if not twins then
+        twins = {}
+        for m, crack in pairs(table_) do
+            local twin = U.material(crack.twin)
+            if twin then twins[twin] = crack.parent end
+        end
+    end
+    return twins[material]
+end
+
+--- Where a stack falls, and how: Life's ground when Life is here, else the
+--- pack of whoever lit the fire. Answers whether it went anywhere.
+local function fall(fire, spec, at, toward)
+    if life and life.drop and life.drop(at, spec, { owner = fire.by, velocity = toward }) then return true end
+    return fire.by ~= nil and U.give(fire.by, spec) == 0
+end
+
+--- Breaks the cells of one block nearest the fire, and lets them fall.
+local function spall_block(fire, p, at)
+    local rock = at.material and at.occupancy ~= 0 and rock_of(at.material)
+    if not rock then return end
+    local fx, fy, fz = fire.x * 3 + 1, fire.y * 3 + 1, fire.z * 3 + 1
+    local function far(i)
+        local dx = p.x * 3 + i % 3 - fx
+        local dy = p.y * 3 + (i // 3) % 3 - fy
+        local dz = p.z * 3 + i // 9 - fz
+        return dx * dx + dy * dy + dz * dz
+    end
+    local cells = {}
+    for i = 0, 26 do
+        if at.occupancy & (1 << i) ~= 0 then cells[#cells + 1] = i end
+    end
+    table.sort(cells, function(a, b)
+        local da, db = far(a), far(b)
+        if da ~= db then return da < db end
+        return a < b
+    end)
+    local n = math.min(C.spall_cells, #cells)
+    local mask, sx, sy, sz = at.occupancy, 0, 0, 0
+    for k = 1, n do
+        local i = cells[k]
+        mask = mask & ~(1 << i)
+        sx, sy, sz = sx + i % 3, sy + (i // 3) % 3, sz + i // 9
+    end
+    local here = { x = p.x + (sx / n + 0.5) / 3, y = p.y + (sy / n + 0.5) / 3, z = p.z + (sz / n + 0.5) / 3,
+        domain = p.domain }
+    local toward = { x = (fire.x - p.x) * 1.5, y = 1.0, z = (fire.z - p.z) * 1.5 }
+    -- The cells come off only if they have somewhere to fall.
+    local name = game.block_of(at.material)
+    local wrote = mask == 0 and game.set_block(p, "engine:air") or (mask ~= 0 and game.set_block(p, name, mask))
+    if not wrote then return end
+    if not fall(fire, { material = rock, units = n }, here, toward) then
+        game.set_block(p, name, at.occupancy)       -- nowhere for them: put back
+        return
+    end
+    game.emit_particles{
+        pos = here, count = C.spall_dust, size = 0.12, lifetime = 1.2,
+        colour = { r = 0.55, g = 0.52, b = 0.48 },
+        velocity = { x = toward.x * 0.5, y = 0.6, z = toward.z * 0.5 }, spread = 0.8,
+        area = { x = 0.15, y = 0.15, z = 0.15 }, gravity = 6, collide = true,
+    }
+    if fire.by then R.first(fire.by, "fireset:" .. string.match(rock, ":(.+)$")) end
+end
+
+--- Breaks away the rock the fire reaches, a few cells a block.
+local function spall_around(fire)
     for _, p in ipairs(reach(pos_of(fire))) do
         local at = game.get_block(p)
-        local crack = at and at.occupancy == game.OCCUPANCY_FULL and at.material and table_[at.material]
-        if crack and game.set_block(p, crack.twin) and fire.by then
-            R.first(fire.by, "fireset:" .. string.match(crack.parent, ":(.+)$"))
-        end
+        if at then spall_block(fire, p, at) end
     end
 end
 
@@ -216,11 +288,19 @@ local function tend(key, fire, step)
         return
     end
     fire.fuel = fire.fuel - step
-    fire.heat = fire.heat + step
+    -- It heats the rock round it first; hot, the rock comes away every
+    -- C.spall_ticks for as long as it burns.
     local fireset = math.max(C.fire_step, C.fireset_ticks + R.effect(fire.by, "craft.fireset_ticks"))
-    while fire.heat >= fireset do
-        fire.heat = fire.heat - fireset
-        crack_around(fire)
+    local was_hot = fire.heat >= fireset
+    fire.heat = math.min(fireset, fire.heat + step)
+    if fire.heat >= fireset then
+        -- The first cells come away the moment the rock is hot.
+        local due = was_hot and (math.type(fire.spall) == "integer" and fire.spall or 0) + step or C.spall_ticks
+        while due >= C.spall_ticks do
+            due = due - C.spall_ticks
+            spall_around(fire)
+        end
+        fire.spall = due
     end
     if fire.fuel <= 0 then
         game.set_block(pos, UNLIT)

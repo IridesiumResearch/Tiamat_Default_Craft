@@ -624,8 +624,11 @@ impl WorldEdit for World {
         self.apply(pos, block);
         true
     }
-    fn set_partial(&self, _: &str, pos: BlockPos, block: &str, _: u32) -> bool {
+    fn set_partial(&self, _: &str, pos: BlockPos, block: &str, occupancy: u32) -> bool {
         self.apply(pos, block);
+        if let Some(entry) = self.blocks.lock().unwrap().get_mut(&(pos.x, pos.y, pos.z)) {
+            entry.1 = occupancy;
+        }
         true
     }
     fn merge_partial(&self, _: &str, pos: BlockPos, block: &str, _: u32) -> bool {
@@ -724,6 +727,7 @@ pub struct Setup {
 /// <call>` in chat answers whether it was made.
 const LIFE: &str = r##"
 local heard = {}
+local dropped = {}   -- material name -> units put on the ground
 local function note(kind) return function(material, value)
     if type(value) == "table" then value = nil end
     heard[kind .. " " .. material .. (value and (" " .. tostring(value)) or "")] = true
@@ -736,7 +740,12 @@ for _, id in ipairs({ "raw_meat", "cooked_meat", "hot_stew", "apple", "berries",
 end
 game.export{ version = 1, add_weapon = note("weapon"), add_harvest_tool = note("harvest"),
     add_tilling_tool = note("tills"), add_contact_fire = note("fire"), add_heat_source = note("heat"),
-    add_food = note("food") }
+    add_food = note("food"),
+    drop = function(pos, stack)
+        local name = type(stack.material) == "string" and stack.material or game.block_of(stack.material)
+        dropped[name] = (dropped[name] or 0) + (stack.units or 27 * (stack.count or 1))
+        return 1
+    end }
 -- Life eats food held, at any block or at nothing, and loads first.
 game.register_on_use(function(e)
     if e.held and game.block_of(e.held.material) == "tiamat_default_life:raw_meat" then
@@ -745,6 +754,11 @@ game.register_on_use(function(e)
     end
 end, { anywhere = true })
 game.register_on_chat(function(e)
+    local what = string.match(e.text, "^life dropped (.+)$")
+    if what then
+        game.chat_to(e.player, tostring(dropped[what] or 0))
+        return false
+    end
     local call = string.match(e.text, "^life heard (.+)$")
     if not call then return end
     game.chat_to(e.player, heard[call] and "yes" or "no")

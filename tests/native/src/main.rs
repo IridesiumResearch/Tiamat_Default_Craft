@@ -530,8 +530,8 @@ fn creative() {
     println!("creative: ok");
 }
 
-/// A fire from nothing: flint, tinder and logs by hand, struck alight, cracking
-/// the rock around it, fed, and burning out after a restart.
+/// A fire from nothing: flint, tinder and logs by hand, struck alight, the
+/// rock around it coming away cell by cell, fed, and burning out after a restart.
 fn fire() {
     let prelude = "tdc_overrides = { fire_fuel = 1200, fire_max_fuel = 8000 }";
     let mut r = Rig::new(Setup { world: true, life: true, prelude: prelude.into(), ..Setup::default() });
@@ -572,14 +572,35 @@ fn fire() {
     let serial = striker.trim_start_matches("t=");
     assert_eq!(r.details(PLAYER, "fire_striker"), vec![format!("t={serial};w=1")], "the wear is on the striker");
 
+    // Hot after thirty seconds, the rock comes away three cells at a time,
+    // the nearest the fire first, each falling as the rock it was.
+    let cells = |r: &Rig, x: i32, y: i32, z: i32| {
+        r.world.blocks.lock().unwrap().get(&(x, y, z)).map_or(0, |(_, o)| o.count_ones())
+    };
+    let fell = |r: &mut Rig, what: &str| -> u32 {
+        r.say(&format!("life dropped tiamat_default_world:{what}"));
+        r.said().parse().unwrap()
+    };
     r.tick(560);
-    assert_eq!(r.block_name(11, 64, 10), "tiamat_default_world:stone", "not yet");
+    assert_eq!(cells(&r, 11, 64, 10), 27, "not yet");
     r.tick(60);
-    assert_eq!(r.block_name(11, 64, 10), "tiamat_default_craft:cracked_stone");
-    assert_eq!(r.block_name(10, 63, 10), "tiamat_default_craft:cracked_copper_ore");
-    assert_eq!(r.block_name(10, 64, 12), "tiamat_default_craft:cracked_stone", "through the air beside it");
-    assert_eq!(r.block_name(9, 64, 10), "tiamat_default_world:granite");
-    assert_eq!(r.block_name(12, 64, 10), "tiamat_default_world:stone", "behind rock, out of reach");
+    assert_eq!(r.block_name(11, 64, 10), "tiamat_default_world:stone", "still stone, less of it");
+    assert_eq!(cells(&r, 11, 64, 10), 24);
+    assert_eq!(cells(&r, 10, 63, 10), 24, "the ore under it");
+    assert_eq!(cells(&r, 10, 64, 12), 24, "through the air beside it");
+    let side = r.world.blocks.lock().unwrap()[&(11, 64, 10)].1;
+    let gone = 0x7FF_FFFF & !side;
+    assert!(gone & (1 << 12) != 0, "the face's middle, nearest the fire, first");
+    assert!((0..27).filter(|i| gone & (1 << i) != 0).all(|i| i % 3 == 0), "all from the face toward the fire");
+    assert_eq!(cells(&r, 9, 64, 10), 27, "granite does not come away");
+    assert_eq!(cells(&r, 12, 64, 10), 27, "behind rock, out of reach");
+    assert_eq!(fell(&mut r, "stone"), 6, "a unit a cell, nothing twice");
+    assert_eq!(fell(&mut r, "copper_ore"), 3);
+    let flecks = r.particles.0.lock().unwrap().iter().filter(|b| b.burst.gravity > 1.0).count();
+    assert!(flecks >= 3, "dust as each comes away");
+    r.tick(60);
+    assert_eq!(cells(&r, 11, 64, 10), 21, "and three more");
+    assert_eq!(fell(&mut r, "stone"), 12);
     r.hold_nothing(PLAYER);
     assert_eq!(r.dig_start(PLAYER, "cracked_copper_ore"), Ok(()));
     assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:copper_ore"), Err("Bare hands will not move stone. Fire will crack it, or a bronze pick will break it.".into()));
@@ -1512,7 +1533,8 @@ fn progress_asks() {
     r.hold(PLAYER, "fire_striker", Some(&d(&r, "fire_striker")));
     assert_eq!(r.use_at(PLAYER, 80, 64, 80).as_deref(), Some(""));
     r.tick(420);
-    assert_eq!(r.block_name(81, 64, 80), "tiamat_default_craft:cracked_stone", "cracked at 400");
+    let left = r.world.blocks.lock().unwrap()[&(81, 64, 80)].1.count_ones();
+    assert!(left < 27, "coming away at 400: {left}");
 
     // A kiln: charcoal a third more, copper from 18 units of ore.
     r.say("q set craft.charcoal_yield 3");

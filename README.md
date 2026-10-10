@@ -48,8 +48,9 @@ lantern that does not burn out.** [`docs/progression.md`](docs/progression.md)
 is the ladder as a player climbs it. A player can start from nothing: break flint out by hand, rub
 tinder from dry grass, split sticks from a log, lay a campfire and strike it
 alight (`craft fire_striker`, `craft tinder`, `craft stick`, `craft
-unlit_campfire`). A burning fire cracks the rock around it in thirty
-seconds, and cracked rock and ore come away by hand, whole. Feed it logs
+unlit_campfire`). A burning fire heats the rock around it for thirty
+seconds, and then the rock and ore come away, three cells a block every
+three seconds, falling as the rock they were. Feed it logs
 or it goes out. Cord from brambles and a workbench of logs, by hand; at
 the bench, planks split with a wedge, hafts, digging sticks, mauls, and a
 chest. V opens the Craft tab (the interface's, when it is here). A kiln of wet clay
@@ -217,8 +218,12 @@ and the change is recorded here.
   gate: it loads after this mod, which therefore cannot read its exports.
 - **Every head has a mould**, the sickle and hoe included, and the pot's
   mould casts the copper pot.
-- **Fire-setting reaches one block further through open air**, so a face
-  dug back keeps cracking. Quenching with water is not built.
+- **Fire-setting breaks the rock away cell by cell** (2026-10-10), the cells
+  nearest the fire first, each falling as a unit of the rock it was, rather
+  than cracking whole blocks for the hand to break: what comes out is the
+  rock's own cells, once. A block that is gone lets the fire reach the one
+  behind it, and no further. The cracked blocks remain for a world that has
+  them. Quenching with water is not built.
 
 ## Pictures and sounds, and replacing them
 
