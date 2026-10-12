@@ -721,6 +721,7 @@ HAND_DRAWN = {
     "mould_pot", "mould_sickle", "mould_spade", "mould_tuyere",
     "mudbrick", "plank",
     "iron_axe", "iron_axe_head", "iron_bar", "iron_chain", "iron_chisel", "iron_sickle_head", "iron_spade_head", "ironwood_maul", "kiln", "kiln_lit", "lead_ingot", "leather", "silver_ingot", "sluice",
+    "iron_frame", "iron_hinge", "iron_hoe", "iron_hoe_head", "iron_knife", "iron_knife_head", "iron_nails", "iron_pick", "iron_pick_head", "iron_plate", "mould_pick",
 }
 
 
