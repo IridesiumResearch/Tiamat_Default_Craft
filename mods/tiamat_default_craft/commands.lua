@@ -75,6 +75,19 @@ tdc.on_chat("craft", function(player, rest)
     end
 end)
 
+-- `uses`: what the thing in hand is for — every recipe it goes into that
+-- the player may make, the ones they have never made first. The same line
+-- a slot's hover will show (engine ask 16).
+tdc.on_chat("uses", function(player, rest)
+    if rest ~= "" then return false end
+    local held = game.held(player)
+    if not held then
+        game.chat_to(player, "Hold something to see what it makes.")
+        return
+    end
+    game.chat_to(player, R.uses_text(player, held.material, 480) or "Nothing you know of is made from that yet.")
+end)
+
 -- `grids`, for an operator: every pattern laid out alone, and any that
 -- makes something else said. Two patterns alike are a recipe nobody can
 -- make in a grid, which nothing else would show.

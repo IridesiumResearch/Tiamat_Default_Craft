@@ -8,6 +8,12 @@ no diamond tools: **wood → bronze → iron**, climbed the way people climbed
 it. V opens the Craft tab (the recipes you can make by hand); a station
 shows its own when you use it with an empty hand.
 
+## What is this for?
+
+Hold something and say `uses` in chat: it lists everything that thing goes
+into that you can make, the ones you have never made first, marked new, and
+where each is made. It is the quickest way to find the next step.
+
 ## Placing one node at a time
 
 Hold C (the "place one node" action) and what you place goes down a node at

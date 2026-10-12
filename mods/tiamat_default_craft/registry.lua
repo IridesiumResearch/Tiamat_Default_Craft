@@ -637,6 +637,11 @@ function R.first(uuid, event)
     return true
 end
 
+--- Whether a player has made a recipe (its first event is theirs).
+function R.made(uuid, recipe)
+    return uuid ~= nil and game.storage.get("first:" .. uuid .. ":" .. recipe.first) ~= nil
+end
+
 function R.tool_broken(uuid, tool)
     for _, fn in ipairs(subscribers.tool_broken) do
         fn(uuid, tool)
@@ -1356,6 +1361,54 @@ function R.grid_make(uuid, match, container)
     end
     R.announce(uuid, match.recipe.id, outputs, container)
     return true
+end
+
+--- What a material is for, for one player: every recipe that takes it — as
+--- an ingredient or a tool — that the gate lets them make, as `{ recipe,
+--- new }`, `new` when they have never made it. The new ones first (the next
+--- steps), then the rest, each by name.
+function R.uses(uuid, material)
+    local out = {}
+    for _, id in ipairs(U.sorted_keys(recipes)) do
+        local recipe = recipes[id]
+        local resolved = R.allowed(uuid, recipe.requires) and resolve(recipe)
+        local hit = false
+        for _, list in ipairs(resolved and { resolved.inputs, resolved.tools } or {}) do
+            for _, e in ipairs(list) do
+                for _, m in ipairs(e.candidates) do
+                    if m == material then hit = true end
+                end
+            end
+        end
+        if hit and #resolved.outputs > 0 then
+            out[#out + 1] = { recipe = recipe, new = not R.made(uuid, recipe) }
+        end
+    end
+    table.sort(out, function(a, b)
+        if a.new ~= b.new then return a.new end
+        if a.recipe.name ~= b.recipe.name then return a.recipe.name < b.recipe.name end
+        return a.recipe.id < b.recipe.id
+    end)
+    return out
+end
+
+--- The same as a line a player reads, at most `cap` bytes (a hover's 256):
+--- "Makes: Planks (workbench, new), Wedges (workbench), …". Nil when the
+--- material makes nothing they may make.
+function R.uses_text(uuid, material, cap)
+    local uses = R.uses(uuid, material)
+    if #uses == 0 then return nil end
+    cap = cap or 256
+    local text = "Makes:"
+    for i, u in ipairs(uses) do
+        local where = u.recipe.station == "hand" and "by hand" or string.lower(stations[u.recipe.station].name)
+        local piece = (i > 1 and ", " or " ") .. u.recipe.name .. " (" .. where .. (u.new and ", new" or "") .. ")"
+        if #text + #piece + 5 > cap then
+            return text .. ", ..."
+        end
+        text = text .. piece
+    end
+    return text .. "."
 end
 
 --- Tells the subscribers a recipe was made, for a maker that did not go

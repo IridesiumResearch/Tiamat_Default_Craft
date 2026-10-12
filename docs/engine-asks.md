@@ -15,7 +15,8 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-10-08)
 
-**15 is open**: an item split in the inventory leaves parts of an item.
+**16 is open**: a slot's hover cannot say what a stack is for. 15 landed
+the day it was asked.
 13 landed in engine 8f20397a and 14 in 13dc3e63, the
 day they were asked; 12 in engine 671f5763 the day after it was asked;
 before them, every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
@@ -26,7 +27,8 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
-| 15 an item moves in whole items | **Open**, 2026-10-12. | nothing here gives part of an item; the inventory's splits do. |
+| 16 a mod's line under a stack's name on hover | **Open**, 2026-10-12. | the text is ready (`R.uses_text`); the `uses` chat word says it for the thing in hand. |
+| 15 an item moves in whole items | Landed, engine 2026-10-12. | nothing to change: every item this mod gives or takes is in whole items. |
 | 14 a small whole thing clipping into the ground | Landed, engine 13dc3e63. | the torch and the spent torch are `sweeps = false`: stood in thin ground they clip into it. |
 | 13 a whole block placed on top of another | Landed, engine 8f20397a. | a torch held to a fire's top lights it: the placement reaches `on_place` before the "one piece" refusal. |
 | 12 swapping a whole material in a thin floor | Landed, engine 671f5763. | a fire lit, put out or a torch burned out in a thin floor keeps the floor's cells: `set_block` swaps the whole material, nothing to change here. |
@@ -43,7 +45,35 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 15. An item moves in whole items (2026-10-12): OPEN
+## 16. A line of a mod's under a stack's name on hover, per player (2026-10-12): OPEN
+
+**Seen.** The designer's playtest, 2026-10-12: "it is too hard to figure
+out what to do next to progress. when an item is collected you should be
+able to hover over it and see a list of things you can make with it that
+are important to your current level in the game." A slot's hover text is
+the stack's name and nothing else (`dialog.rs`'s `stack_name`), and no API
+adds to it: `tooltip` on an `item_grid` is one text for the whole grid,
+and a material's `description` is not shown in a slot.
+
+**Why the mod cannot.** The inventory screen and the hotbar are not this
+mod's tree, and even in its own trees a slot's hover is the engine's. What
+to say is this mod's and is ready — `R.uses_text(uuid, material)`, every
+recipe a material goes into that the player may make, the ones they have
+never made first ("Makes: Planks (workbench, new), Sticks (by hand), …";
+the `uses` chat word says it today) — but it differs per player, since it
+follows their research and what they have made.
+
+**Smallest change.** `game.set_hover(uuid, { [material] = "text", ... })`:
+latest state per player, replaced whole each call, each text at most 256
+bytes (the tooltip cap) and a bounded number of entries, drawn under the
+stack's name wherever that player hovers a stack of that material — an
+`item_slot`, an `item_grid`, the hotbar. A table keyed by material rather
+than by slot, so it survives items moving and costs one message when what
+the player knows changes, not one per click. `nil` clears it.
+
+**Stands in.** The `uses` chat word: what the thing in hand is for.
+
+## 15. An item moves in whole items (2026-10-12): LANDED 2026-10-12 (engine)
 
 **Seen.** The designer's playtest, 2026-10-12: "items like meat should never
 have subnodes in the inventory. too many duplication glitches." A
@@ -67,9 +97,9 @@ stack held puts down one ITEM, and a shift-click or a merge moves whole
 items. Optionally `give`/`take` of an item refuse, or round down to, a
 whole number of items — the same rule, at the API.
 
-**Stands in.** Nothing this mod makes gives part of an item: every item a
-recipe here gives is counted in whole items. The splits come from the
-inventory alone.
+**Landed** as asked: an item moves in whole items in every view, and
+`give`/`take` round to whole items. Nothing changed here: every item this
+mod gives or takes was already counted in whole items.
 
 ## 14. A small whole thing that clips into the ground instead of sweeping it (2026-10-08): LANDED 2026-10-08 (engine 13dc3e63)
 

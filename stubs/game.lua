@@ -238,6 +238,9 @@ function ChunkBuffer:fill_layers(depth, code, layers) end
 ---buf:fill_cover(allium, { cells = 6, take = rare })   -- two blocks tall
 ---```
 ---@param material integer
+---**A passable cell is not ground** (2026-10-12). A run stands only on a cell
+---whose material collides, so an earlier call's grass, flowers or plants —
+---every one of them `passable` — are never grown on, and never written over.
 ---@param options table? `{ cells = 1..9, take = Tiamat.Density }`
 function ChunkBuffer:fill_cover(material, options) end
 
@@ -1044,6 +1047,12 @@ function game.register_view(spec) end
 ---    texture = "items/sword.png",
 ---}
 ---```
+---
+---**An item moves in whole items.** It has no cells, so a part of one means
+---nothing: in every inventory the engine holds, a right-click halves a stack of
+---it in whole items (the larger half to the hand), a right-click with a stack
+---held puts down one whole item, and `game.give`/`game.take` round to whole
+---items — 27 units each, exactly as 27 units of a block are one block.
 ---@param spec { id: string, name?: string, texture?: string, description?: string }
 ---@return integer material_id
 function game.register_item(spec) end
@@ -1746,7 +1755,10 @@ function game.inventory(player, view) end
 ---and brick.
 ---
 ---Returns false for a player who is not connected, or for a quantity of zero.
----An inventory never refuses for lack of room — it grows.
+---An inventory never refuses for lack of room — it grows. **An item
+---(`register_item`) goes in whole**: of forty units of meat one meat goes in
+---and thirteen come back in `left`, and `slot` refuses a part of an item
+---outright.
 ---@param player string A player UUID in hex.
 ---`slot` names ONE slot of the view, one-based, and then the stack goes in whole
 ---or not at all — an empty slot takes it, one holding the same thing with room
@@ -1861,7 +1873,8 @@ function game.heading(dx, dz) end
 ---the block, whose `material` and missing mask look like loose material's. A
 ---stack table `game.inventory` reported is a spec for the same stack. A cut of
 ---several is taken in whole items: asking for part of one takes the whole
----ones the request covers.
+---ones the request covers. So is an item (`register_item`): ten units of meat
+---is no meat taken, forty is one.
 ---@param player string A player UUID in hex.
 ---`slot` names ONE slot of the view, one-based, to take from that slot alone.
 ---@param spec { material: string|integer?, units: integer?, count: integer?, shape: integer?, cells: (string|integer)[]?, detail: string?, view: string?, slot: integer? }
@@ -4444,7 +4457,7 @@ function game.transfer_entity(id, domain, position) end
 ---a fall of four hundred land at exactly the same number, and a body dropping
 ---through water is slowed by the water before it touches down. Walking down a
 ---step raises nothing: a body that never left the ground never fell.
----@return { pos: { x: number, y: number, z: number }, yaw: number, pitch: number, facing: { x: number, y: number, z: number }, velocity: { x: number, y: number, z: number }, on_ground: boolean, submerged: number, fell: number, source: string, model: string|nil, item: table|nil, anim: integer, health: integer|nil, max_health: integer|nil, owner: string|nil, nametag: string|nil, nametag_player: string|nil }|nil
+---@return { pos: { x: number, y: number, z: number }, yaw: number, pitch: number, facing: { x: number, y: number, z: number }, velocity: { x: number, y: number, z: number }, on_ground: boolean, submerged: number, fell: number, source: string, model: string|nil, item: table|nil, anim: integer, health: integer|nil, max_health: integer|nil, owner: string|nil, nametag: string|nil, nametag_player: string|nil, tint: { r: number, g: number, b: number } }|nil
 function game.entity(id) end
 
 ---Changes an entity. Returns whether anything changed.
@@ -4473,7 +4486,7 @@ function game.entity(id) end
 ---})
 ---```
 ---@param id integer
----@param spec { pos?: { x: number, y: number, z: number }, velocity?: { x: number, y: number, z: number }, yaw?: number, pitch?: number, health?: integer, speed?: number, anim?: integer, drive?: { walk?: { x: number, z: number }, jump?: boolean, gait?: "walk"|"sprint"|"sneak" } }
+---@param spec { pos?: { x: number, y: number, z: number }, velocity?: { x: number, y: number, z: number }, yaw?: number, pitch?: number, health?: integer, speed?: number, anim?: integer, drive?: { walk?: { x: number, z: number }, jump?: boolean, gait?: "walk"|"sprint"|"sneak" }, tint?: { r: number, g: number, b: number }|false, tint_ticks?: integer } `tint` colours the figure, a multiplier on its skin in 0..=1 per channel, until changed (`false` clears it); with `tint_ticks` it is a FLASH over the tint underneath, eased back out over that many ticks by the engine, with no further messages — the hit flash, `{ tint = { r = 1, g = 0.55, b = 0.55 }, tint_ticks = 6 }`. Presentation only, and not persisted: a mod keeping a state across a save sets its colour again.
 ---@return boolean changed
 function game.set_entity(id, spec) end
 

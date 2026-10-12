@@ -1277,6 +1277,16 @@ fn torch_and_hud() {
         assert!(r.said().starts_with("made"), "{recipe}");
     }
     assert_eq!(r.units(PLAYER, "torch"), 54);
+
+    // What a log is for: the things never made first, marked new.
+    r.give(PLAYER, "tiamat_default_world:oak_log", 27);
+    r.hold(PLAYER, "tiamat_default_world:oak_log", None);
+    r.say("uses");
+    let uses = r.said();
+    assert!(uses.starts_with("Makes: "), "{uses}");
+    assert!(uses.contains("Planks (workbench, new)"), "{uses}");
+    assert!(uses.contains("Sticks (by hand)") && !uses.contains("Sticks (by hand, new)"), "made already: {uses}");
+    assert!(uses.find("Planks").unwrap() < uses.find("Sticks").unwrap(), "the new ones first: {uses}");
     r.put(60, 64, 60, "torch");
     let out = r.vm.random_tick(&tiamat_core::script::RandomTickEvent {
         pos: tiamat_core::BlockPos { x: 60, y: 64, z: 60 },
