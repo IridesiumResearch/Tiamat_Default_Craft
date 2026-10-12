@@ -15,8 +15,8 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-10-08)
 
-**16 is open**: a slot's hover cannot say what a stack is for. 15 landed
-the day it was asked.
+**Nothing is open.** 16 landed in engine a7608684 and 15 the day each was
+asked.
 13 landed in engine 8f20397a and 14 in 13dc3e63, the
 day they were asked; 12 in engine 671f5763 the day after it was asked;
 before them, every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
@@ -27,7 +27,7 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
-| 16 a mod's line under a stack's name on hover | **Open**, 2026-10-12. | the text is ready (`R.uses_text`); the `uses` chat word says it for the thing in hand. |
+| 16 a mod's line under a stack's name on hover | Landed, engine a7608684. | `hover.lua`: every material a player carries says what it makes, theirs, sent when it changes. |
 | 15 an item moves in whole items | Landed, engine 2026-10-12. | nothing to change: every item this mod gives or takes is in whole items. |
 | 14 a small whole thing clipping into the ground | Landed, engine 13dc3e63. | the torch and the spent torch are `sweeps = false`: stood in thin ground they clip into it. |
 | 13 a whole block placed on top of another | Landed, engine 8f20397a. | a torch held to a fire's top lights it: the placement reaches `on_place` before the "one piece" refusal. |
@@ -45,7 +45,7 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
 
-## 16. A line of a mod's under a stack's name on hover, per player (2026-10-12): OPEN
+## 16. A line of a mod's under a stack's name on hover, per player (2026-10-12): LANDED (engine a7608684)
 
 **Seen.** The designer's playtest, 2026-10-12: "it is too hard to figure
 out what to do next to progress. when an item is collected you should be
@@ -71,7 +71,9 @@ stack's name wherever that player hovers a stack of that material — an
 than by slot, so it survives items moving and costs one message when what
 the player knows changes, not one per click. `nil` clears it.
 
-**Stands in.** The `uses` chat word: what the thing in hand is for.
+**Landed** as asked: `game.set_hover(uuid, { [material] = line })`. `hover.lua`
+sends each player the line for every material they carry, every two seconds
+if it has changed. (It stood in, until then, as the `uses` chat word.)
 
 ## 15. An item moves in whole items (2026-10-12): LANDED 2026-10-12 (engine)
 

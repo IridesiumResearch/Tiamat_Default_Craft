@@ -393,7 +393,8 @@ Chat words, said by a player and swallowed. For anyone: `recipes
 and `craft <recipe> [times]` makes it; `uses` says what the thing in hand
 is for — every recipe it goes into that the player may make, the ones they
 have never made first and marked new (engine ask 16 would show the same on
-a slot's hover). A sentence that only begins with
+a slot's hover, which it does: `hover.lua` sends each player the line for
+every material they carry, `game.set_hover`, when it changes). A sentence that only begins with
 one of them is chat. For operators, and everyone in a Creative world:
 `toolkit`, one of every tool. For operators: `grids`, every pattern laid
 out alone, saying of any that makes another recipe instead.

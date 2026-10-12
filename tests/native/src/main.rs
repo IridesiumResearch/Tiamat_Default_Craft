@@ -1293,6 +1293,22 @@ fn torch_and_hud() {
     assert!(uses.contains("Planks (workbench, new)"), "{uses}");
     assert!(uses.contains("Sticks (by hand)") && !uses.contains("Sticks (by hand, new)"), "made already: {uses}");
     assert!(uses.find("Planks").unwrap() < uses.find("Sticks").unwrap(), "the new ones first: {uses}");
+    // The same line under a log's name on hover, sent when it changes.
+    r.tick(40);
+    let log = r.material("tiamat_default_world:oak_log");
+    let hover = |r: &Rig, m: MaterialId| -> Option<String> {
+        r.dialogs.hovers.lock().unwrap().get(&hex(PLAYER))
+            .and_then(|lines| lines.iter().find(|(k, _)| *k == m).map(|(_, l)| l.clone()))
+    };
+    assert_eq!(hover(&r, log), Some(uses.clone()), "the hover says what `uses` says");
+    assert!(hover(&r, log).is_some_and(|l| l.contains("Workbench (by hand, new)")), "{:?}", hover(&r, log));
+    r.give(PLAYER, "tiamat_default_world:oak_log", 27 * 4);
+    r.give(PLAYER, "cord", 27 * 4);
+    r.say("craft workbench");
+    assert!(r.said().starts_with("made"));
+    r.tick(40);
+    assert!(hover(&r, log).is_some_and(|l| l.contains("Workbench (by hand)") && !l.contains("Workbench (by hand, new)")),
+        "made once, no longer new, and sent again: {:?}", hover(&r, log));
     r.put(60, 64, 60, "torch");
     let out = r.vm.random_tick(&tiamat_core::script::RandomTickEvent {
         pos: tiamat_core::BlockPos { x: 60, y: 64, z: 60 },

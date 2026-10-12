@@ -44,6 +44,7 @@ tdc.cooking = load("cooking")     -- what a campfire cooks
 tdc.sluice = load("sluice")       -- tin washed out of river gravel
 tdc.anvil = load("anvil")         -- iron worked by blows
 load("commands")                  -- chat words: listing and crafting by hand
+tdc.hover = load("hover")         -- what a thing is for, under its name on hover
 
 -- The HUD: wear pips beside the hotbar and a red bar under the crosshair
 -- when the tool in hand cannot break what it points at. The pips sit

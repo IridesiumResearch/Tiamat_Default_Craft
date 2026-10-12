@@ -10,7 +10,9 @@ shows its own when you use it with an empty hand.
 
 ## What is this for?
 
-Hold something and say `uses` in chat: it lists everything that thing goes
+Hover over anything you carry: under its name is everything it goes into
+that you can make, the ones you have never made first, marked new, and
+where each is made. Or hold it and say `uses` in chat: it lists everything that thing goes
 into that you can make, the ones you have never made first, marked new, and
 where each is made. It is the quickest way to find the next step.
 

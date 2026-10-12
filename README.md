@@ -250,6 +250,12 @@ in the script, which never overwrites those; the engine serves textures
 itself, so there is nothing to hash. Sounds are the same, in `sounds/` from `tools/make_sounds.py`;
 or leave the files and bind your own sounds to the cues from a sound pack.
 
+## Engine
+
+Needs the engine at protocol 90 or later (0.4 and after) for the lines
+under a stack's name on hover; on an older engine those are simply not
+sent, and the `uses` chat word still says them.
+
 ## For other mods
 
 `game.exports("tiamat_default_craft")`, for a mod that lists this one in

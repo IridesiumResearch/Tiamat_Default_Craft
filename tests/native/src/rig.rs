@@ -460,6 +460,8 @@ impl hud::Access for Huds {
 pub struct Dialogs {
     pub shown: Mutex<Vec<ShowRequest>>,
     pub closed: Mutex<Vec<(String, String)>>,
+    /// Each player's hover lines, as last sent: material -> line.
+    pub hovers: Mutex<HashMap<String, Vec<(MaterialId, String)>>>,
 }
 
 impl uihost::Access for Dialogs {
@@ -471,6 +473,10 @@ impl uihost::Access for Dialogs {
     }
     fn close(&self, player: &str, form: &str) -> bool {
         self.closed.lock().unwrap().push((player.to_owned(), form.to_owned()));
+        true
+    }
+    fn set_hover(&self, player: &str, lines: Vec<(MaterialId, String)>) -> bool {
+        self.hovers.lock().unwrap().insert(player.to_owned(), lines);
         true
     }
 }
