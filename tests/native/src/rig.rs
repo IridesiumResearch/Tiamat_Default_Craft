@@ -1122,6 +1122,7 @@ impl Rig {
             mod_id: MOD.into(),
             form: format!("{MOD}:{form}"),
             event,
+            dropped: None,
         });
         self.assert_healthy(form);
     }
@@ -1135,6 +1136,7 @@ impl Rig {
             mod_id: owner,
             form: form.into(),
             event,
+            dropped: None,
         });
         self.assert_healthy(form);
     }
@@ -1158,6 +1160,20 @@ impl Rig {
         self.inventory.put(player, stack);
         let click = if shift { tiamat_core::proto::Click::ShiftLeft } else { tiamat_core::proto::Click::Left };
         self.click(player, form, view, slot, click);
+    }
+
+    /// A stack dragged out of one of this mod's screens (`form` unqualified),
+    /// as the engine reports it: answers whether the mod took it.
+    pub fn drop_out(&mut self, player: [u8; 32], form: &str, stack: Stack) -> bool {
+        let out = self.vm.dialog_event(&tiamat_core::script::DialogEvent {
+            player,
+            mod_id: MOD.into(),
+            form: format!("{MOD}:{form}"),
+            event: tiamat_core::proto::DialogEvent::Dropped { click: tiamat_core::proto::Click::Left },
+            dropped: Some(stack),
+        });
+        self.assert_healthy(form);
+        out.claimed
     }
 
     /// A dialog closed, and the container it lent put back, as the engine does.

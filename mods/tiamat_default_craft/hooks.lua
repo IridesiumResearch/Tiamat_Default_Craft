@@ -158,7 +158,8 @@ end)
 
 game.register_on_dialog_event(function(event)
     local fn = dialogs[event.form]
-    if fn then fn(event) end
+    -- The answer matters for one event: `true` to a "dropped" takes the stack.
+    if fn then return fn(event) end
 end)
 
 game.register_on_dig_start(function(event)

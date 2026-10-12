@@ -770,6 +770,12 @@ fn stations() {
     let tree = format!("{:?}", r.dialogs.shown.lock().unwrap().last().unwrap().tree);
     assert!(!tree.contains("Button { text: \"Planks x4\""), "no log in the pack: not in the list");
 
+    // A stack dragged out of the screen is thrown onto the ground.
+    let cord = r.stack("cord", 54);
+    assert!(r.drop_out(PLAYER, "station", cord), "taken");
+    r.say("life dropped tiamat_default_craft:cord");
+    assert_eq!(r.said(), "54", "thrown, all of it");
+
     // Closed, what was shown is gone: it was never made.
     r.close(PLAYER, "station");
     assert_eq!(r.boxes.get(bench, 10), None, "withdrawn on close");

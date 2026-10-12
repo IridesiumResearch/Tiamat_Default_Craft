@@ -14,6 +14,12 @@ Hold something and say `uses` in chat: it lists everything that thing goes
 into that you can make, the ones you have never made first, marked new, and
 where each is made. It is the quickest way to find the next step.
 
+## Throwing things away
+
+Drag a stack out of a station's screen (or the hand's own) and let it go
+outside the screen: it is thrown where you look, as Q throws what you
+hold. A right-click outside throws one.
+
 ## Placing one node at a time
 
 Hold C (the "place one node" action) and what you place goes down a node at

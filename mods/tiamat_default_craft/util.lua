@@ -129,6 +129,21 @@ function U.name_at(at, whole)
     return nil
 end
 
+--- Throws a stack from a player along where they look, onto Life's ground:
+--- a stack dragged out of a screen. Answers whether it went (no Life, no
+--- body, or a cut of several materials: it does not, and the engine gives
+--- it back to the cursor).
+function U.throw(uuid, stack)
+    local life = game.exports("tiamat_default_life")
+    local id = game.player_entity(uuid)
+    local body = id and game.entity(id)
+    if not (life and life.drop and body and stack and stack.cells == nil) then return false end
+    local f = body.facing
+    local at = { x = body.pos.x + f.x * 0.5, y = body.pos.y + 1.4, z = body.pos.z + f.z * 0.5 }
+    local spec = { material = stack.material, units = stack.units, shape = stack.shape, detail = stack.detail }
+    return life.drop(at, spec, { velocity = { x = f.x * 4, y = f.y * 4 + 1, z = f.z * 4 }, owner = uuid }) ~= nil
+end
+
 --- A block position as a key: "x,y,z".
 function U.key(x, y, z)
     return x .. "," .. y .. "," .. z

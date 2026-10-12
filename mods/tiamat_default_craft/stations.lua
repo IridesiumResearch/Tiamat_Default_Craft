@@ -296,6 +296,8 @@ local function quick(player, id)
 end
 
 tdc.on_dialog(FORM, function(e)
+    -- A stack dragged out of the screen is thrown, as Q throws one.
+    if e.kind == "dropped" then return U.throw(e.player, e.stack) end
     local o = open[e.player]
     if not o then return end
     if e.kind == "closed" then
@@ -434,6 +436,7 @@ tdc.on_action(game.mod_id .. ":craft", function(e)
 end)
 
 tdc.on_dialog(HAND_FORM, function(e)
+    if e.kind == "dropped" then return U.throw(e.player, e.stack) end
     if e.kind == "closed" then
         hand[e.player] = nil
         local g = G.hand_of(e.player)
