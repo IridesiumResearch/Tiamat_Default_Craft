@@ -248,7 +248,7 @@ block("unlit_campfire", {
 })
 block("campfire_lit", {
     name = "Campfire",
-    description = "A fire of your own making. Feed it logs; it cracks the rock beside it.",
+    description = "A fire of your own making. Feed it logs; the rock beside it comes away in the heat.",
     hardness = 0.4,
     drops = { unlit_campfire = 27 },           -- dug, a fire comes up out
     model = "campfire_lit",

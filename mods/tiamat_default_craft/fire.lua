@@ -17,12 +17,13 @@
 --
 -- # Fire-setting
 --
--- A fire that has burned `fireset_ticks` cracks the rock around it: the six
+-- A fire that has burned `fireset_ticks` heats the rock around it — the six
 -- blocks against it, and, through any of those that is open air, the blocks
--- one further on — so as a player digs the cracked face away the heat
--- reaches the next layer in. A cracked block breaks by hand and drops the
--- rock whole (materials.lua). Only whole blocks crack; a carved one keeps
--- its shape.
+-- one further on — and from then the rock comes away a few cells at a time,
+-- the nearest first, each falling as a unit of the rock it was (`spall_*`
+-- below). A block that is gone lets the heat reach the one behind it. The
+-- cracked blocks of a world from before cells fell come away as their rock.
+-- Only a block of one material comes away; a mixed one keeps its shape.
 --
 -- # State
 --

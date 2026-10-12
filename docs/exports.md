@@ -383,7 +383,8 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Groups:** `#ash`, this mod's ash and the world's volcanic ash;
   `#hammer`, `#chisel` and `#knife`, the bronze and iron ones; `#fruit`, Life's apples and berries; `#plank`, this mod's plank and the world's three; `#wedge`,
   the two wedges; `#log`, the world's thirteen logs; `#tinder`, its dry grass,
-  needles, moss, lichen and heather.
+  needles, moss, lichen and heather; `#cobbles`, the world's cobbles, gravel
+  and permafrost; `#bedding`, Life's hide and wool and the world's tall grass.
 
 ## Commands it accepts
 

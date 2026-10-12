@@ -66,7 +66,7 @@ C.groups = {
 -- as the ground is concerned.
 --
 -- Wood has no pick and no axe. That is the point: the wood tier moves soil,
--- breaks fire-cracked rock and makes the workshop, and metal does the rest.
+-- gathers what fire breaks from the rock and makes the workshop, and metal does the rest.
 -- Ironwood doubles a wooden tool's life, and is hardwood, so it comes after
 -- the first bronze axe.
 

@@ -10,7 +10,7 @@ them, a chest, fire, cooking, and tools that wear.
 
 The ladder is not Minecraft's. There are no stone tools and no diamond
 tools: it runs **wood → bronze → iron**, and it is climbed the way people
-climbed it. Fire cracks rock before any pick does, copper is found green on
+climbed it. Fire breaks rock away before any pick does, copper is found green on
 the surface, tin is washed out of river gravel, bronze is cast into clay
 moulds, and iron is bloomed and hammered.
 
