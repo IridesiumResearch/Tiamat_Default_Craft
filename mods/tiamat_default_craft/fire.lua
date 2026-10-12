@@ -59,6 +59,10 @@ end
 --- fire burning as one still burns, is fed and goes out.
 F.LIT = OWN_LIT
 
+-- The weather's fire, which burns the world's leaves, logs and grass.
+local weather = game.exports("tiamat_weather")
+if not (weather and weather.version == 1 and weather.flammable and weather.ignite) then weather = nil end
+
 local life = game.exports("tiamat_default_life")
 if life and life.version == 1 then
     -- This mod's own fire burns and warms as Life's does, for a world that
@@ -401,6 +405,15 @@ tdc.on_use(function(e)
         if held ~= STRIKER then return nil end
         local ok, why = F.ignite(pos, e.player)
         if not ok then return why end
+        T.wear_held(e.player, 1)
+        return ""
+    end
+
+    -- Struck at anything that burns — leaves on a tree, a log, dry grass —
+    -- the weather's fire takes it, by its own rules (it may not catch).
+    -- The weather's world is the overworld's.
+    if held == STRIKER and weather and pos.domain == nil and weather.flammable(pos.x, pos.y, pos.z) then
+        if not weather.ignite(pos.x, pos.y, pos.z) then return C.will_not_catch end
         T.wear_held(e.player, 1)
         return ""
     end

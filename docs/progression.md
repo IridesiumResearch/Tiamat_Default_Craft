@@ -8,6 +8,12 @@ no diamond tools: **wood → bronze → iron**, climbed the way people climbed
 it. V opens the Craft tab (the recipes you can make by hand); a station
 shows its own when you use it with an empty hand.
 
+## Placing one node at a time
+
+Hold C (the "place one node" action) and what you place goes down a node at
+a time, whatever you hold: the hand needs no tool to build finely. It digs
+nothing while held — taking single nodes OUT is a chisel's work.
+
 ## Laying out a recipe
 
 By hand (a grid of two by two on the Craft tab) and at the workbench (three
@@ -42,7 +48,8 @@ Cells here are one of an item each unless the table says otherwise.
 | maul | a log over a haft | bench |
 | ironwood tools | as the wooden ones, with ironwood logs | bench |
 | a tool | its head over a haft (a stick for a chisel or knife) | bench |
-| kiln | a row of three cells of three wet clay over a row of three of three cobbles | bench |
+| kiln | a row of three cells of three wet clay over a row of three of three cobbles (or gravel, or permafrost) | bench |
+| bed (Life's: where you wake) | three of hide, wool or tall grass over three planks | bench |
 | crucible | wet clay in a V: two cells over one | bench |
 | a mould | wet clay laid in the shape it casts — pick a row of three, axe an L of three, spade one, hammer a square of four, sickle a diagonal of three, hoe a row of two, chisel a column of three, knife a column of two, pot a bowl of five, tuyere two columns of two, gear a diamond of four | bench |
 | bloomery | three cells of three fired clay, the bronze tuyere under the middle, three cells of three stone | bench |
@@ -50,7 +57,7 @@ Cells here are one of an item each unless the table says otherwise.
 | stone anvil | a chisel over granite | bench |
 | chest | eight planks round a cell of two cord | bench |
 | sluice | plank, cord, plank, twice | bench |
-| shape crafter | two planks and two cobbles, crossed, two to a cell | bench |
+| shape crafter | two planks and two cobbles (or gravel, or permafrost), crossed, two to a cell | bench |
 | leather | bark, hide, bark | bench |
 | cloth | three wool in a row | bench |
 | bone needle | a knife over a bone | bench |
@@ -77,7 +84,9 @@ cord).
 ## Fire
 
 Lay the campfire and strike it with the striker — or hold a burning torch to
-it, which lights it and is not spent. It burns twenty minutes
+it, which lights it and is not spent. The striker sets leaves, logs and dry
+grass alight too, when the weather's fire is in the world. A burning fire,
+kiln or bloomery dug comes up out. It burns twenty minutes
 and takes logs for more. After thirty seconds the rock around it is hot
 and **comes away**: stone, slate, calcite, basalt, copper and iron ore,
 coal. Every three seconds each block of it loses the three cells nearest

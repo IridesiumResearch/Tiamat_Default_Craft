@@ -15,7 +15,8 @@ the engine on 2026-09-26; 0 was found and answered the same day.
 
 ## Where these stand (2026-10-08)
 
-**Nothing is open.** 13 landed in engine 8f20397a and 14 in 13dc3e63, the
+**15 is open**: an item split in the inventory leaves parts of an item.
+13 landed in engine 8f20397a and 14 in 13dc3e63, the
 day they were asked; 12 in engine 671f5763 the day after it was asked;
 before them, every ask landed — 2 to 7 in engine c83fbc9, 8 and 9
 in engine cbbbc5e, 10 in engine 7cf1c73, 11 in engine f2cbc36 — and every
@@ -25,6 +26,7 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 
 | Item | State | In this mod |
 |---|---|---|
+| 15 an item moves in whole items | **Open**, 2026-10-12. | nothing here gives part of an item; the inventory's splits do. |
 | 14 a small whole thing clipping into the ground | Landed, engine 13dc3e63. | the torch and the spent torch are `sweeps = false`: stood in thin ground they clip into it. |
 | 13 a whole block placed on top of another | Landed, engine 8f20397a. | a torch held to a fire's top lights it: the placement reaches `on_place` before the "one piece" refusal. |
 | 12 swapping a whole material in a thin floor | Landed, engine 671f5763. | a fire lit, put out or a torch burned out in a thin floor keeps the floor's cells: `set_block` swaps the whole material, nothing to change here. |
@@ -40,6 +42,34 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 2 a tool's speed per material | Landed, engine c83fbc9. | picks, axes, mauls and chisels are slow on loose ground. |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
+
+## 15. An item moves in whole items (2026-10-12): OPEN
+
+**Seen.** The designer's playtest, 2026-10-12: "items like meat should never
+have subnodes in the inventory. too many duplication glitches." A
+right-click on a stack in any view halves it by UNITS (`Slots::right_click`,
+`grain` 1 for everything but a cut of several), so one raw meat — 27 units —
+becomes 14 in the hand and 13 left behind, and a right-click with a stack
+held puts down one unit. Neither half is an item any more: not food to
+Life's eat key, not an ingredient a recipe counting items will take, and a
+quantity every mod's arithmetic has to survive. An item (`register_item`,
+`placeable = false`) has no cells; a part of one means nothing.
+
+**Why the mod cannot.** Slot clicks are applied by the engine before any mod
+hears them, cannot be vetoed, and the cursor is out of a mod's reach, so a
+mod cannot put a split back; and `game.give`/`game.take` accept any units of
+an item, so every mod would have to round on its own.
+
+**Smallest change.** For a non-placeable material, `grain` is a whole item
+(27 units), as it already is for a cut of several: a right-click takes half
+the ITEMS (rounded so the hand gets the larger half), a right-click with a
+stack held puts down one ITEM, and a shift-click or a merge moves whole
+items. Optionally `give`/`take` of an item refuse, or round down to, a
+whole number of items — the same rule, at the API.
+
+**Stands in.** Nothing this mod makes gives part of an item: every item a
+recipe here gives is counted in whole items. The splits come from the
+inventory alone.
 
 ## 14. A small whole thing that clips into the ground instead of sweeping it (2026-10-08): LANDED 2026-10-08 (engine 13dc3e63)
 

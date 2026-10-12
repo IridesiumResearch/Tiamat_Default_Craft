@@ -57,6 +57,19 @@ game.register_tool{
     default = true,
 }
 
+--- The hand while "place one node" is held: what it places goes down a
+--- node at a time. It digs nothing — carving single nodes out is a chisel's
+--- work (the dig gate below refuses it).
+T.NODE = game.mod_id .. ":node_hand"
+game.register_tool{
+    id = "node_hand",
+    name = "Hand (one node)",
+    brush = "subnode",
+    speed_multiplier = C.hand_speed,
+}
+game.register_action{ id = "place_node", default_key = "KeyC", description = "Hold to place one node at a time" }
+local node_mode = {}   -- uuid -> true while the action is held
+
 -- The records ------------------------------------------------------------------
 
 local tools = {}         -- qualified id -> { id, name, type, tier, uses, digs }
@@ -228,6 +241,7 @@ local creative = C.mode == "Creative"
 local hinted = {}   -- "uuid:class" -> true, for this session
 
 tdc.on_dig_start(function(e)
+    if game.get_tool(e.player) == T.NODE then return C.node_no_dig end
     if creative then return end
     local class = T.class(e.material)
     if not class then return end
@@ -481,14 +495,22 @@ tdc.on_leave(function(e)
         if uuid == e.player then table.remove(online, i) break end
     end
     expected[e.player] = nil
+    node_mode[e.player] = nil
 end)
 
 --- The engine tool a player should be holding.
 local function wanted(uuid)
     local tool = T.held(uuid)
     if tool and tool.digs and not unusable[tool.id] then return tool.id end
+    if node_mode[uuid] then return T.NODE end
     return T.HAND
 end
+
+tdc.on_action(game.mod_id .. ":place_node", function(e)
+    node_mode[e.player] = e.pressed or nil
+    local want = wanted(e.player)
+    if game.set_tool(e.player, want) then expected[e.player] = want end
+end)
 
 -- The HUD: what is left of the tool in hand, and whether it can break what
 -- it points at. Sent only when it changes.

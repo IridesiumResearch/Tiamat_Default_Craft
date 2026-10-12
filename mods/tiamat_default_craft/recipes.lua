@@ -62,6 +62,22 @@ for _, name in ipairs(U.sorted_keys(C.groups)) do
     assert(R.register_group(name, qualified))
 end
 assert(R.register_group("#plank", { M.id("plank") }))
+-- Rough stone for laying: cobbles, and the gravel and permafrost that do as well.
+do
+    local rough = {}
+    for _, name in ipairs({ "cobbles", "gravel", "permafrost" }) do
+        if U.material(U.world(name)) then rough[#rough + 1] = U.world(name) end
+    end
+    if #rough > 0 then assert(R.register_group("#cobbles", rough)) end
+end
+-- Something to lie on: hide, wool, or an armful of grass.
+do
+    local soft = {}
+    for _, name in ipairs({ "tiamat_default_life:hide", "tiamat_default_life:wool", U.world("tall_grass") }) do
+        if U.material(name) then soft[#soft + 1] = name end
+    end
+    if #soft > 0 then assert(R.register_group("#bedding", soft)) end
+end
 assert(R.register_group("#wedge", { M.id("wooden_wedge"), M.id("ironwood_wedge") }))
 assert(R.register_group("#hammer", { M.id("bronze_hammer"), M.id("iron_hammer") }))
 assert(R.register_group("#chisel", { M.id("bronze_chisel"), M.id("iron_chisel") }))
@@ -193,7 +209,7 @@ R.own{
 
 R.own{
     id = "unfired_kiln", station = "workbench", name = "Kiln",
-    pattern = { "CCC", "BBB" }, key = { C = { U.world("wet_clay"), count = 3 }, B = { U.world("cobbles"), count = 3 } },
+    pattern = { "CCC", "BBB" }, key = { C = { U.world("wet_clay"), count = 3 }, B = { "#cobbles", count = 3 } },
     outputs = { { M.id("unfired_kiln"), count = 1 } },
 }
 
@@ -280,7 +296,7 @@ local UI = game.exports("tiamat_default_ui")
 if UI and type(UI.shape_crafter) == "string" then
     R.own{
         id = "shape_crafter", station = "workbench", name = "Shape crafter",
-        pattern = { "PB", "BP" }, key = { P = { "#plank", count = 2 }, B = { U.world("cobbles"), count = 2 } },
+        pattern = { "PB", "BP" }, key = { P = { "#plank", count = 2 }, B = { "#cobbles", count = 2 } },
         outputs = { { UI.shape_crafter, count = 1 } },
     }
 end
@@ -577,6 +593,16 @@ R.own{
     outputs = { { M.id("bronze_gear"), count = 1 } },
     first = "cast:bronze_gear",
 }
+
+-- Life's bed, early: a bed is where a player comes back to, so it is made
+-- from the first things there are — planks, and hide, wool or grass to lie on.
+if U.material("tiamat_default_life:bed") then
+    R.own{
+        id = "bed", station = "workbench", name = "Bed",
+        pattern = { "SSS", "PPP" }, key = { S = "#bedding", P = "#plank" },
+        outputs = { { "tiamat_default_life:bed", count = 1 } },
+    }
+end
 
 -- Building.
 R.own{

@@ -734,6 +734,7 @@ local function note(kind) return function(material, value)
     return true
 end end
 game.register_block{ id = "campfire", light_emit = { r = 15, g = 9, b = 2 } }
+game.register_block{ id = "bed" }
 for _, id in ipairs({ "raw_meat", "cooked_meat", "hot_stew", "apple", "berries", "wheat", "bread",
         "hide", "sinew", "wool", "bone", "warm_coat", "cool_cloak", "bandage" }) do
     game.register_item{ id = id }
@@ -1163,6 +1164,12 @@ impl Rig {
     pub fn close(&mut self, player: [u8; 32], form: &str) {
         self.dialog(player, form, tiamat_core::proto::DialogEvent::Closed);
         self.boxes.holders.lock().unwrap().retain(|_, p| *p != player);
+    }
+
+    /// An action pressed or let go, alone.
+    pub fn action_held(&mut self, player: [u8; 32], id: &str, pressed: bool) {
+        let _ = self.vm.action(&tiamat_core::script::ActionEvent { player, id: id.into(), pressed });
+        self.assert_healthy(id);
     }
 
     pub fn action(&mut self, player: [u8; 32], id: &str) {

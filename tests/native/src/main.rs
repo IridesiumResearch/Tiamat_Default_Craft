@@ -1704,6 +1704,28 @@ fn life_goods_and_iron_anvil() {
     make(&mut r, &[("tiamat_default_life:raw_meat", 27), ("tiamat_default_world:salt", 9)], "Cured meat", "cured_meat");
     r.say("grids");
     assert_eq!(r.said(), "every pattern makes its own recipe", "with Life's goods too");
+    // Life's bed, early: planks and something to lie on.
+    make(&mut r, &[("tiamat_default_world:tall_grass", 81), ("plank", 81)], "Bed", "tiamat_default_life:bed");
+    // Gravel lays a kiln as cobbles do.
+    make(&mut r, &[("tiamat_default_world:wet_clay", 27 * 9), ("tiamat_default_world:gravel", 27 * 9)], "Kiln", "unfired_kiln");
+    // A lit fire, kiln or bloomery dug comes up out.
+    let rules = r.vm.registered_block_rules();
+    for (lit, out) in [("campfire_lit", "unlit_campfire"), ("kiln_lit", "kiln"), ("bloomery_lit", "bloomery")] {
+        let rule = rules.iter().find(|b| b.block == format!("tiamat_default_craft:{lit}")).expect(lit);
+        assert_eq!(rule.drops, Some(vec![(format!("tiamat_default_craft:{out}"), 27)]), "{lit}");
+    }
+    // Held, the node key places one node at a time and digs nothing.
+    r.hold(PLAYER, "tiamat_default_world:stone", None);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
+    r.action_held(PLAYER, "tiamat_default_craft:place_node", true);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:node_hand"));
+    assert_eq!(r.dig_start(PLAYER, "tiamat_default_world:dirt"),
+        Err("Let go of the node key to dig; a chisel takes single nodes out.".into()));
+    r.action_held(PLAYER, "tiamat_default_craft:place_node", false);
+    r.tick(1);
+    assert_eq!(r.tool(PLAYER).as_deref(), Some("tiamat_default_craft:hand"));
     r.say("life heard food tiamat_default_craft:cured_meat");
     assert_eq!(r.said(), "yes");
     r.give(PLAYER, "cloth", 27);

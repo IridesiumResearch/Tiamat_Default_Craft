@@ -15,11 +15,12 @@ depends = ["core >=0.1"]
 # - The world, whose ores, logs, clay and rock this mod names in its recipes
 #   and dig classes (config.lua).
 # - Life, whose food, fire and farm exports cooking and the farm tools use.
+# - The weather, whose fire a fire striker sets in leaves, logs and grass.
 # - The interface, whose screen the Craft tab sits on and whose look the
 #   station dialogs borrow.
 #
 # Optional, so the mod still loads on a bare engine for the test harness.
-optional_depends = ["tiamat_default_world", "tiamat_default_life", "tiamat_default_ui"]
+optional_depends = ["tiamat_default_world", "tiamat_default_life", "tiamat_default_ui", "tiamat_weather"]
 # The engine's reference tools stand aside. Not for the hand, which a real
 # mod's default already beats, but for the reference chisel and its
 # `chisel_mode` action: this mod's chisel is a craftable tool that wears.

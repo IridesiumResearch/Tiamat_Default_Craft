@@ -220,6 +220,8 @@ C.chest_slots = 27
 -- blown with bellows, step 8).
 
 C.furnace_step = 20             -- furnaces are tended once a second
+C.node_no_dig = "Let go of the node key to dig; a chisel takes single nodes out."
+C.will_not_catch = "It will not catch."
 C.level_ground = "Level this ground"   -- a whole block would sweep rock a hand could not dig
 C.grid_shift_most = 64         -- shift-taking from a grid makes at most this many
 C.max_run_percent = 1000        -- a station run by another mod: ten times speed at most

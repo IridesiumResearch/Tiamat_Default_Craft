@@ -195,6 +195,7 @@ block("bloomery_lit", {
     name = "Bloomery (burning)",
     description = "Burning.",
     hardness = 1.5,
+    drops = { bloomery = 27 },           -- dug, a fire comes up out
     light_emit = { r = 14, g = 8, b = 2 },
     flicker = tdc.config.flicker.bloomery,
 }, modelled("bloomery_lit", "bloomery"))
@@ -225,6 +226,7 @@ block("kiln_lit", {
     name = "Kiln (burning)",
     description = "Burning.",
     hardness = 1.5,
+    drops = { kiln = 27 },           -- dug, a fire comes up out
     light_emit = { r = 12, g = 6, b = 1 },
     flicker = tdc.config.flicker.kiln,
 }, modelled("kiln_lit", "kiln"))
@@ -248,6 +250,7 @@ block("campfire_lit", {
     name = "Campfire",
     description = "A fire of your own making. Feed it logs; it cracks the rock beside it.",
     hardness = 0.4,
+    drops = { unlit_campfire = 27 },           -- dug, a fire comes up out
     model = "campfire_lit",
     shape = { "### ### ###", "... .#. ...", "... .#. ..." },
     light_emit = { r = 14, g = 9, b = 4 },
