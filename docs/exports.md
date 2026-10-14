@@ -370,6 +370,11 @@ All are namespaced `tiamat_default_craft:` by the engine.
 - **Containers:** `tiamat_default_craft:<station>:x,y,z` for every station
   block placed, this mod's or another's, and `tiamat_default_craft:chest:x,y,z`
   (27 slots) for a chest; `<domain>@` before the position off the overworld.
+  **These names are stable**, and another mod may fill one: set down
+  `tiamat_default_craft:chest` and `game.make_container(name, 27)` (make if
+  absent) and `game.container_give` into it, and a player opens it with the
+  chest's own screen. Weather's wrecks do (Wx-C1). A change to the names
+  will be said here and to every mod known to rely on them.
 - **Sounds and cues:** `tool_break`, `anvil_ring`, `sizzle`, `craft`, each
   a sound bound to the cue of its name (`craft` to Tiamat Default UI's own
   craft sound when that mod is here). Bind your own sounds to these cues to
@@ -384,7 +389,7 @@ All are namespaced `tiamat_default_craft:` by the engine.
   `#hammer`, `#chisel` and `#knife`, the bronze and iron ones; `#fruit`, Life's apples and berries; `#plank`, this mod's plank and the world's three; `#wedge`,
   the two wedges; `#log`, the world's thirteen logs; `#tinder`, its dry grass,
   needles, moss, lichen and heather; `#cobbles`, the world's cobbles, gravel
-  and permafrost; `#bedding`, Life's hide and wool and the world's tall grass.
+  and permafrost; `#bedding`, Life's hide, wool and feathers and the world's tall grass.
 
 ## Commands it accepts
 

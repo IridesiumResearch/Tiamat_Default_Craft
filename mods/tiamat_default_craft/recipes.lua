@@ -70,10 +70,11 @@ do
     end
     if #rough > 0 then assert(R.register_group("#cobbles", rough)) end
 end
--- Something to lie on: hide, wool, or an armful of grass.
+-- Something to lie on: hide, wool, feathers, or an armful of grass.
 do
     local soft = {}
-    for _, name in ipairs({ "tiamat_default_life:hide", "tiamat_default_life:wool", U.world("tall_grass") }) do
+    for _, name in ipairs({ "tiamat_default_life:hide", "tiamat_default_life:wool",
+            "tiamat_default_life:feather", U.world("tall_grass") }) do
         if U.material(name) then soft[#soft + 1] = name end
     end
     if #soft > 0 then assert(R.register_group("#bedding", soft)) end
@@ -595,7 +596,8 @@ R.own{
 }
 
 -- Life's bed, early: a bed is where a player comes back to, so it is made
--- from the first things there are — planks, and hide, wool or grass to lie on.
+-- from the first things there are — planks, and hide, wool, feathers or grass
+-- to lie on.
 if U.material("tiamat_default_life:bed") then
     R.own{
         id = "bed", station = "workbench", name = "Bed",

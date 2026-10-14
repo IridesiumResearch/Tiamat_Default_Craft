@@ -63,7 +63,7 @@ Cells here are one of an item each unless the table says otherwise.
 | ironwood tools | as the wooden ones, with ironwood logs | bench |
 | a tool | its head over a haft (a stick for a chisel or knife) | bench |
 | kiln | a row of three cells of three wet clay over a row of three of three cobbles (or gravel, or permafrost) | bench |
-| bed (Life's: where you wake) | three of hide, wool or tall grass over three planks | bench |
+| bed (Life's: where you wake) | three of hide, wool, feathers or tall grass over three planks | bench |
 | crucible | wet clay in a V: two cells over one | bench |
 | a mould | wet clay laid in the shape it casts — pick a row of three, axe an L of three, spade one, hammer a square of four, sickle a diagonal of three, hoe a row of two, chisel a column of three, knife a column of two, pot a bowl of five, tuyere two columns of two, gear a diamond of four | bench |
 | bloomery | three cells of three fired clay, the bronze tuyere under the middle, three cells of three stone | bench |

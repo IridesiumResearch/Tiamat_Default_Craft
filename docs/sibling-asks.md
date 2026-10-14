@@ -37,8 +37,11 @@ stew `hearty`, in Life's own definitions, with nothing needed from here.
 - **C2, leather, cord and cloth:** leather (a hide tanned with two bark
   strips), cord from sinew, cloth from wool, a bone needle, and Life's own
   warm coat, cool cloak and bandages sewn from them; bellows of leather, as
-  the brief first had them. Not built: bowstrings (no mod has a bow) and "a
-  bed that is not a block" (Life's bed is Life's). Feathers have no use yet.
+  the brief first had them. Feathers (2026-10-14, relayed again as "hide,
+  sinew, wool and feathers"): three are bedding, as hide, wool and grass
+  are, for Life's bed at the workbench. Not built: bowstrings (no mod has a
+  bow) and "a bed that is not a block" (Life's bed is Life's). Life's own
+  sheet still says OPEN; everything it names now has a use here.
 
 ### L3. Who cooks (2026-09-26): SETTLED, built 2026-09-28
 
@@ -247,3 +250,19 @@ in this mod's registry.
 engine's, and the engine frames EVERY sheet with it and sets its fonts, a
 station's own `show_dialog` included. For the rest, build the tree with
 `ui.widgets` and `ui.theme.colours` and it matches the inventory exactly.
+
+## Tiamat Weather
+
+### Wx-C1, its ask of this mod: a chest another mod may fill (2026-10-12): ANSWERED 2026-10-14
+
+**Wanted.** A wreck at the end of a rainbow holds loot in one of this mod's
+chests, filled by Weather through the container name this mod gives a
+chest, so the name must not move under it.
+
+**Answered.** The name is a contract now, written where the containers are
+listed in `docs/exports.md` and beside `ST.name` in `stations.lua`:
+`tiamat_default_craft:chest:x,y,z` (27 slots), `<domain>@` before the
+position off the overworld, and every station's the same shape. Another mod
+may fill one with `make_container` (make if absent) and `container_give`.
+Nothing else was needed: this mod lists Weather in `optional_depends`, so
+Weather cannot read its exports and the name is the whole contract.

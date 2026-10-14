@@ -76,6 +76,9 @@ end
 local kind_of = ST.kind
 
 --- A station's container name at a block.
+-- A station's or a chest's container name. Other mods rely on it — Weather
+-- fills a wreck's chest by it (Wx-C1) — so it is a contract, written in
+-- docs/exports.md: change it and tell them.
 function ST.name(kind_id, pos)
     local where = U.key(pos.x, pos.y, pos.z)
     if pos.domain and pos.domain ~= "overworld" then where = pos.domain .. "@" .. where end
