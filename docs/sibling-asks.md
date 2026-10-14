@@ -212,6 +212,11 @@ each.
   interface is (`recipes.lua`).
 - **C2, the hand tab beside Inventory:** the Craft tab is `order = 20`, the
   place the interface's own Crafting tab had (`stations.lua`).
+- **Relayed again 2026-10-14**, from the interface's sheet, which still says
+  OPEN. Checked against the interface as it stands (0.4.0): its export
+  answers `tiamat_default_ui:shape_crafter` at load, so the recipe is
+  registered, and the tab is at 20. Nothing to build; the interface's sheet
+  is stale. The engine's `bundle.toml` pins Craft at c56f9e2, which has both.
 
 ### U3. The carved mask from the shape crafter (2026-09-26): WITHDRAWN 2026-09-28
 
