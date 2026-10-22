@@ -271,3 +271,17 @@ position off the overworld, and every station's the same shape. Another mod
 may fill one with `make_container` (make if absent) and `container_give`.
 Nothing else was needed: this mod lists Weather in `optional_depends`, so
 Weather cannot read its exports and the name is the whole contract.
+
+## Tiamat Default Structures
+
+### ST-C1, its notice to this mod: the chest's names (2026-10-22): NOTED 2026-10-22
+
+**A notice, not a change.** Structures' schematics set down
+`tiamat_default_craft:chest` and make and fill its container,
+`tiamat_default_craft:chest:x,y,z` (`<domain>@` off the overworld), when a
+site is first entered, as Weather's wrecks do (Wx-C1). It takes no
+dependency edge on this mod.
+
+**Noted.** Structures is named beside Weather where the contract is written
+(`docs/exports.md`, and `ST.name` in `stations.lua`): if the block's id or
+the container names change, both are told.

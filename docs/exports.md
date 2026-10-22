@@ -373,8 +373,9 @@ All are namespaced `tiamat_default_craft:` by the engine.
   **These names are stable**, and another mod may fill one: set down
   `tiamat_default_craft:chest` and `game.make_container(name, 27)` (make if
   absent) and `game.container_give` into it, and a player opens it with the
-  chest's own screen. Weather's wrecks do (Wx-C1). A change to the names
-  will be said here and to every mod known to rely on them.
+  chest's own screen. Weather's wrecks do (Wx-C1), and Structures' sites
+  (ST-C1). A change to the block's id or the names will be said here and
+  told to both.
 - **Sounds and cues:** `tool_break`, `anvil_ring`, `sizzle`, `craft`, each
   a sound bound to the cue of its name (`craft` to Tiamat Default UI's own
   craft sound when that mod is here). Bind your own sounds to these cues to
