@@ -13,7 +13,7 @@ finds every mod's open asks in one place.
 Numbered as the brief (`docs/brief.md` §11) numbered them, from its audit of
 the engine on 2026-09-26; 0 was found and answered the same day.
 
-## Where these stand (2026-10-08)
+## Where these stand (2026-10-26)
 
 **Nothing is open.** 16 landed in engine a7608684 and 15 the day each was
 asked.
@@ -44,6 +44,22 @@ Open asks are copied to the engine's `docs/engine-asks/tiamat_default_craft.md`.
 | 2 a tool's speed per material | Landed, engine c83fbc9. | picks, axes, mauls and chisels are slow on loose ground. |
 | 1 a dig-start hook | Landed, engine ddc4fee. | the tool gate refuses as the dig starts (step 2). |
 | 0 the default tool is the lowest id | Landed, engine ddc4fee. | the hand is this mod's without a fight; `conflicts = ["core_tools"]` stays for the reference chisel. |
+
+## From the engine, 2026-10-13: milestone 0.5.0, the mod API is 1.0 — ADOPTED 2026-10-14
+
+Not an ask of ours: the engine's notice to every mod (its
+`docs/milestone-0.5.0.md`). (1) The API is frozen as 1.0 (engine fe8ebc40):
+`game.api_version`, the stubs' header, and the deprecation rule in
+`AGENTS.md`; re-vendor `api/` (item A4). (2) A conformance run for the
+mod's own CI (item A3): `scripts/conform.sh <mod dir>` from an engine
+checkout, with the workflow in the engine's `docs/mod-conformance.md`.
+(3) The nightly fen soak over the pinned mods.
+
+**Adopted in Craft 452d034:** `stubs/game.lua` and `AGENTS.md` re-vendored
+from the engine's main, and `.github/workflows/conform.yml` copied from
+`docs/mod-conformance.md`, passing `../mod/mods/tiamat_default_craft`; it
+has run green on push and nightly since. Kept here rather than on the
+engine's sheet, which holds open asks only (2026-10-26).
 
 ## 16. A line of a mod's under a stack's name on hover, per player (2026-10-12): LANDED (engine a7608684)
 
